@@ -24,6 +24,8 @@ func TestConfig_Validate(t *testing.T) {
 			config: Config{
 				DocID:           "some-doc-id",
 				CredentialsPath: validCredsFile,
+				ChunkSize:       10,
+				OutputDir:       "bauer-output",
 			},
 			wantErr: false,
 		},
@@ -32,6 +34,7 @@ func TestConfig_Validate(t *testing.T) {
 			config: Config{
 				DocID:           "",
 				CredentialsPath: validCredsFile,
+				ChunkSize:       10,
 			},
 			wantErr: true,
 		},
@@ -40,6 +43,7 @@ func TestConfig_Validate(t *testing.T) {
 			config: Config{
 				DocID:           "some-doc-id",
 				CredentialsPath: "",
+				ChunkSize:       10,
 			},
 			wantErr: true,
 		},
@@ -48,6 +52,7 @@ func TestConfig_Validate(t *testing.T) {
 			config: Config{
 				DocID:           "some-doc-id",
 				CredentialsPath: filepath.Join(tmpDir, "non-existent.json"),
+				ChunkSize:       10,
 			},
 			wantErr: true,
 		},
@@ -56,6 +61,16 @@ func TestConfig_Validate(t *testing.T) {
 			config: Config{
 				DocID:           "some-doc-id",
 				CredentialsPath: tmpDir,
+				ChunkSize:       10,
+			},
+			wantErr: true,
+		},
+		{
+			name: "Invalid chunk size",
+			config: Config{
+				DocID:           "some-doc-id",
+				CredentialsPath: validCredsFile,
+				ChunkSize:       0,
 			},
 			wantErr: true,
 		},

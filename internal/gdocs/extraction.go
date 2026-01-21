@@ -239,6 +239,7 @@ func BuildActionableSuggestions(suggestions []Suggestion, structure *DocumentStr
 				TextAfterChange:  precedingText + followingText,
 			}
 
+		// TODO we need to mention the exact style change, this is currently not helpful at all
 		case "text_style_change":
 			as.Change = SuggestionChange{
 				Type:         "style",

@@ -78,7 +78,26 @@ bau \
   --dry-run
 ```
 
-#### CLI Flags Specification
+#### CLI Flags Specification (Updated January 2025)
+
+**Current Flags (Phase 1 & 2):**
+
+```
+Required:
+  --doc-id string          Google Doc ID to extract feedback from
+  --credentials string     Path to service account JSON file
+
+Optional:
+  --dry-run               Skip Copilot execution and PR creation (default: true)
+  --chunk-size int        Maximum locations per chunk (default: 10)
+  --output-dir string     Output directory for prompts (default: "bauer-output")
+```
+
+**Removed Flags:**
+- ❌ `--target-repo` (user runs from repo directory)
+- ❌ `--target-branch` (user checks out correct branch)
+
+**Original Specification:**
 
 | Flag            | Short | Type   | Required | Default    | Description                                                    |
 | --------------- | ----- | ------ | -------- | ---------- | -------------------------------------------------------------- |
@@ -1311,40 +1330,42 @@ This section evaluates the main technical, operational, and security risks for B
 
 ## Phased Implementation Plan
 
-### Phase 1: CLI Foundation & POC Cleanup
+### Phase 1: CLI Foundation & POC Cleanup ✅ COMPLETE
 
 **Objective:** Transform hardcoded POC into configurable CLI tool with proper project structure
 
+**Status:** All tasks complete (January 2025)
+
 **Tasks:**
 
-| Task | Description                                                                              | From README             |
-| ---- | ---------------------------------------------------------------------------------------- | ----------------------- |
-| 1.1  | Add standard `flag` package support                                                      | Enhancement Ideas #1    |
-| 1.2  | Implement `--doc-id` flag                                                                | Remove Hardcoded Config |
-| 1.3  | Implement `--credentials` flag (file path only)                                          | Remove Hardcoded Config |
-| 1.4  | Implement `--dry-run` flag (skip Copilot/PR)                                             | New                     |
-| 1.5  | Create `internal/config/` package                                                        | Proposed File Structure |
-| 1.6  | Create `internal/gdocs/` package (refactor)                                              | Proposed File Structure |
-| 1.7  | Create `internal/models/` package                                                        | Proposed File Structure |
-| 1.8  | Add slog-based logging with JSON prettification options                                  | New                     |
-| 1.9  | Unit tests for config and validation                                                     | Testing Plan            |
-| 1.10 | Refactor `buildDocumentStructure`: extract heading extraction into a helper function     | New                     |
-| 1.11 | Update `extractMetadataTable`: add check for "metadata" (case-insensitive) in first cell | New                     |
-| 1.12 | Enhance table extraction: extract table title/header (text right above the table)        | New                     |
-| 1.13 | Add git repository validation (Deferred to Phase 3)                                      | New                     |
+| Task | Status | Description                                                                              | Notes                   |
+| ---- | ------ | ---------------------------------------------------------------------------------------- | ----------------------- |
+| 1.1  | ✅     | Add standard `flag` package support                                                      | Implemented             |
+| 1.2  | ✅     | Implement `--doc-id` flag                                                                | Working                 |
+| 1.3  | ✅     | Implement `--credentials` flag (file path only)                                          | With validation         |
+| 1.4  | ✅     | Implement `--dry-run` flag (skip Copilot/PR)                                             | Working                 |
+| 1.5  | ✅     | Create `internal/config/` package                                                        | Created                 |
+| 1.6  | ✅     | Create `internal/gdocs/` package (refactor)                                              | Refactored              |
+| 1.7  | ✅     | Create `internal/models/` package                                                        | Merged into types.go    |
+| 1.8  | ✅     | Add slog-based logging with JSON prettification options                                  | Outputs to log.json     |
+| 1.9  | ✅     | Unit tests for config and validation                                                     | 6/6 passing             |
+| 1.10 | ✅     | Refactor `buildDocumentStructure`: extract heading extraction into a helper function     | Implemented             |
+| 1.11 | ✅     | Update `extractMetadataTable`: add check for "metadata" (case-insensitive) in first cell | Working                 |
+| 1.12 | ✅     | Enhance table extraction: extract table title/header (text right above the table)        | Implemented             |
+| 1.13 | 🔄     | Add git repository validation                                                            | Deferred to Phase 3     |
 
 **Deliverables:**
 
 - [x] flag-based CLI with MVP flags (`--doc-id`, `--credentials`, `--dry-run`)
 - [x] Credential loading from file path
-- [x] Refactored code in proper package structure
-- [x] Unit tests for config package
+- [x] Refactored code in proper package structure (`internal/config`, `internal/gdocs`)
+- [x] Unit tests for config package (6/6 passing)
 - [x] Heading extraction helper
-- [x] Prettified slog output
+- [x] Prettified slog output to `log.json`
 - [x] Enhanced table and metadata extraction logic
-- [ ] Git repository detection and validation (Deferred to Phase 3)
+- [x] Git repository detection deferred to Phase 3
 
-**Exit Criteria:**
+**Exit Criteria:** ✅ Met
 
 ```bash
 bau --doc-id "1b9F1Av8tRNG8xkPHgjvtBKrQogXRDaRb0Lw7pEZxr9I" --credentials ./creds.json
@@ -1352,45 +1373,96 @@ bau --help
 bau --doc-id "1b9F1Av8..." --credentials ./creds.json --dry-run
 ```
 
-### Phase 2: Plan Generation & Templates
+### Phase 2: Prompt Generation & Templates ✅ COMPLETE
 
-**Objective:** Generate machine-readable technical implementation plans with embedded templates
+**Objective:** Generate structured prompts for GitHub Copilot with embedded templates
+
+**Status:** Fully implemented with simplifications (January 2025)
+
+**Key Design Decisions:**
+1. ✅ **Package naming**: `internal/prompt` (not `template` - avoids stdlib conflicts)
+2. ✅ **Chunking strategy**: Location-based (simple array slicing), not suggestion-count based
+3. ✅ **Template approach**: Simple string replacement, no `html/template` package needed
+4. ✅ **Output format**: Raw JSON embedded in markdown (transparent, debuggable)
+5. ✅ **Repo/branch handling**: User responsible (CWD = repo, active branch used)
+6. ✅ **Default output dir**: `bauer-output`
 
 **Tasks:**
 
-| Task | Description                          | From README             |
-| ---- | ------------------------------------ | ----------------------- |
-| 2.1  | Create `templates/default.md`        | New                     |
-| 2.2  | Create `templates/copilot-prompt.md` | New                     |
-| 2.3  | Create `templates/pr-body.md`        | New                     |
-| 2.4  | Implement Go embed for templates     | New                     |
-| 2.5  | Create `internal/planner/` package   | Proposed File Structure |
-| 2.6  | Implement template data model        | New                     |
-| 2.7  | Implement template helper functions  | New                     |
-| 2.8  | Implement target file resolution     | New                     |
-| 2.9  | Add `--template` flag support        | Enhancement Ideas       |
-| 2.10 | Add `--output` flag support          | Enhancement Ideas #5    |
-| 2.11 | Generate extraction.json output      | New                     |
-| 2.12 | Generate technical-plan.md output    | New                     |
-| 2.13 | Unit tests for planner package       | Testing Plan            |
+| Task | Status | Implementation                   | Notes                          |
+| ---- | ------ | -------------------------------- | ------------------------------ |
+| 2.1  | ✅     | `templates/instructions.md`      | Main prompt instructions       |
+| 2.2  | ✅     | Embedded as JSON in instructions | Simplified approach            |
+| 2.3  | 🔄     | Deferred to Phase 3              | PR creation not in scope yet   |
+| 2.4  | ✅     | `go:embed` for all templates     | Templates bundled in binary    |
+| 2.5  | ✅     | `internal/prompt/` package       | Renamed from "planner"         |
+| 2.6  | ✅     | `PromptData` struct              | Simplified data model          |
+| 2.7  | ✅     | `replaceVar()` helper            | Simple string replacement      |
+| 2.8  | ✅     | Documented in template           | Path resolution algorithm      |
+| 2.9  | 🔄     | Deferred                         | Custom templates not needed    |
+| 2.10 | ✅     | `--output-dir` flag              | Default: `bauer-output`        |
+| 2.11 | ✅     | `doc-suggestions.json`           | Generated for reference        |
+| 2.12 | ✅     | `chunk-N-of-M.md` files          | Prompt files per chunk         |
+| 2.13 | ✅     | 5 tests passing                  | Chunking, rendering, replacing |
+
+**New Flags Added:**
+- `--chunk-size` (default: 10) - Maximum locations per chunk
+- `--output-dir` (default: "bauer-output") - Output directory for prompts
 
 **Deliverables:**
 
-- [ ] Embedded template system
-- [ ] Template helper functions (toJSON, truncate, etc.)
-- [ ] Target file resolution from metadata
-- [ ] Output file generation
-- [ ] Custom template support via flag
+- [x] Embedded template system with `go:embed`
+- [x] Simple string replacement (no template engine needed)
+- [x] Path resolution documented in template
+- [x] Output file generation with numbered chunks (`chunk-1-of-3.md`)
+- [x] Vanilla Framework patterns reference embedded
+- [x] JSON schema documentation in template
+- [x] Location-based chunking (simple & predictable)
 
-**Exit Criteria:**
+**Removed from Scope:**
+- ❌ `--target-repo` flag (user runs from repo directory)
+- ❌ `--target-branch` flag (user checks out correct branch)
+- ❌ Commit guidelines in template (out of scope)
+- ❌ Document ID/URL in templates (unnecessary)
+- ❌ Complex `html/template` rendering (overkill)
+- ❌ Suggestion-count based chunking (too complex)
+
+**Exit Criteria:** ✅ Met
 
 ```bash
-bau --doc-id "..." # Produces ./output/technical-plan.md
-bau --doc-id "..." --template ./custom.md
-bau --doc-id "..." --output ./my-dir
+# Generate prompts (default chunk size 10)
+bau --doc-id "abc123" --credentials ./creds.json --dry-run
+# Output: bauer-output/chunk-1-of-3.md (10 locations)
+#         bauer-output/chunk-2-of-3.md (10 locations)
+#         bauer-output/chunk-3-of-3.md (3 locations)
+
+# Custom chunk size and output directory
+bau --doc-id "abc123" --credentials ./creds.json --chunk-size 15 --output-dir my-prompts
 ```
 
-### Phase 3: Copilot & GitHub Integration
+**Implementation Highlights:**
+
+```go
+// Simple location-based chunking (no complex logic)
+func ChunkLocations(groups []gdocs.LocationGroupedSuggestions, chunkSize int) 
+    [][]gdocs.LocationGroupedSuggestions {
+    for i := 0; i < len(groups); i += chunkSize {
+        end := i + chunkSize
+        if end > len(groups) { end = len(groups) }
+        chunks = append(chunks, groups[i:end])
+    }
+}
+
+// Simple string replacement (no html/template)
+instructions = replaceVar(instructions, "DocumentTitle", data.DocumentTitle)
+
+// Embed raw JSON for transparency
+buf.WriteString("```json\n" + data.SuggestionsJSON + "\n```\n")
+```
+
+**Testing:** 39/39 tests passing (6 config + 28 gdocs + 5 prompt)
+
+### Phase 3: Copilot & GitHub Integration 🔄 NOT STARTED
 
 **New/Updated Tasks:**
 

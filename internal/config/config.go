@@ -17,6 +17,14 @@ type Config struct {
 
 	// DryRun indicates if the tool should skip side-effect operations (Copilot CLI, PR creation).
 	DryRun bool
+
+	// ChunkSize is the maximum number of locations to process in a single chunk.
+	// Default is 10 if not specified.
+	ChunkSize int
+
+	// OutputDir is the directory where generated prompt files will be saved.
+	// Default is "bauer-output" if not specified.
+	OutputDir string
 }
 
 // Load parses command-line flags and returns a validated Config.
@@ -30,6 +38,8 @@ func Load() (*Config, error) {
 	docID := flag.String("doc-id", "", "Google Doc ID to extract feedback from (required)")
 	credentialsPath := flag.String("credentials", "", "Path to service account JSON (required)")
 	dryRun := flag.Bool("dry-run", false, "Run extraction and planning only; skip Copilot and PR creation")
+	chunkSize := flag.Int("chunk-size", 10, "Maximum number of locations per chunk (default: 10)")
+	outputDir := flag.String("output-dir", "bauer-output", "Directory for generated prompt files (default: bauer-output)")
 
 	// Custom usage message
 	flag.Usage = func() {
@@ -45,6 +55,8 @@ func Load() (*Config, error) {
 		DocID:           *docID,
 		CredentialsPath: *credentialsPath,
 		DryRun:          *dryRun,
+		ChunkSize:       *chunkSize,
+		OutputDir:       *outputDir,
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -62,6 +74,10 @@ func (c *Config) Validate() error {
 
 	if c.CredentialsPath == "" {
 		return errors.New("missing required flag: --credentials")
+	}
+
+	if c.ChunkSize <= 0 {
+		return errors.New("chunk-size must be greater than 0")
 	}
 
 	// Verify credentials file exists
