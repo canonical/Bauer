@@ -4,4 +4,6 @@ log.json
 *-creds.json
 *.log
 /.github/copilot-instructions.md
-.env.local
+.env.local-e 
+# BAU output
+bauer-output/
