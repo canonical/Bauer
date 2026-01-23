@@ -1,6 +1,8 @@
 # BAU Implementation Instructions
 
-You are assisting with implementing feedback from a Google Doc into a web project that uses the Vanilla Framework from Canonical.
+You are assisting with implementing feedback from a Google Doc into a web project that uses the Vanilla Framework from Canonical. The feedback is provided as structured suggestions in JSON format. 
+
+Your task is to accurately apply these suggestions to the correct files in the project repository. Once you read and understand this document, implement all of the suggestions in the provided JSON data, and follow the instructions carefully.
 
 ## Project Context
 
@@ -75,8 +77,8 @@ Each suggestion in the JSON array is a **LocationGroupedSuggestions** object wit
         "text_after_change": "combined after state"
       },
       "position": {
-        "start_index": 123,
-        "end_index": 456
+        "start_index": 123,     // Character index in the document before change. Do not use this to locate text, it's for reference only.
+        "end_index": 456        // Character index in the document before change. Do not use this to locate text, it's for reference only. 
       },
       "atomic_count": 1                 // Number of atomic operations merged
     }
@@ -117,13 +119,14 @@ For each suggestion:
 - **Order matters**: Process suggestions in the order provided
 - **Pattern awareness**: If `table_title` indicates a Vanilla pattern, consult the patterns reference below
 - **Style changes**: Some suggestions may be style-only changes (e.g., making text bold, adding emphasis). Use appropriate Vanilla Framework classes and HTML to apply these changes.
+- **Section deletions**: It is expected that some suggestions involve removing entire sections, this is acceptable behavior, ensure proper HTML structure and semantics are maintained. 
 
 ## Vanilla Framework Patterns
 
 When implementing pattern-related changes (identified by `table_title` in location metadata):
 
 1. **Identify the pattern**: Check the `table_title` field (e.g., "Hero", "Equal Heights")
-2. **Match with reference**: Find the corresponding pattern in the Vanilla Patterns section below
+2. **Match with reference**: Find the corresponding pattern in the Vanilla Patterns Reference section that follows these instructions
 3. **Apply correctly**: Follow the pattern's structure, required params, and slots
 4. **Import macros**: Ensure proper Jinja macro imports at the top of the template
 
@@ -135,7 +138,7 @@ Common patterns you'll encounter:
 - **Tabs**: Navigation or content panes
 - **Basic Section**: Flexible 2-column content sections
 
-Refer to the complete Vanilla Patterns reference at the end of this document for detailed implementation guidance.
+**Note**: The complete Vanilla Framework Patterns Reference appears immediately after these instructions and before the suggestions data.
 
 ## Error Handling
 
@@ -166,13 +169,20 @@ If you encounter issues:
   - Report this to the user in your summary
   - Continue with the remaining suggestions
 
+## Document Structure
+
+This prompt is organized in the following order:
+
+1. **These instructions** (what you're reading now)
+2. **Vanilla Framework Patterns Reference** (reference material for implementing patterns)
+3. **Suggestions Data** (JSON array of changes to implement)
+
 ## Processing Instructions
 
 **Chunk {{.ChunkNumber}} of {{.TotalChunks}}**
 
-Process the suggestions data below one location at a time. After processing all locations in this chunk, report:
+After reviewing the Vanilla Framework Patterns Reference section, process the suggestions data at the end of this document one location at a time. After processing ALL locations in this chunk, report:
 - Number of locations processed
 - Number of successful changes
 - Any errors or issues encountered
-
----
+- For each chunk, report if a vanilla pattern was changed or added and which one

@@ -1,6 +1,10 @@
 package main
 
 import (
+	"bauer/internal/config"
+	"bauer/internal/copilotcli"
+	"bauer/internal/gdocs"
+	"bauer/internal/prompt"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,17 +12,12 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"bauer/internal/config"
-	"bauer/internal/copilotcli"
-	"bauer/internal/gdocs"
-	"bauer/internal/prompt"
 )
 
 func main() {
 	startTime := time.Now()
 
-	fmt.Println("BAU - Build Automation Utility")
+	fmt.Println("BAUer - BAU maker")
 	fmt.Println(strings.Repeat("=", 80))
 	fmt.Println()
 

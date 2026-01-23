@@ -1,5 +1,3 @@
-Rules acknowledged ✅
-
 # Vanilla patterns
 
 This file summarizes common Vanilla patterns and how to use them from Jinja macros. Each pattern below contains:
@@ -8,12 +6,15 @@ This file summarizes common Vanilla patterns and how to use them from Jinja macr
 - minimal Jinja import + usage examples,
 - short configuration notes.
 
+You should import all required macros at the beginning of the Jinja template before using them.
+
 Table of contents
 - [Hero pattern](#hero-pattern)
 - [Equal heights](#equal-heights)
 - [Text Spotlight](#text-spotlight)
 - [Logo section](#logo-section)
-- [Tabs](#tabs)
+- [Tab section](#tab-section)
+- [Tiered list](#tiered-list)
 - [Basic section](#basic-section)
 
 ---
@@ -71,22 +72,48 @@ Jinja import
 {% from "_macros/vf_equal-heights.jinja" import vf_equal_heights %}
 ```
 
-Minimal usage (inline data)
-```/dev/null/equal-heights-example.jinja#L1-18
+Minimal usage (using call syntax with slots)
+```/dev/null/equal-heights-example.jinja#L1-40
 {% from "_macros/vf_equal-heights.jinja" import vf_equal_heights %}
 
-{% set items = [
-  {'title_text':'Item 1','image_html':'<img src=\"/img/1.jpg\" alt=\"\">','description_html':'<p>Desc 1</p>'},
-  {'title_text':'Item 2','image_html':'<img src=\"/img/2.jpg\" alt=\"\">','description_html':'<p>Desc 2</p>'},
-  {'title_text':'Item 3','image_html':'<img src=\"/img/3.jpg\" alt=\"\">','description_html':'<p>Desc 3</p>'}
-] %}
-
-{{ vf_equal_heights(title_text='Our features', items=items, highlight_images=False) }}
+{% call(slot) vf_equal_heights(
+  title_text="Keep this heading to 2 lines on large screens.",
+  attrs={ "id": "4-columns-responsive" },
+  subtitle_text="Ensure the right hand side of this 50/50 split is taller than the left hand side (heading) on its left. This includes the subtitle and description.",
+  items=[
+    {
+      "title_text": "A strong hardware ecosystem",
+      "image_html":  "<img src='https://assets.ubuntu.com/v1/ff6a068d-kernelt-vanilla-ehp-1.png' class='p-image-container__image' width='284' height='426' alt='Kernelt' />",
+      "description_html": "<p>We enable Ubuntu Core with the best ODMs and silicon vendors in the world. We continuously test it on leading IoT and edge devices and hardware.</p>",
+      "cta_html": "<a href='#'>Browse all certified hardware&nbsp;&rsaquo;</a>"
+    },
+    {
+      "title_text": "A strong hardware ecosystem",
+      "image_html":  "<img src='https://assets.ubuntu.com/v1/7aa4ed28-kernelt-vanilla-ehp-2.png' class='p-image-container__image' width='284' height='426' alt='Kernelt' />",
+      "description_html": "<p>We enable Ubuntu Core with the best ODMs and silicon vendors in the world. We continuously test it on leading IoT and edge devices and hardware.</p>",
+      "cta_html": "<a href='#'>Browse all certified hardware&nbsp;&rsaquo;</a>"
+    },
+    {
+      "title_text": "A strong hardware ecosystem",
+      "image_html":  "<img src='https://assets.ubuntu.com/v1/4936d43a-kernelt-vanilla-ehp-3.png' class='p-image-container__image' width='284' height='426' alt='Kernelt' />",
+      "description_html": "<p>We enable Ubuntu Core with the best ODMs and silicon vendors in the world. We continuously test it on leading IoT and edge devices and hardware.</p>",
+      "cta_html": "<a href='#'>Browse all certified hardware&nbsp;&rsaquo;</a>"
+    },
+    {
+      "title_text": "A strong hardware ecosystem",
+      "image_html":  "<img src='https://assets.ubuntu.com/v1/bbe7b062-kernelt-vanilla-ehp-4.png' class='p-image-container__image' width='284' height='426' alt='Kernelt' />",
+      "description_html": "<p>We enable Ubuntu Core with the best ODMs and silicon vendors in the world. We continuously test it on leading IoT and edge devices and hardware.</p>",
+      "cta_html": "<a href='#'>Browse all certified hardware&nbsp;&rsaquo;</a>"
+    }
+  ]
+) %}
+{% endcall %}
 ```
 
 Notes
 - Prefer consistent properties across `items` for visual rhythm.
 - If number of items is divisible by 4/3, layout adjusts to 4/3 columns on large screens.
+- For the parent `title_text` use the text from the first suggestion in the given location, if it is much shorter than the others.
 
 ---
 
@@ -120,7 +147,7 @@ Notes
 
 ---
 
-## Logo section
+## Logo section (aka logo cloud)
 
 Purpose: heading + optional description + a block of logos or CTA blocks (use for partner/client logos).
 
@@ -135,16 +162,77 @@ Jinja import
 {% from "_macros/vf_logo-section.jinja" import vf_logo_section %}
 ```
 
-Minimal usage (blocks array)
-```/dev/null/logo-section-example.jinja#L1-22
+Minimal usage (using call syntax with slots)
+```/dev/null/logo-section-example.jinja#L1-60
 {% from "_macros/vf_logo-section.jinja" import vf_logo_section %}
 
-{% set blocks = [
-  {'type':'logo-block','item':{'logos':[{'attrs':{'src':'/logos/a.svg','alt':'A'}},{'attrs':{'src':'/logos/b.svg','alt':'B'}}]}},
-  {'type':'cta-block','item':{'primary':{'content_html':'Contact us','attrs':{'href':'/contact'}}}}
-] %}
-
-{{ vf_logo_section(title={'text':'Trusted by'}, blocks=blocks, padding='default') }}
+{% call(slot) vf_logo_section(
+  title={
+    "text": "The quick brown fox jumps over the lazy dog"
+  },
+  blocks=[
+    {
+      "type": "cta-block",
+      "item": {
+        "primary": {
+          "content_html": "Primary Button",
+          "attrs": {
+            "href": "#"
+          }
+        },
+        "link": {
+          "content_html": "Lorem ipsum dolor sit amet ›",
+          "attrs": {
+            "href": "#"
+          }
+        }
+      }
+    },
+    {
+      "type": "logo-block",
+      "item": {
+        "logos": [
+          {
+            "src": "https://assets.ubuntu.com/v1/38fdfd23-Dell-logo.png",
+            "alt": "Dell Technologies"
+          },
+          {
+            "src": "https://assets.ubuntu.com/v1/cd5f636a-hp-logo.png",
+            "alt": "Hewlett Packard"
+          },
+          {
+            "src": "https://assets.ubuntu.com/v1/f90702cd-lenovo-logo.png",
+            "alt": "Lenovo"
+          },
+          {
+            "src": "https://assets.ubuntu.com/v1/2ef3c028-amazon-web-services-logo.png",
+            "alt": "Amazon Web Services"
+          },
+          {
+            "src": "https://assets.ubuntu.com/v1/cb7ef8ac-ibm-cloud-logo.png",
+            "alt": "IBM Cloud"
+          },
+          {
+            "src": "https://assets.ubuntu.com/v1/210f44e4-microsoft-azure-new-logo.png",
+            "alt": "Microsoft Azure"
+          },
+          {
+            "src": "https://assets.ubuntu.com/v1/a554a818-google-cloud-logo.png",
+            "alt": "Google Cloud Platform"
+          },
+          {
+            "src": "https://assets.ubuntu.com/v1/b3e692f4-oracle-new-logo.png",
+            "alt": "Oracle"
+          }
+        ]
+      }
+    }
+  ]
+) -%}
+{%- if slot == 'description' -%}
+<p>The quick brown fox jumps over the lazy dog</p>
+{%- endif -%}
+{% endcall -%}
 ```
 
 Notes
@@ -153,48 +241,113 @@ Notes
 
 ---
 
-## Tabs
+## Tab section
 
-Purpose: navigation or content panes controlled by a tab list.
+Purpose: organize related content into separate tabs within a section with title, optional description, and CTA.
 
 Key points
-- Tabs have two contexts: navigation (links) and content (interactive panes).
-- For interactive content panes, JavaScript is required for keyboard navigation and panel toggling.
-- Mark the active tab with `aria-selected="true"` on the corresponding `<li>`.
+- Required params: `title` (Object with `text`), `tabs` (Array of tab objects).
+- Layouts: `'full-width'`, `'50-50'` (default), `'25-75'`.
+- Each tab has `type` (content block type) and `item` (block config).
+- Supported block types vary by layout (e.g., quote only in full-width).
+- JavaScript required for tab interactivity.
 
-SCSS import
-```/dev/null/tabs-scss.jinja#L1-6
-// import Vanilla and include base mixins
-@import 'vanilla-framework';
-@include vf-base;
-@include vf-p-tabs;
+Jinja import
+```/dev/null/tab-section-import.jinja#L1-3
+{% from "_macros/vf_tab-section.jinja" import vf_tab_section %}
 ```
 
-JS import (interactive)
-```/dev/null/tabs-js.jinja#L1-3
-import { tabs } from 'vanilla-framework/js/tabs';
-// Initialize on DOM ready for your tab containers
-tabs();
-```
+Minimal usage
+```/dev/null/tab-section-example.jinja#L1-40
+{% from "_macros/vf_tab-section.jinja" import vf_tab_section %}
 
-Minimal markup (static)
-```/dev/null/tabs-markup.html#L1-20
-<ul class="p-tabs" role="tablist">
-  <li role="tab" aria-selected="true">Tab A</li>
-  <li role="tab" aria-selected="false">Tab B</li>
-  <li role="tab" aria-selected="false">Tab C</li>
-</ul>
-
-<div class="p-tabs__panels">
-  <div role="tabpanel">Content A</div>
-  <div role="tabpanel" hidden>Content B</div>
-  <div role="tabpanel" hidden>Content C</div>
-</div>
+{{ vf_tab_section(
+  title={"text": "Features"},
+  description={"content": "Explore our key features", "type": "text"},
+  layout="50-50",
+  tabs=[
+    {
+      "tab_html": "Logos",
+      "type": "logo-block",
+      "item": {
+        "logos": [
+          {"attrs": {"src": "https://assets.ubuntu.com/v1/cd5f636a-hp-logo.png", "alt": "HP"}},
+          {"attrs": {"src": "https://assets.ubuntu.com/v1/f90702cd-lenovo-logo.png", "alt": "Lenovo"}}
+        ]
+      }
+    },
+    {
+      "tab_html": "Blog",
+      "type": "blog",
+      "item": {
+        "articles": [
+          {
+            "title": {"text": "Getting started", "link_attrs": {"href": "#"}},
+            "description": {"text": "Learn the basics"},
+            "metadata": {
+              "authors": [{"text": "Author Name", "link_attrs": {"href": "#"}}],
+              "date": {"text": "15 March 2025"}
+            }
+          }
+        ]
+      }
+    }
+  ]
+) }}
 ```
 
 Notes
-- For accessible keyboard navigation follow WAI-ARIA tab pattern (arrow keys, home/end).
-- Import and initialize the JS module for interactive behaviour.
+- Block types: `quote`, `linked-logo`, `logo-block`, `divided-section`, `blog`, `basic-section`.
+- Full-width supports quote; 50/50 supports divided-section and basic-section; all support linked-logo, logo-block, blog.
+- Requires JS module: `import {tabs} from 'vanilla-framework/js'; tabs.initTabs('[role="tablist"]');`
+
+---
+
+## Tiered list
+
+Purpose: list of paired titles and descriptions with optional top-level description and CTAs.
+
+Key points
+- Required params: `is_description_full_width_on_desktop` (bool), `is_list_full_width_on_tablet` (bool).
+- Uses slots: `title`, `description` (optional), `list_item_title_[1-25]`, `list_item_description_[1-25]`, `cta` (optional).
+- Layouts determined by boolean flags (50/50 vs full-width on different breakpoints).
+- Max 25 list items.
+
+Jinja import
+```/dev/null/tiered-list-import.jinja#L1-3
+{% from "_macros/vf_tiered-list.jinja" import vf_tiered_list %}
+```
+
+Minimal usage
+```/dev/null/tiered-list-example.jinja#L1-30
+{% from "_macros/vf_tiered-list.jinja" import vf_tiered_list %}
+
+{% call(slot) vf_tiered_list(
+  is_description_full_width_on_desktop=true,
+  is_list_full_width_on_tablet=false
+) %}
+  {% if slot == 'title' %}
+    <h2>Key benefits</h2>
+  {% elif slot == 'description' %}
+    <p>Discover what makes our solution unique.</p>
+  {% elif slot == 'list_item_title_1' %}
+    <h3>Fast deployment</h3>
+  {% elif slot == 'list_item_description_1' %}
+    <p>Get up and running in minutes with our streamlined setup.</p>
+  {% elif slot == 'list_item_title_2' %}
+    <h3>Enterprise support</h3>
+  {% elif slot == 'list_item_description_2' %}
+    <p>24/7 support from our expert team.</p>
+  {% elif slot == 'cta' %}
+    <a href="#" class="p-button--positive">Get started</a>
+  {% endif %}
+{% endcall %}
+```
+
+Notes
+- `is_description_full_width_on_desktop=true` makes title/description span full width on desktop.
+- `is_list_full_width_on_tablet=false` makes list items display side-by-side on tablet.
+- Use numbered slots (`list_item_title_1`, `list_item_description_1`, etc.) for each list item pair.
 
 ---
 

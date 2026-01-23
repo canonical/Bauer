@@ -88,18 +88,19 @@ func (e *Engine) RenderChunk(data PromptData) (string, error) {
 	buf.WriteString(instructions)
 	buf.WriteString("\n\n")
 
-	// Write raw JSON suggestions
+	// Append Vanilla patterns reference (before the data)
+	buf.WriteString("---\n\n")
+	buf.WriteString(vanillaPatterns)
+	buf.WriteString("\n\n")
+
+	// Write raw JSON suggestions (last, as the data to process)
+	buf.WriteString("---\n\n")
 	buf.WriteString("# Suggestions Data\n\n")
 	buf.WriteString("The following is the JSON array of location-grouped suggestions to implement.\n")
 	buf.WriteString("Process each location one by one, applying all suggestions for that location before moving to the next.\n\n")
 	buf.WriteString("```json\n")
 	buf.WriteString(data.SuggestionsJSON)
-	buf.WriteString("\n```\n\n")
-
-	// Append Vanilla patterns reference
-	buf.WriteString("---\n\n")
-	buf.WriteString("# Vanilla Framework Patterns Reference\n\n")
-	buf.WriteString(vanillaPatterns)
+	buf.WriteString("\n```\n")
 
 	return buf.String(), nil
 }

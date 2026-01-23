@@ -1,0 +1,36 @@
+# TODOs
+
+1) cmd/bauer/main.go: "// TODO disable with a flag or env var"
+   Summary: Logging to `bauer-log.json` is hardcoded; make log output optional or controllable via a CLI flag or environment variable so users can disable or change logging destination/behavior.
+
+2) internal/copilotcli/client.go: "LogLevel: \"info\", // TODO make configurable - set to error in production"
+   Summary: Make the Copilot SDK log level configurable (e.g., via config/env/flag) and default to `error` in production to reduce noisy logs.
+
+3) internal/copilotcli/client.go: "// TODO these 2 events should be only for debugging/verbose logging"
+   Summary: Streamed events `assistant.message_delta` and `assistant.reasoning_delta` should be gated behind a debug/verbose mode to avoid spamming normal runs.
+
+4) internal/gdocs/process.go: "// TODO need to remove this filtering and add instructions on how exactly to approach metadata fields"
+   Summary: Currently suggestions inside metadata tables are filtered out; decide and document a clear policy for handling metadata suggestions (include/exclude and how to present them).
+
+5) internal/gdocs/extraction.go: "// TODO this and all sub functions can be made concurrent for speed"
+   Summary: Consider converting traversal and extraction functions to use concurrency (goroutines/workers) to speed up processing of large documents.
+
+6) internal/gdocs/extraction.go: "// TODO add recursion depth control on this and sub functions"
+   Summary: Add recursion depth limits or safeguards to avoid excessive recursion on deeply nested doc structures.
+
+7) internal/gdocs/extraction.go: "// TODO this should be combined with ExtractSuggestions to avoid multiple traversals of the same document"
+   Summary: Merge `BuildDocumentStructure` and `ExtractSuggestions` passes to avoid multiple traversals and improve performance.
+
+8) internal/gdocs/extraction.go: "// TODO we need to mention the exact style change, this is currently not helpful at all"
+   Summary: Improve detection and representation of style changes (bold/italic/underline) so that verification and model prompts can reason about them precisely rather than skipping them.
+
+9) .git/hooks/sendemail-validate.sample: "# TODO: Replace with appropriate checks (e.g. spell checking)."
+   Summary: Add concrete checks for cover letters like spell checking or other validations relevant to your workflow.
+
+10) .git/hooks/sendemail-validate.sample: "# TODO: Replace with appropriate checks for this patch"
+    Summary: Add patch-level validations (e.g., apply cleanly, run `checkpatch.pl`, or run linters) to block bad patches.
+
+11) .git/hooks/sendemail-validate.sample: "# TODO: Replace with appropriate checks for the whole series"
+    Summary: Add series-level checks (e.g., quick build, test run, style checks) to validate an entire patch series before sending.
+
+
