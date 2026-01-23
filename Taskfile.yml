@@ -23,7 +23,8 @@ tasks:
       DOC_ID: "13pde34a6x5sAfWf30lgVm2NjsOiUdN-F8XSpANzjBfw"
       CHUNK_SIZE: "5"
       OUTPUT_DIR: "bauer-output"
+      MODEL: "gpt-5-mini-high"
     cmds:
-      - go run cmd/bauer/main.go --doc-id "{{.DOC_ID}}" --credentials "{{.CREDS}}" --chunk-size {{.CHUNK_SIZE}} --output-dir "{{.OUTPUT_DIR}}" --dry-run
+      - go run cmd/bauer/main.go --doc-id "{{.DOC_ID}}" --credentials "{{.CREDS}}" --chunk-size {{.CHUNK_SIZE}} --output-dir "{{.OUTPUT_DIR}}" --model "{{.MODEL}}" --dry-run
     # requires:
     #   vars: [DOC_ID]

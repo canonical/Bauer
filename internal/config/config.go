@@ -25,6 +25,10 @@ type Config struct {
 	// OutputDir is the directory where generated prompt files will be saved.
 	// Default is "bauer-output" if not specified.
 	OutputDir string
+
+	// Model is the Copilot model to use for sessions.
+	// Default is "gpt-5-mini-high" if not specified.
+	Model string
 }
 
 // Load parses command-line flags and returns a validated Config.
@@ -40,6 +44,7 @@ func Load() (*Config, error) {
 	dryRun := flag.Bool("dry-run", false, "Run extraction and planning only; skip Copilot and PR creation")
 	chunkSize := flag.Int("chunk-size", 10, "Maximum number of locations per chunk (default: 10)")
 	outputDir := flag.String("output-dir", "bauer-output", "Directory for generated prompt files (default: bauer-output)")
+	model := flag.String("model", "gpt-5-mini-high", "Copilot model to use for sessions (default: gpt-5-mini-high)")
 
 	// Custom usage message
 	flag.Usage = func() {
@@ -57,6 +62,7 @@ func Load() (*Config, error) {
 		DryRun:          *dryRun,
 		ChunkSize:       *chunkSize,
 		OutputDir:       *outputDir,
+		Model:           *model,
 	}
 
 	if err := cfg.Validate(); err != nil {
