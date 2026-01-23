@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"time"
 
 	"bauer/internal/config"
 	"bauer/internal/copilotcli"
@@ -15,6 +16,8 @@ import (
 )
 
 func main() {
+	startTime := time.Now()
+
 	fmt.Println("BAU - Build Automation Utility")
 	fmt.Println(strings.Repeat("=", 80))
 	fmt.Println()
@@ -54,7 +57,9 @@ func main() {
 
 	// 3. Initialize GDocs Client
 	fmt.Println("[1/4] Extracting from Google Doc...")
-	client, err := gdocs.NewClient(ctx, cfg.CredentialsPath)
+	extractionStart := time.Now()
+
+	gdocsClient, err := gdocs.NewClient(ctx, cfg.CredentialsPath)
 	if err != nil {
 		slog.Error("Failed to initialize Google Docs client", slog.String("error", err.Error()))
 		fmt.Fprintf(os.Stderr, "Failed to initialize Google Docs client: %v\n", err)
@@ -62,11 +67,13 @@ func main() {
 	}
 
 	// 4. Process Document
-	result, err := client.ProcessDocument(ctx, cfg.DocID)
+	result, err := gdocsClient.ProcessDocument(ctx, cfg.DocID)
 	if err != nil {
 		// Error logging is handled in ProcessDocument
 		os.Exit(1)
 	}
+
+	extractionDuration := time.Since(extractionStart)
 
 	// 5. Generate Output JSON (for reference)
 	outputJSON, err := json.MarshalIndent(result, "", "  ")
@@ -85,10 +92,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	slog.Info("Extraction complete", slog.String("output_file", outputFile))
+	slog.Info("Extraction complete",
+		slog.String("output_file", outputFile),
+		slog.Duration("extraction_duration", extractionDuration),
+	)
+
+	fmt.Printf("  ✓ Extraction completed in %s\n", extractionDuration.Round(time.Millisecond))
+	fmt.Println()
 
 	// 6. Initialize Prompt Engine
 	fmt.Println("[2/4] Generating technical plan...")
+	planStart := time.Now()
 	engine, err := prompt.NewEngine()
 	if err != nil {
 		slog.Error("Failed to initialize prompt engine", slog.String("error", err.Error()))
@@ -102,7 +116,6 @@ func main() {
 		slog.Int("total_locations", totalLocations),
 		slog.Int("chunk_size", cfg.ChunkSize),
 	)
-
 	chunks, err := engine.GenerateAllChunks(
 		result,
 		cfg.ChunkSize,
@@ -114,9 +127,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	planDuration := time.Since(planStart)
+
 	// 8. Report Results
 	fmt.Printf("  ✓ Saved: %s\n", outputFile)
 	fmt.Printf("  ✓ Generated %d chunk file(s) in '%s/'\n", len(chunks), cfg.OutputDir)
+	fmt.Printf("  ✓ Planning completed in %s\n", planDuration.Round(time.Millisecond))
 	for _, chunk := range chunks {
 		slog.Info("Generated chunk",
 			slog.Int("chunk_number", chunk.ChunkNumber),
@@ -127,6 +143,8 @@ func main() {
 	fmt.Println()
 
 	if cfg.DryRun {
+		totalDuration := time.Since(startTime)
+
 		fmt.Println("[3/4] Copilot execution (skipped - dry run)")
 		fmt.Println()
 		fmt.Println(strings.Repeat("=", 80))
@@ -136,6 +154,10 @@ func main() {
 		fmt.Printf("    • Extracted: %d suggestions\n", len(result.ActionableSuggestions))
 		fmt.Printf("    • Grouped into: %d location(s)\n", totalLocations)
 		fmt.Printf("    • Generated: %d chunk file(s) in '%s/'\n", len(chunks), cfg.OutputDir)
+		fmt.Printf("\n  Timing:\n")
+		fmt.Printf("    • Extraction: %s\n", extractionDuration.Round(time.Millisecond))
+		fmt.Printf("    • Planning: %s\n", planDuration.Round(time.Millisecond))
+		fmt.Printf("    • Total: %s\n", totalDuration.Round(time.Millisecond))
 		fmt.Printf("\n  Next steps:\n")
 		fmt.Printf("    1. Review generated chunks in '%s/'\n", cfg.OutputDir)
 		fmt.Printf("    2. Run without --dry-run to execute changes via Copilot\n")
@@ -148,8 +170,37 @@ func main() {
 	fmt.Println("[3/4] Executing changes via Copilot...")
 	fmt.Println(strings.Repeat("=", 80))
 
-	// Execute chunks via Copilot SDK
-	if err := executeCopilotChunks(ctx, chunks, cfg); err != nil {
+	// Initialize shared Copilot client
+	cwd, err := os.Getwd()
+	if err != nil {
+		slog.Error("Failed to get working directory", slog.String("error", err.Error()))
+		fmt.Fprintf(os.Stderr, "Failed to get working directory: %v\n", err)
+		os.Exit(1)
+	}
+
+	slog.Info("Initializing Copilot client", slog.String("cwd", cwd))
+	copilotClient, err := copilotcli.NewClient(cwd)
+	if err != nil {
+		slog.Error("Failed to create Copilot client", slog.String("error", err.Error()))
+		fmt.Fprintf(os.Stderr, "Failed to create Copilot client: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Start the Copilot CLI server once
+	if err := copilotClient.Start(); err != nil {
+		slog.Error("Failed to start Copilot", slog.String("error", err.Error()))
+		fmt.Fprintf(os.Stderr, "Failed to start Copilot: %v\n", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := copilotClient.Stop(); err != nil {
+			slog.Error("Failed to stop Copilot client", slog.String("error", err.Error()))
+		}
+	}()
+
+	// Execute chunks via Copilot SDK using shared client
+	chunkOutputs, copilotDuration, err := executeCopilotChunks(ctx, chunks, cfg, copilotClient)
+	if err != nil {
 		slog.Error("Copilot execution failed", slog.String("error", err.Error()))
 		fmt.Fprintf(os.Stderr, "\n❌ Copilot execution failed: %v\n", err)
 		os.Exit(1)
@@ -157,62 +208,88 @@ func main() {
 
 	fmt.Println(strings.Repeat("=", 80))
 	fmt.Printf("  ✓ All %d chunk(s) processed successfully\n", len(chunks))
+	fmt.Printf("  ✓ Total Copilot execution time: %s\n", copilotDuration.Round(time.Millisecond))
 	fmt.Println()
 
-	// 10. Next steps
-	fmt.Println("[4/4] Next steps...")
-	fmt.Println("  • Review the changes made by Copilot")
-	fmt.Println("  • Create a PR with: gh pr create")
-	fmt.Println()
+	// 10. Generate summary if multiple chunks
+	if len(chunks) > 1 {
+		fmt.Println("[4/5] Generating summary...")
+		summaryStart := time.Now()
+
+		if err := copilotClient.GenerateSummary(ctx, chunkOutputs, cfg.SummaryModel); err != nil {
+			slog.Error("Summary generation failed", slog.String("error", err.Error()))
+			fmt.Fprintf(os.Stderr, "  ⚠ Summary generation failed: %v\n", err)
+		} else {
+			summaryDuration := time.Since(summaryStart)
+			fmt.Printf("  ✓ Summary completed in %s\n", summaryDuration.Round(time.Millisecond))
+		}
+		fmt.Println()
+	}
+
+	// 11. Final summary and next steps
+	totalDuration := time.Since(startTime)
+
+	stepLabel := "[4/4]"
+	if len(chunks) > 1 {
+		stepLabel = "[5/5]"
+	}
+
+	fmt.Printf("%s Complete!\n", stepLabel)
 	fmt.Println(strings.Repeat("=", 80))
 	fmt.Println("SUCCESS: Feedback applied!")
 	fmt.Println(strings.Repeat("=", 80))
+	fmt.Printf("  Summary:\n")
+	fmt.Printf("    • Extracted: %d suggestions\n", len(result.ActionableSuggestions))
+	fmt.Printf("    • Processed: %d chunk(s)\n", len(chunks))
+	fmt.Printf("\n  Timing:\n")
+	fmt.Printf("    • Extraction: %s\n", extractionDuration.Round(time.Millisecond))
+	fmt.Printf("    • Planning: %s\n", planDuration.Round(time.Millisecond))
+	fmt.Printf("    • Copilot execution: %s\n", copilotDuration.Round(time.Millisecond))
+	fmt.Printf("    • Total: %s\n", totalDuration.Round(time.Millisecond))
+	fmt.Printf("\n  Next steps:\n")
+	fmt.Printf("    • Review the changes made by Copilot\n")
+	fmt.Printf("    • Create a PR with: gh pr create\n")
+	fmt.Println(strings.Repeat("=", 80))
 }
 
-// executeCopilotChunks executes each chunk via the Copilot SDK
-func executeCopilotChunks(ctx context.Context, chunks []prompt.ChunkResult, cfg *config.Config) error {
-	// Get current working directory
-	cwd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get working directory: %w", err)
-	}
+// executeCopilotChunks executes each chunk via the Copilot SDK and returns outputs
+func executeCopilotChunks(ctx context.Context, chunks []prompt.ChunkResult, cfg *config.Config, client *copilotcli.Client) ([]copilotcli.ChunkOutput, time.Duration, error) {
+	executionStart := time.Now()
 
-	// Initialize Copilot client
-	slog.Info("Initializing Copilot client", slog.String("cwd", cwd))
-	client, err := copilotcli.NewClient(cwd)
-	if err != nil {
-		return fmt.Errorf("failed to create Copilot client: %w", err)
-	}
-
-	// Start the Copilot CLI server
-	if err := client.Start(); err != nil {
-		return fmt.Errorf("failed to start Copilot: %w", err)
-	}
-	defer func() {
-		if err := client.Stop(); err != nil {
-			slog.Error("Failed to stop Copilot client", slog.String("error", err.Error()))
-		}
-	}()
-
-	// Execute each chunk sequentially
+	// Execute each chunk sequentially and collect outputs
+	var outputs []copilotcli.ChunkOutput
 	totalChunks := len(chunks)
+
 	for i, chunk := range chunks {
+		chunkStart := time.Now()
 		fmt.Printf("  [Chunk %d/%d] Processing %s...\n", i+1, totalChunks, chunk.Filename)
 
 		// Execute the chunk
-		if err := client.ExecuteChunk(ctx, chunk.Filename, chunk.ChunkNumber, cfg.Model); err != nil {
-			return fmt.Errorf("failed to execute chunk %d: %w", chunk.ChunkNumber, err)
+		output, err := client.ExecuteChunk(ctx, chunk.Filename, chunk.ChunkNumber, cfg.Model)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to execute chunk %d: %w", chunk.ChunkNumber, err)
 		}
 
-		fmt.Printf("  ✓ Chunk %d/%d completed\n\n", i+1, totalChunks)
+		chunkDuration := time.Since(chunkStart)
+
+		// Collect output
+		outputs = append(outputs, copilotcli.ChunkOutput{
+			ChunkNumber: chunk.ChunkNumber,
+			Output:      output,
+			Duration:    chunkDuration,
+		})
+
+		fmt.Printf("  ✓ Chunk %d/%d completed in %s\n\n", i+1, totalChunks, chunkDuration.Round(time.Millisecond))
 
 		// Log progress
 		slog.Info("Chunk executed successfully",
 			slog.Int("chunk", chunk.ChunkNumber),
 			slog.Int("completed", i+1),
 			slog.Int("total", totalChunks),
+			slog.Duration("duration", chunkDuration),
 		)
 	}
 
-	return nil
+	totalDuration := time.Since(executionStart)
+	return outputs, totalDuration, nil
 }

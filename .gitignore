@@ -7,3 +7,6 @@ bauer-log.json
 .env.local-e
 # BAU output
 bauer-output/
+.DS_Store
+.vscode/
+*.exe

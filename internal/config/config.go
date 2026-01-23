@@ -29,6 +29,10 @@ type Config struct {
 	// Model is the Copilot model to use for sessions.
 	// Default is "gpt-5-mini-high" if not specified.
 	Model string
+
+	// SummaryModel is the Copilot model to use for the summary session.
+	// Default is "gpt-5-mini-high" if not specified.
+	SummaryModel string
 }
 
 // Load parses command-line flags and returns a validated Config.
@@ -45,6 +49,7 @@ func Load() (*Config, error) {
 	chunkSize := flag.Int("chunk-size", 10, "Maximum number of locations per chunk (default: 10)")
 	outputDir := flag.String("output-dir", "bauer-output", "Directory for generated prompt files (default: bauer-output)")
 	model := flag.String("model", "gpt-5-mini-high", "Copilot model to use for sessions (default: gpt-5-mini-high)")
+	summaryModel := flag.String("summary-model", "gpt-5-mini-high", "Copilot model to use for summary session (default: gpt-5-mini-high)")
 
 	// Custom usage message
 	flag.Usage = func() {
@@ -63,6 +68,7 @@ func Load() (*Config, error) {
 		ChunkSize:       *chunkSize,
 		OutputDir:       *outputDir,
 		Model:           *model,
+		SummaryModel:    *summaryModel,
 	}
 
 	if err := cfg.Validate(); err != nil {

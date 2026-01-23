@@ -60,6 +60,7 @@ func (c *Client) ProcessDocument(ctx context.Context, docID string) (*Processing
 	slog.Info("Grouped actionable suggestions", slog.Int("location_groups", len(groupedSuggestions)))
 
 	// Filter out suggestions in the metadata table
+	// TODO need to remove this filtering and add instructions on how exactly to approach metadata fields
 	groupedSuggestions = FilterMetadataSuggestions(groupedSuggestions)
 	slog.Info("Filtered metadata suggestions", slog.Int("location_groups_remaining", len(groupedSuggestions)))
 
