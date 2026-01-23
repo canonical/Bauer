@@ -3,6 +3,7 @@ package gdocs
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"google.golang.org/api/docs/v1"
@@ -176,6 +177,16 @@ func BuildActionableSuggestions(suggestions []Suggestion, structure *DocumentStr
 	const anchorLength = 80
 
 	for _, sugg := range suggestions {
+		// TODO we need to mention the exact style change, this is currently not helpful at all
+		// and breaks the model's ability to correctly verify other related changes.
+		// Potentially can detect only certain change styles like bold/italic/underline.
+		// This needs to be revisited later, with special processing for each style change,
+		// correct integration - or even total separation - from other change types.
+		// For now, skip all style changes completely.
+		if sugg.Type == "text_style_change" {
+			continue
+		}
+
 		as := ActionableSuggestion{
 			ID: sugg.ID,
 		}
@@ -239,17 +250,13 @@ func BuildActionableSuggestions(suggestions []Suggestion, structure *DocumentStr
 				TextAfterChange:  precedingText + followingText,
 			}
 
-		// TODO we need to mention the exact style change, this is currently not helpful at all
-		case "text_style_change":
-			as.Change = SuggestionChange{
-				Type:         "style",
-				OriginalText: sugg.Content,
-				NewText:      sugg.Content,
-			}
-			as.Verification = SuggestionVerification{
-				TextBeforeChange: precedingText + sugg.Content + followingText,
-				TextAfterChange:  precedingText + sugg.Content + followingText,
-			}
+		default:
+			// Skip unknown suggestion types
+			slog.Warn("Unknown suggestion type encountered",
+				slog.String("type", sugg.Type),
+				slog.String("id", sugg.ID),
+			)
+			continue
 		}
 
 		actionable = append(actionable, as)

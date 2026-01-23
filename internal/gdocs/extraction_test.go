@@ -390,6 +390,86 @@ func createContent(text string) []*docs.StructuralElement {
 	}
 }
 
+// TestBuildActionableSuggestions_FilterStyleChanges verifies that style changes are completely filtered out
+func TestBuildActionableSuggestions_FilterStyleChanges(t *testing.T) {
+	structure := &DocumentStructure{
+		TextElements: []TextElementWithPosition{
+			{ID: "text-1", Text: "Normal text ", StartIndex: 0, EndIndex: 12},
+			{ID: "text-2", Text: "bold text", StartIndex: 12, EndIndex: 21},
+			{ID: "text-3", Text: " more text", StartIndex: 21, EndIndex: 31},
+		},
+		Headings: []DocumentHeading{},
+	}
+
+	suggestions := []Suggestion{
+		{
+			ID:         "sugg-insert",
+			Type:       "insertion",
+			Content:    "INSERT",
+			StartIndex: 12,
+			EndIndex:   12,
+		},
+		{
+			ID:         "sugg-delete",
+			Type:       "deletion",
+			Content:    "bold text",
+			StartIndex: 12,
+			EndIndex:   21,
+		},
+		{
+			ID:         "sugg-style-1",
+			Type:       "text_style_change",
+			Content:    "bold text",
+			StartIndex: 12,
+			EndIndex:   21,
+		},
+		{
+			ID:         "sugg-style-2",
+			Type:       "text_style_change",
+			Content:    "more text",
+			StartIndex: 22,
+			EndIndex:   31,
+		},
+	}
+
+	actionable := BuildActionableSuggestions(suggestions, structure, nil)
+
+	// Should only have 2 actionable suggestions (insertion and deletion)
+	// Style changes should be completely filtered out
+	if len(actionable) != 2 {
+		t.Fatalf("Expected 2 actionable suggestions (style changes filtered), got %d", len(actionable))
+	}
+
+	// Verify we only have insertion and deletion, no style changes
+	hasInsertion := false
+	hasDeletion := false
+	for _, as := range actionable {
+		if as.ID == "sugg-insert" {
+			hasInsertion = true
+			if as.Change.Type != "insert" {
+				t.Errorf("Expected change type 'insert', got '%s'", as.Change.Type)
+			}
+		}
+		if as.ID == "sugg-delete" {
+			hasDeletion = true
+			if as.Change.Type != "delete" {
+				t.Errorf("Expected change type 'delete', got '%s'", as.Change.Type)
+			}
+		}
+		// Verify no style change suggestions made it through
+		if as.ID == "sugg-style-1" || as.ID == "sugg-style-2" {
+			t.Errorf("Style change suggestion %s should have been filtered out", as.ID)
+		}
+	}
+
+	if !hasInsertion {
+		t.Error("Insertion suggestion was incorrectly filtered out")
+	}
+	if !hasDeletion {
+		t.Error("Deletion suggestion was incorrectly filtered out")
+	}
+}
+
 // TestGetTextAround tests the text extraction around a position with various edge cases
 func TestGetTextAround(t *testing.T) {
 	tests := []struct {
