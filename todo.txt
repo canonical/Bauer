@@ -24,13 +24,3 @@
 8) internal/gdocs/extraction.go: "// TODO we need to mention the exact style change, this is currently not helpful at all"
    Summary: Improve detection and representation of style changes (bold/italic/underline) so that verification and model prompts can reason about them precisely rather than skipping them.
 
-9) .git/hooks/sendemail-validate.sample: "# TODO: Replace with appropriate checks (e.g. spell checking)."
-   Summary: Add concrete checks for cover letters like spell checking or other validations relevant to your workflow.
-
-10) .git/hooks/sendemail-validate.sample: "# TODO: Replace with appropriate checks for this patch"
-    Summary: Add patch-level validations (e.g., apply cleanly, run `checkpatch.pl`, or run linters) to block bad patches.
-
-11) .git/hooks/sendemail-validate.sample: "# TODO: Replace with appropriate checks for the whole series"
-    Summary: Add series-level checks (e.g., quick build, test run, style checks) to validate an entire patch series before sending.
-
-

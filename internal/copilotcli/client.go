@@ -18,7 +18,6 @@ const (
 	colorCyan   = "\033[36m"
 	colorYellow = "\033[33m"
 	colorDim    = "\033[2m"
-	colorBright = "\033[1m"
 )
 
 // isTTY checks if stdout is a terminal (supports colors)

@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func main() {
+func run() error {
 	startTime := time.Now()
 
 	fmt.Println("BAUer - BAU maker")
@@ -24,8 +24,7 @@ func main() {
 	// 1. Load Configuration
 	cfg, err := config.Load()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error loading configuration: %w", err)
 	}
 
 	// 2. Setup Logging
@@ -33,8 +32,7 @@ func main() {
 	// TODO disable with a flag or env var
 	logFile, err := os.OpenFile("bauer-log.json", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to open log file: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to open log file: %w", err)
 	}
 	defer func() {
 		if err := logFile.Close(); err != nil {
@@ -61,15 +59,14 @@ func main() {
 	gdocsClient, err := gdocs.NewClient(ctx, cfg.CredentialsPath)
 	if err != nil {
 		slog.Error("Failed to initialize Google Docs client", slog.String("error", err.Error()))
-		fmt.Fprintf(os.Stderr, "Failed to initialize Google Docs client: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to initialize Google Docs client: %w", err)
 	}
 
 	// 4. Process Document
 	result, err := gdocsClient.ProcessDocument(ctx, cfg.DocID)
 	if err != nil {
 		// Error logging is handled in ProcessDocument
-		os.Exit(1)
+		return fmt.Errorf("failed to process document: %w", err)
 	}
 
 	extractionDuration := time.Since(extractionStart)
@@ -78,8 +75,7 @@ func main() {
 	outputJSON, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
 		slog.Error("Failed to marshal output", slog.String("error", err.Error()))
-		fmt.Fprintf(os.Stderr, "Failed to generate output JSON: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to generate output JSON: %w", err)
 	}
 
 	// Write JSON to file
@@ -87,8 +83,7 @@ func main() {
 	err = os.WriteFile(outputFile, outputJSON, 0644)
 	if err != nil {
 		slog.Error("Failed to write output file", slog.String("error", err.Error()))
-		fmt.Fprintf(os.Stderr, "Failed to write output file: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to write output file: %w", err)
 	}
 
 	slog.Info("Extraction complete",
@@ -105,8 +100,7 @@ func main() {
 	engine, err := prompt.NewEngine()
 	if err != nil {
 		slog.Error("Failed to initialize prompt engine", slog.String("error", err.Error()))
-		fmt.Fprintf(os.Stderr, "Failed to initialize prompt engine: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to initialize prompt engine: %w", err)
 	}
 
 	// 7. Generate Prompts from Chunks
@@ -122,8 +116,7 @@ func main() {
 	)
 	if err != nil {
 		slog.Error("Failed to generate prompts", slog.String("error", err.Error()))
-		fmt.Fprintf(os.Stderr, "Failed to generate prompts: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to generate prompts: %w", err)
 	}
 
 	planDuration := time.Since(planStart)
@@ -162,7 +155,7 @@ func main() {
 		fmt.Printf("    2. Run without --dry-run to execute changes via Copilot\n")
 		fmt.Printf("    3. Or manually pass chunk files to: gh copilot\n")
 		fmt.Println(strings.Repeat("=", 80))
-		return
+		return nil
 	}
 
 	// 9. Execute via Copilot SDK
@@ -173,23 +166,24 @@ func main() {
 	cwd, err := os.Getwd()
 	if err != nil {
 		slog.Error("Failed to get working directory", slog.String("error", err.Error()))
-		fmt.Fprintf(os.Stderr, "Failed to get working directory: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
 	slog.Info("Initializing Copilot client", slog.String("cwd", cwd))
 	copilotClient, err := copilotcli.NewClient(cwd)
 	if err != nil {
 		slog.Error("Failed to create Copilot client", slog.String("error", err.Error()))
-		fmt.Fprintf(os.Stderr, "Failed to create Copilot client: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to create Copilot client: %w", err)
 	}
 
 	// Start the Copilot CLI server once
 	if err := copilotClient.Start(); err != nil {
+		// Attempt to stop the client if Start failed
+		if stopErr := copilotClient.Stop(); stopErr != nil {
+			slog.Error("Failed to stop Copilot client after start failure", slog.String("error", stopErr.Error()))
+		}
 		slog.Error("Failed to start Copilot", slog.String("error", err.Error()))
-		fmt.Fprintf(os.Stderr, "Failed to start Copilot: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to start Copilot: %w", err)
 	}
 	defer func() {
 		if err := copilotClient.Stop(); err != nil {
@@ -201,8 +195,7 @@ func main() {
 	chunkOutputs, copilotDuration, err := executeCopilotChunks(ctx, chunks, cfg, copilotClient)
 	if err != nil {
 		slog.Error("Copilot execution failed", slog.String("error", err.Error()))
-		fmt.Fprintf(os.Stderr, "\n❌ Copilot execution failed: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("copilot execution failed: %w", err)
 	}
 
 	fmt.Println(strings.Repeat("=", 80))
@@ -249,6 +242,15 @@ func main() {
 	fmt.Printf("    • Review the changes made by Copilot\n")
 	fmt.Printf("    • Create a PR with: gh pr create\n")
 	fmt.Println(strings.Repeat("=", 80))
+
+	return nil
+}
+
+func main() {
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 // executeCopilotChunks executes each chunk via the Copilot SDK and returns outputs

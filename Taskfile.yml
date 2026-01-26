@@ -26,6 +26,5 @@ tasks:
       MODEL: "gpt-5-mini-high"
     cmds:
       - go run cmd/bauer/main.go --doc-id "{{.DOC_ID}}" --credentials "{{.CREDS}}" --chunk-size {{.CHUNK_SIZE}} --output-dir "{{.OUTPUT_DIR}}" --model "{{.MODEL}}"
-      # - --dry-run
     # requires:
     #   vars: [DOC_ID]

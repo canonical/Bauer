@@ -135,7 +135,7 @@ Common patterns you'll encounter:
 - **Equal Heights**: Grid of cards/tiles with consistent heights
 - **Text Spotlight**: Callout list highlighting benefits (2-7 items)
 - **Logo Section**: Partner/client logo displays
-- **Tabs**: Navigation or content panes
+- **Tab section**: Navigation or content panes
 - **Basic Section**: Flexible 2-column content sections
 
 **Note**: The complete Vanilla Framework Patterns Reference appears immediately after these instructions and before the suggestions data.
