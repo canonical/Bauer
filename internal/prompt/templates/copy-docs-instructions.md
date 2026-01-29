@@ -1,6 +1,6 @@
-# BAU Implementation Instructions
+# BAU Copy Update Implementation Instructions
 
-You are assisting with implementing feedback from a Google Doc into a web project that uses the Vanilla Framework from Canonical. The feedback is provided as structured suggestions in JSON format. 
+You are assisting with implementing copy suggestions from a Google Doc into a web project that uses the Vanilla Framework from Canonical. The feedback is provided as structured suggestions in JSON format. You are only required to update text fields. 
 
 Your task is to accurately apply these suggestions to the correct files in the project repository. Once you read and understand this document, implement all of the suggestions in the provided JSON data, and follow the instructions carefully.
 
@@ -9,7 +9,7 @@ Your task is to accurately apply these suggestions to the correct files in the p
 - **Framework**: Vanilla Framework (https://vanillaframework.io/)
 - **Template Engine**: Jinja2
 - **Repository**: Current working directory (ensure you're in the target repo)
-- **Branch**: Currently active branch (ensure you're on the correct branch)
+- **Branch**: Currently active branch
 - **Document**: {{.DocumentTitle}}
 
 ## Finding Target Files
@@ -123,20 +123,9 @@ For each suggestion:
 
 ## Vanilla Framework Patterns
 
-When implementing pattern-related changes (identified by `table_title` in location metadata):
+This section is added so you can understand the vanilla patterns you may encounter. Do NOT change any pattern, and report to the user any pattern mismatches.
 
-1. **Identify the pattern**: Check the `table_title` field (e.g., "Hero", "Equal Heights")
-2. **Match with reference**: Find the corresponding pattern in the Vanilla Patterns Reference section that follows these instructions
-3. **Apply correctly**: Follow the pattern's structure, required params, and slots
-4. **Import macros**: Ensure proper Jinja macro imports at the top of the template
-
-Common patterns you'll encounter:
-- **Hero**: Prominent banner with title, description, CTA, images
-- **Equal Heights**: Grid of cards/tiles with consistent heights
-- **Text Spotlight**: Callout list highlighting benefits (2-7 items)
-- **Logo Section**: Partner/client logo displays
-- **Tab section**: Navigation or content panes
-- **Basic Section**: Flexible 2-column content sections
+To identify a pattern from the suggestion use `table_title` in location metadata and match with the corresponding pattern in the Vanilla Patterns Reference section that follows these instructions.
 
 **Note**: The complete Vanilla Framework Patterns Reference appears immediately after these instructions and before the suggestions data.
 
@@ -154,20 +143,10 @@ If you encounter issues:
    - Report the missing anchor and suggestion details
    - Ask for manual verification
 
-3. **Pattern not recognized**:
-   - Check the Vanilla Patterns section below
-   - If pattern is missing, implement as generic HTML
-   - Flag for review
-
-4. **Verification mismatch**:
+3. **Verification mismatch**:
    - Report expected vs actual text
    - Indicate which suggestion failed
    - Continue with remaining suggestions
-
-5. **Pattern includes images**:
-  - Add a placeholder and use the attached Alt text if found
-  - Report this to the user in your summary
-  - Continue with the remaining suggestions
 
 ## Document Structure
 
@@ -181,8 +160,7 @@ This prompt is organized in the following order:
 
 **Chunk {{.ChunkNumber}} of {{.TotalChunks}}**
 
-After reviewing the Vanilla Framework Patterns Reference section, process the suggestions data at the end of this document one location at a time. After processing ALL locations in this chunk, report:
+Process the suggestions data at the end of this document one location at a time. After processing ALL locations in this chunk, report:
 - Number of locations processed
 - Number of successful changes
 - Any errors or issues encountered
-- For each chunk, report if a vanilla pattern was changed or added and which one

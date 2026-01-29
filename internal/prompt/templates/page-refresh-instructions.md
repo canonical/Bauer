@@ -1,4 +1,4 @@
-# BAU Implementation Instructions
+# BAU Page Refresh Implementation Instructions
 
 You are assisting with implementing feedback from a Google Doc into a web project that uses the Vanilla Framework from Canonical. The feedback is provided as structured suggestions in JSON format. 
 
