@@ -19,8 +19,12 @@ type Config struct {
 	DryRun bool
 
 	// ChunkSize is the maximum number of locations to process in a single chunk.
-	// Default is 10 if not specified.
+	// Default is 1 if not specified, or 5 if PageRefresh is true.
 	ChunkSize int
+
+	// PageRefresh indicates if the page refresh mode should be used.
+	// When true, uses page-refresh-instructions.md template and defaults ChunkSize to 5.
+	PageRefresh bool
 
 	// OutputDir is the directory where generated prompt files will be saved.
 	// Default is "bauer-output" if not specified.
@@ -46,7 +50,8 @@ func Load() (*Config, error) {
 	docID := flag.String("doc-id", "", "Google Doc ID to extract feedback from (required)")
 	credentialsPath := flag.String("credentials", "", "Path to service account JSON (required)")
 	dryRun := flag.Bool("dry-run", false, "Run extraction and planning only; skip Copilot and PR creation")
-	chunkSize := flag.Int("chunk-size", 10, "Maximum number of locations per chunk (default: 10)")
+	chunkSize := flag.Int("chunk-size", 0, "Maximum number of locations per chunk (default: 1, or 5 if --page-refresh is set)")
+	pageRefresh := flag.Bool("page-refresh", false, "Use page refresh mode with page-refresh-instructions template (default chunk size: 5)")
 	outputDir := flag.String("output-dir", "bauer-output", "Directory for generated prompt files (default: bauer-output)")
 	model := flag.String("model", "gpt-5-mini-high", "Copilot model to use for sessions (default: gpt-5-mini-high)")
 	summaryModel := flag.String("summary-model", "gpt-5-mini-high", "Copilot model to use for summary session (default: gpt-5-mini-high)")
@@ -61,11 +66,23 @@ func Load() (*Config, error) {
 
 	flag.Parse()
 
+	// Determine effective chunk size based on flags
+	effectiveChunkSize := *chunkSize
+	if effectiveChunkSize == 0 {
+		// User didn't specify chunk size, apply defaults
+		if *pageRefresh {
+			effectiveChunkSize = 5
+		} else {
+			effectiveChunkSize = 1
+		}
+	}
+
 	cfg := &Config{
 		DocID:           *docID,
 		CredentialsPath: *credentialsPath,
 		DryRun:          *dryRun,
-		ChunkSize:       *chunkSize,
+		ChunkSize:       effectiveChunkSize,
+		PageRefresh:     *pageRefresh,
 		OutputDir:       *outputDir,
 		Model:           *model,
 		SummaryModel:    *summaryModel,

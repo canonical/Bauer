@@ -11,14 +11,20 @@ import (
 	"bauer/internal/gdocs"
 )
 
-//go:embed templates/instructions.md
-var instructionsTemplate string
+//go:embed templates/page-refresh-instructions.md
+var pageRefreshInstructionsTemplate string
+
+//go:embed templates/copy-docs-instructions.md
+var copyDocsInstructionsTemplate string
 
 //go:embed templates/vanilla-patterns.md
 var vanillaPatterns string
 
 // Engine handles prompt generation for Copilot
-type Engine struct{}
+type Engine struct {
+	// UsePageRefresh determines which instruction template to use
+	UsePageRefresh bool
+}
 
 // PromptData contains all data needed to render a complete prompt
 type PromptData struct {
@@ -46,8 +52,10 @@ type ChunkResult struct {
 }
 
 // NewEngine creates a new prompt engine
-func NewEngine() (*Engine, error) {
-	return &Engine{}, nil
+func NewEngine(usePageRefresh bool) (*Engine, error) {
+	return &Engine{
+		UsePageRefresh: usePageRefresh,
+	}, nil
 }
 
 // ChunkLocations splits location groups into chunks based on location count (not suggestion count)
@@ -79,7 +87,11 @@ func (e *Engine) RenderChunk(data PromptData) (string, error) {
 	var buf bytes.Buffer
 
 	// Write instructions with template variable substitution
-	instructions := instructionsTemplate
+	// Select template based on page refresh mode
+	instructions := copyDocsInstructionsTemplate
+	if e.UsePageRefresh {
+		instructions = pageRefreshInstructionsTemplate
+	}
 	instructions = replaceVar(instructions, "DocumentTitle", data.DocumentTitle)
 	instructions = replaceVar(instructions, "SuggestedURL", data.SuggestedURL)
 	instructions = replaceVar(instructions, "ChunkNumber", fmt.Sprintf("%d", data.ChunkNumber))

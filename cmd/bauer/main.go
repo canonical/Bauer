@@ -97,7 +97,7 @@ func run() error {
 	// 6. Initialize Prompt Engine
 	fmt.Println("[2/4] Generating technical plan...")
 	planStart := time.Now()
-	engine, err := prompt.NewEngine()
+	engine, err := prompt.NewEngine(cfg.PageRefresh)
 	if err != nil {
 		slog.Error("Failed to initialize prompt engine", slog.String("error", err.Error()))
 		return fmt.Errorf("failed to initialize prompt engine: %w", err)

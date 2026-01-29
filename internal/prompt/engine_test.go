@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewEngine(t *testing.T) {
-	engine, err := NewEngine()
+	engine, err := NewEngine(false)
 	if err != nil {
 		t.Fatalf("NewEngine() failed: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestChunkLocations(t *testing.T) {
 }
 
 func TestRenderChunk(t *testing.T) {
-	engine, err := NewEngine()
+	engine, err := NewEngine(false)
 	if err != nil {
 		t.Fatalf("Failed to create engine: %v", err)
 	}
@@ -153,8 +153,65 @@ func TestRenderChunk(t *testing.T) {
 	}
 }
 
+func TestRenderChunkWithPageRefresh(t *testing.T) {
+	// Test with PageRefresh enabled
+	engine, err := NewEngine(true)
+	if err != nil {
+		t.Fatalf("Failed to create engine with PageRefresh: %v", err)
+	}
+
+	data := PromptData{
+		DocumentTitle:   "Test Document",
+		SuggestedURL:    "ubuntu.com/test/page",
+		ChunkNumber:     1,
+		TotalChunks:     1,
+		LocationCount:   1,
+		SuggestionsJSON: `[{"location":{"section":"Body"},"suggestions":[{"id":"test-1"}]}]`,
+	}
+
+	content, err := engine.RenderChunk(data)
+	if err != nil {
+		t.Fatalf("RenderChunk() with PageRefresh failed: %v", err)
+	}
+
+	// Verify content still contains expected sections
+	// (Both templates should have the same structure for now)
+	expectedStrings := []string{
+		"BAU Implementation Instructions",
+		"Test Document",
+		"ubuntu.com/test/page",
+		"Chunk 1 of 1",
+		"Suggestions Data",
+		"```json",
+		"Vanilla Framework Patterns Reference",
+	}
+
+	for _, expected := range expectedStrings {
+		if !contains(content, expected) {
+			t.Errorf("Rendered content with PageRefresh missing expected string: %q", expected)
+		}
+	}
+
+	// Test with PageRefresh disabled
+	engineNormal, err := NewEngine(false)
+	if err != nil {
+		t.Fatalf("Failed to create engine without PageRefresh: %v", err)
+	}
+
+	contentNormal, err := engineNormal.RenderChunk(data)
+	if err != nil {
+		t.Fatalf("RenderChunk() without PageRefresh failed: %v", err)
+	}
+
+	// For now, both templates are identical, so content should be the same
+	// In the future, they may differ
+	if len(content) == 0 || len(contentNormal) == 0 {
+		t.Error("Rendered content should not be empty")
+	}
+}
+
 func TestGenerateAllChunks(t *testing.T) {
-	engine, err := NewEngine()
+	engine, err := NewEngine(false)
 	if err != nil {
 		t.Fatalf("Failed to create engine: %v", err)
 	}
