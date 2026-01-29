@@ -15,26 +15,22 @@ sudo snap install bauer
 brew install britneywwc/bauer
 ```
 
+N.B. You need to install [Copilot CLI](https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli) Copilot CLI which is used by Bauer.
+
 ## Configuration
 1. Install [Copilot CLI](https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli)
 2. Create `credentials.json` file and copy the structure from the [default file](https://github.com/muhammadbassiony/Bauer/blob/main/credentials.json)
 3. Get credentials from Google Cloud service or Bitwarden (internally)
-4. Fill up `credentials.json` with Google Cloud credentials.
-   Required fields: 
-- `type`: "service_account"
-- `project_id`: GCP project ID
-- `private_key`: RSA private key
-- `client_email`: Service account email
-4. Share copy document with service account (if `useDelegation = false`)
-5. If you are not using Bitwarden credentials, make sure to enable APIs in GCP: Google Docs API, Google Drive API
+4. Fill up `credentials.json` with Google Cloud credentials (see [Generating Google Cloud credentials](https://developers.google.com/workspace/guides/create-credentials)).
+5. Share copy document with service account
 
 ## Usage
-1. Clone this repository
+1. Install bauer using the instructions above
 2. Check that `bauer` is installed
 ```
 bauer
 ```
-3. Get document ID from Google Document
+3. Get document ID from Google Document & share the document with the service account
 4. Run Bauer
 ```bash
 bauer --doc-id <your-document-id> --credentials ./credentials.json
@@ -44,10 +40,11 @@ bauer --doc-id <your-document-id> --credentials ./credentials.json
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--chunk-size` | int | `30` | Number of suggestions per chunk sent to Copilot |
+| `--chunk-size` | int | `1` | Total number of chunks to create (default: 1, or 5 if --page-refresh is set) |
 | `--dry-run` | bool | `false` | Run extraction and planning only; skip Copilot execution and PR creation |
 | `--output-dir` | string | `bauer-output` | Output directory for generated files |
-| `--model` | string | `gpt-5-mini` | Copilot model to use for code generation |
+| `--model` | string | `gpt-5-mini-high` | Copilot model to use for code generation |
+| `--page-refresh` | bool | `false` | Whether this is a page refresh, or the default copy update |
 
 ### Examples
 
@@ -75,9 +72,14 @@ bauer --doc-id <your-document-id> \
 ```bash
 bauer --doc-id <your-document-id> \
         --credentials ./credentials.json \
-        --model "gpt-4-turbo"
+        --model "claude-sonnet-4.5"
 ```
-
+### Page refresh
+```bash
+bauer --doc-id <your-document-id> \
+        --credentials ./credentials.json \
+        --page-refresh
+```
 
 ## Local development
 ### Prerequisites
@@ -86,14 +88,30 @@ bauer --doc-id <your-document-id> \
 3. Install [Copilot CLI](https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli)
 
 ## Steps
-1. Build the project with task
+1. Modify the [Taskfile](./Taskfile.yml) with your document ID and credentials path for convenience
+2. Run the project with task
 ```
-task build
+task run
 ```
-2. Run the project with `./bauer` command
-
 
 ## Documentation
 For more information refer to [`ARCHITECTURE.md`](/docs/ARCHITECTURE.md)
 
-Full details of the specification can be found in [`FULL_SPEC.md`](/docs/FULL_SPEC.md)
+## Future improvements
+
+### Short term
+- Automatically open PR with changes applied to the document using Google Docs API
+- Improve prompt templates for better results (this requires a lot of trial and error)
+
+for code improvements, you can also refer to our [todo](./todo.txt) list
+
+### Long term
+
+On the long term, BAUer should evolve into a full-fledged API service, with the following features:
+- Automatic Jira ticket hooks to trigger workflows
+- Unified service account with domain wide delegation
+- Calling LLMs - with varying implementation complexity - via: 
+        - calling LLM APIs directly
+        - spinning up ephemeral Copilot CLI instances
+        - self-hosted LLMs (can use open source models such as Llama, openAI OSS, deepseek, etc)
+- Automatic PR creations and reviewer assignments
