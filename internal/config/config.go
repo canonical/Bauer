@@ -18,7 +18,7 @@ type Config struct {
 	// DryRun indicates if the tool should skip side-effect operations (Copilot CLI, PR creation).
 	DryRun bool
 
-	// ChunkSize is the maximum number of locations to process in a single chunk.
+	// ChunkSize is the total number of chunks to create from all locations.
 	// Default is 1 if not specified, or 5 if PageRefresh is true.
 	ChunkSize int
 
@@ -50,7 +50,7 @@ func Load() (*Config, error) {
 	docID := flag.String("doc-id", "", "Google Doc ID to extract feedback from (required)")
 	credentialsPath := flag.String("credentials", "", "Path to service account JSON (required)")
 	dryRun := flag.Bool("dry-run", false, "Run extraction and planning only; skip Copilot and PR creation")
-	chunkSize := flag.Int("chunk-size", 0, "Maximum number of locations per chunk (default: 1, or 5 if --page-refresh is set)")
+	chunkSize := flag.Int("chunk-size", 0, "Total number of chunks to create (default: 1, or 5 if --page-refresh is set)")
 	pageRefresh := flag.Bool("page-refresh", false, "Use page refresh mode with page-refresh-instructions template (default chunk size: 5)")
 	outputDir := flag.String("output-dir", "bauer-output", "Directory for generated prompt files (default: bauer-output)")
 	model := flag.String("model", "gpt-5-mini-high", "Copilot model to use for sessions (default: gpt-5-mini-high)")

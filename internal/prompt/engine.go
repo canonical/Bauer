@@ -58,25 +58,41 @@ func NewEngine(usePageRefresh bool) (*Engine, error) {
 	}, nil
 }
 
-// ChunkLocations splits location groups into chunks based on location count (not suggestion count)
-func ChunkLocations(groups []gdocs.LocationGroupedSuggestions, chunkSize int) [][]gdocs.LocationGroupedSuggestions {
-	if chunkSize <= 0 {
-		chunkSize = 10
+// ChunkLocations splits location groups into the desired number of chunks
+// chunkSize is the desired number of chunks to create, not locations per chunk
+func ChunkLocations(groups []gdocs.LocationGroupedSuggestions, desiredChunks int) [][]gdocs.LocationGroupedSuggestions {
+	if desiredChunks <= 0 {
+		desiredChunks = 1
 	}
+
+	totalLocations := len(groups)
+
+	// Handle edge cases
+	if totalLocations == 0 {
+		return [][]gdocs.LocationGroupedSuggestions{{}}
+	}
+
+	// If desired chunks is greater than or equal to total locations,
+	// create one chunk per location
+	if desiredChunks >= totalLocations {
+		var chunks [][]gdocs.LocationGroupedSuggestions
+		for _, group := range groups {
+			chunks = append(chunks, []gdocs.LocationGroupedSuggestions{group})
+		}
+		return chunks
+	}
+
+	// Calculate locations per chunk (rounded up to ensure all locations are included)
+	locationsPerChunk := (totalLocations + desiredChunks - 1) / desiredChunks
 
 	var chunks [][]gdocs.LocationGroupedSuggestions
 
-	for i := 0; i < len(groups); i += chunkSize {
-		end := i + chunkSize
-		if end > len(groups) {
-			end = len(groups)
+	for i := 0; i < totalLocations; i += locationsPerChunk {
+		end := i + locationsPerChunk
+		if end > totalLocations {
+			end = totalLocations
 		}
 		chunks = append(chunks, groups[i:end])
-	}
-
-	// Handle case where there are no groups
-	if len(chunks) == 0 {
-		return [][]gdocs.LocationGroupedSuggestions{{}}
 	}
 
 	return chunks

@@ -26,25 +26,25 @@ func TestChunkLocations(t *testing.T) {
 		expectedChunks int
 	}{
 		{
-			name: "single group fits in one chunk",
+			name: "single location - request 1 chunk",
 			groups: []gdocs.LocationGroupedSuggestions{
 				{Suggestions: makeTestSuggestions(5)},
 			},
-			chunkSize:      10,
+			chunkSize:      1,
 			expectedChunks: 1,
 		},
 		{
-			name: "multiple groups fit in one chunk",
+			name: "3 locations - request 1 chunk",
 			groups: []gdocs.LocationGroupedSuggestions{
 				{Suggestions: makeTestSuggestions(3)},
 				{Suggestions: makeTestSuggestions(4)},
 				{Suggestions: makeTestSuggestions(2)},
 			},
-			chunkSize:      10,
+			chunkSize:      1,
 			expectedChunks: 1,
 		},
 		{
-			name: "groups split across multiple chunks - exact division",
+			name: "6 locations - request 3 chunks",
 			groups: []gdocs.LocationGroupedSuggestions{
 				{Suggestions: makeTestSuggestions(5)},
 				{Suggestions: makeTestSuggestions(3)},
@@ -53,11 +53,11 @@ func TestChunkLocations(t *testing.T) {
 				{Suggestions: makeTestSuggestions(1)},
 				{Suggestions: makeTestSuggestions(7)},
 			},
-			chunkSize:      3, // 6 locations / 3 per chunk = 2 chunks
-			expectedChunks: 2,
+			chunkSize:      3, // 6 locations / 3 chunks = 2 locations per chunk
+			expectedChunks: 3,
 		},
 		{
-			name: "groups split with remainder",
+			name: "5 locations - request 2 chunks",
 			groups: []gdocs.LocationGroupedSuggestions{
 				{Suggestions: makeTestSuggestions(1)},
 				{Suggestions: makeTestSuggestions(2)},
@@ -65,8 +65,8 @@ func TestChunkLocations(t *testing.T) {
 				{Suggestions: makeTestSuggestions(4)},
 				{Suggestions: makeTestSuggestions(5)},
 			},
-			chunkSize:      2, // 5 locations / 2 per chunk = 3 chunks (2, 2, 1)
-			expectedChunks: 3,
+			chunkSize:      2, // 5 locations / 2 chunks = 3 locs in chunk 1, 2 in chunk 2
+			expectedChunks: 2,
 		},
 		{
 			name:           "empty groups",
@@ -75,14 +75,78 @@ func TestChunkLocations(t *testing.T) {
 			expectedChunks: 1,
 		},
 		{
-			name: "chunk size of 1",
+			name: "25 locations - request 1 chunk",
 			groups: []gdocs.LocationGroupedSuggestions{
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
 				{Suggestions: makeTestSuggestions(1)},
 				{Suggestions: makeTestSuggestions(1)},
 				{Suggestions: makeTestSuggestions(1)},
 			},
 			chunkSize:      1,
-			expectedChunks: 3,
+			expectedChunks: 1,
+		},
+		{
+			name: "25 locations - request 5 chunks",
+			groups: []gdocs.LocationGroupedSuggestions{
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+			},
+			chunkSize:      5,
+			expectedChunks: 5,
+		},
+		{
+			name: "3 locations - request 10 chunks (more than locations)",
+			groups: []gdocs.LocationGroupedSuggestions{
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+				{Suggestions: makeTestSuggestions(1)},
+			},
+			chunkSize:      10,
+			expectedChunks: 3, // Should cap at number of locations
 		},
 	}
 
@@ -105,13 +169,68 @@ func TestChunkLocations(t *testing.T) {
 				t.Errorf("Lost locations during chunking: original=%d, chunked=%d", originalCount, chunkedCount)
 			}
 
-			// Verify chunk sizes (except last chunk which may be smaller)
-			for i := 0; i < len(chunks)-1; i++ {
-				if len(chunks[i]) != tt.chunkSize {
-					t.Errorf("Chunk %d has %d locations, expected %d", i, len(chunks[i]), tt.chunkSize)
+			// Verify chunk distribution is reasonable
+			if originalCount > 0 && tt.chunkSize > 0 && tt.chunkSize < originalCount {
+				expectedLocPerChunk := (originalCount + tt.chunkSize - 1) / tt.chunkSize
+				for i, chunk := range chunks {
+					// Each chunk should have roughly the expected number (may vary by 1)
+					if len(chunk) > expectedLocPerChunk+1 || len(chunk) < 1 {
+						t.Errorf("Chunk %d has %d locations, expected around %d", i, len(chunk), expectedLocPerChunk)
+					}
 				}
 			}
 		})
+	}
+}
+
+func TestChunkLocationsPractical(t *testing.T) {
+	// This test demonstrates the new chunk size semantics with a real-world scenario
+	// Simulating: 25 locations with chunk-size=1 should create 1 chunk (not 25)
+
+	// Create 25 locations
+	locations := make([]gdocs.LocationGroupedSuggestions, 25)
+	for i := range locations {
+		locations[i] = gdocs.LocationGroupedSuggestions{
+			Location:    gdocs.SuggestionLocation{Section: "Body"},
+			Suggestions: makeTestSuggestions(1),
+		}
+	}
+
+	// Test 1: chunk-size=1 means "create 1 chunk total"
+	chunks := ChunkLocations(locations, 1)
+	if len(chunks) != 1 {
+		t.Errorf("With 25 locations and chunk-size=1, expected 1 chunk, got %d", len(chunks))
+	}
+	if len(chunks) > 0 && len(chunks[0]) != 25 {
+		t.Errorf("Expected first chunk to contain all 25 locations, got %d", len(chunks[0]))
+	}
+
+	// Test 2: chunk-size=5 means "create 5 chunks"
+	chunks = ChunkLocations(locations, 5)
+	if len(chunks) != 5 {
+		t.Errorf("With 25 locations and chunk-size=5, expected 5 chunks, got %d", len(chunks))
+	}
+
+	// Each chunk should have 5 locations (25/5 = 5)
+	for i, chunk := range chunks {
+		if len(chunk) != 5 {
+			t.Errorf("Chunk %d has %d locations, expected 5", i+1, len(chunk))
+		}
+	}
+
+	// Test 3: chunk-size=3 means "create 3 chunks" (25/3 = 9, 8, 8)
+	chunks = ChunkLocations(locations, 3)
+	if len(chunks) != 3 {
+		t.Errorf("With 25 locations and chunk-size=3, expected 3 chunks, got %d", len(chunks))
+	}
+
+	// Verify total is still 25
+	total := 0
+	for _, chunk := range chunks {
+		total += len(chunk)
+	}
+	if total != 25 {
+		t.Errorf("Expected total of 25 locations across chunks, got %d", total)
 	}
 }
 
@@ -243,14 +362,14 @@ func TestGenerateAllChunks(t *testing.T) {
 
 	chunks, err := engine.GenerateAllChunks(
 		result,
-		2, // chunk size of 2 locations
+		2, // Request 2 chunks total (3 locations will be split into 2 chunks)
 		tmpDir,
 	)
 	if err != nil {
 		t.Fatalf("GenerateAllChunks() failed: %v", err)
 	}
 
-	// Verify correct number of chunks: 3 locations / 2 per chunk = 2 chunks
+	// Verify correct number of chunks: requested 2 chunks for 3 locations
 	if len(chunks) != 2 {
 		t.Errorf("Expected 2 chunks, got %d", len(chunks))
 	}
