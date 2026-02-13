@@ -1,0 +1,23 @@
+.git
+.gitignore
+
+# Local secrets
+.env
+.env.local
+.env.*
+!.env.example
+credentials.json
+*-creds.json
+
+# Build/test artifacts
+bauer
+bauer-api
+bauer-output/
+dist/
+*.log
+bauer-doc-suggestions.json
+bauer-log.json
+
+# Local tooling files
+.vscode/
+.DS_Store
