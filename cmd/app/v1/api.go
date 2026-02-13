@@ -33,13 +33,12 @@ func JobPost(rc types.RouteConfig) func(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		cfg := config.Config{
-			DocID:           payload.DocID,
-			ChunkSize:       payload.ChunkSize,
-			PageRefresh:     payload.PageRefresh,
-			CredentialsPath: rc.APIConfig.CredentialsPath,
-			OutputDir:       fmt.Sprintf("%s/%s", rc.APIConfig.BaseOutputDir, requestID),
-			Model:           rc.APIConfig.Model,
-			SummaryModel:    rc.APIConfig.SummaryModel,
+			DocID:        payload.DocID,
+			ChunkSize:    payload.ChunkSize,
+			PageRefresh:  payload.PageRefresh,
+			OutputDir:    fmt.Sprintf("%s/%s", rc.APIConfig.BaseOutputDir, requestID),
+			Model:        rc.APIConfig.Model,
+			SummaryModel: rc.APIConfig.SummaryModel,
 		}
 
 		go executeJob(requestID, cfg, rc)
@@ -82,7 +81,6 @@ func executeJob(requestID string, cfg config.Config, rc types.RouteConfig) {
 		"requestID", requestID,
 	)
 }
-
 
 func GetHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")

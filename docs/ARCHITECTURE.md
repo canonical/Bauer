@@ -5,7 +5,7 @@
 At a high level, Bauer is a CLI with three core subsystems: Google Docs extraction, prompt generation, and Copilot execution.
 
 - cmd/bauer/main.go: CLI entry point and the end-to-end orchestrator.
-- internal/config: flag parsing + validation for `--doc-id`, `--credentials`, `--chunk-size`, `--output-dir`, `--dry-run`, `--model`, `--summary-model`, `--page-refresh`.
+- internal/config: flag parsing + validation for `--doc-id`, `--chunk-size`, `--output-dir`, `--dry-run`, `--model`, `--summary-model`, `--page-refresh` plus required `GOOGLE_*` env vars.
 - internal/gdocs: Google Docs/Drive client + extraction pipeline.
   - service.go: auth + API clients.
   - extraction.go: fetch doc, walk document tree, build structure/anchors.

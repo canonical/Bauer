@@ -74,13 +74,6 @@ func runBauer() error {
 
 	// 1b. Change to target repository if specified
 	if cfg.TargetRepo != "" {
-		// Convert credentials path to absolute before changing directory
-		absCredsPath, err := filepath.Abs(cfg.CredentialsPath)
-		if err != nil {
-			return fmt.Errorf("failed to resolve credentials path: %w", err)
-		}
-		cfg.CredentialsPath = absCredsPath
-
 		// Convert output directory to absolute before changing directory
 		absOutputDir, err := filepath.Abs(cfg.OutputDir)
 		if err != nil {
@@ -127,18 +120,18 @@ func runBauer() error {
 		slog.Error("Orchestration failed", slog.String("error", err.Error()))
 		// Check if the error is credentials-related and provide more context
 		errMsg := err.Error()
-		if strings.Contains(errMsg, "credentials") || strings.Contains(errMsg, "private_key") || strings.Contains(errMsg, "client_email") {
+		if strings.Contains(errMsg, "credentials") || strings.Contains(errMsg, "GOOGLE_") {
 			fmt.Fprintf(os.Stderr, "\n⚠️  CREDENTIALS ERROR:\n")
 			fmt.Fprintf(os.Stderr, "  %v\n\n", err)
 			fmt.Fprintf(os.Stderr, "Please verify:\n")
-			fmt.Fprintf(os.Stderr, "  1. Credentials file exists at: %s\n", cfg.CredentialsPath)
-			fmt.Fprintf(os.Stderr, "  2. Credentials file is valid JSON\n")
-			fmt.Fprintf(os.Stderr, "  3. Credentials file contains required fields:\n")
-			fmt.Fprintf(os.Stderr, "     - type\n")
-			fmt.Fprintf(os.Stderr, "     - project_id\n")
-			fmt.Fprintf(os.Stderr, "     - private_key\n")
-			fmt.Fprintf(os.Stderr, "     - client_email\n")
-			fmt.Fprintf(os.Stderr, "     - token_uri\n\n")
+			fmt.Fprintf(os.Stderr, "  1. GOOGLE_* service account variables are set (for example in .env)\n")
+			fmt.Fprintf(os.Stderr, "  2. GOOGLE_PRIVATE_KEY contains a valid key (use \\n escapes in .env)\n")
+			fmt.Fprintf(os.Stderr, "  3. Required variables include:\n")
+			fmt.Fprintf(os.Stderr, "     - GOOGLE_TYPE\n")
+			fmt.Fprintf(os.Stderr, "     - GOOGLE_PROJECT_ID\n")
+			fmt.Fprintf(os.Stderr, "     - GOOGLE_PRIVATE_KEY\n")
+			fmt.Fprintf(os.Stderr, "     - GOOGLE_CLIENT_EMAIL\n")
+			fmt.Fprintf(os.Stderr, "     - GOOGLE_TOKEN_URI\n\n")
 		}
 		return err
 	}

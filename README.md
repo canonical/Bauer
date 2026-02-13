@@ -30,10 +30,16 @@ N.B. You need to install [Copilot CLI](https://docs.github.com/en/copilot/how-to
 ## Configuration
 
 1. Install [Copilot CLI](https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli)
-2. Create `credentials.json` file and copy the structure from the [default file](https://github.com/muhammadbassiony/Bauer/blob/main/credentials.json)
-3. Get credentials from Google Cloud service or Bitwarden (internally)
-4. Fill up `credentials.json` with Google Cloud credentials (see [Generating Google Cloud credentials](https://developers.google.com/workspace/guides/create-credentials)).
-5. Share copy document with service account
+2. Copy `.env.example` to `.env`
+3. Fill `.env` with Google Cloud credentials (see [Generating Google Cloud credentials](https://developers.google.com/workspace/guides/create-credentials))
+4. Set `API_SECRET` in `.env` for API basic auth
+5. Share copy document with the service account from `GOOGLE_CLIENT_EMAIL`
+
+If you already have `credentials.json`, migrate it with:
+
+```bash
+python3 scripts/migrate_credentials_to_env.py --input credentials.json --output .env
+```
 
 ## Usage
 
@@ -43,7 +49,7 @@ N.B. You need to install [Copilot CLI](https://docs.github.com/en/copilot/how-to
 4. Run Bauer
 
 ```bash
-bauer --doc-id <your-document-id> --credentials ./credentials.json
+bauer --doc-id <your-document-id>
 ```
 
 6. Optional parameters
@@ -61,14 +67,13 @@ bauer --doc-id <your-document-id> --credentials ./credentials.json
 #### Basic run
 
 ```bash
-bauer --doc-id <your-document-id> --credentials ./credentials.json
+bauer --doc-id <your-document-id>
 ```
 
 #### Dry run (test without executing changes)
 
 ```bash
 bauer --doc-id <your-document-id> \
-        --credentials ./credentials.json \
         --dry-run
 ```
 
@@ -76,7 +81,6 @@ bauer --doc-id <your-document-id> \
 
 ```bash
 bauer --doc-id <your-document-id> \
-        --credentials ./credentials.json \
         --chunk-size 5 \
         --output-dir ./results
 ```
@@ -85,14 +89,12 @@ bauer --doc-id <your-document-id> \
 
 ```bash
 bauer --doc-id <your-document-id> \
-        --credentials ./credentials.json \
         --model "claude-sonnet-4.5"
 ```
 
 #### Run on a different repository
 ```bash
 bauer --doc-id <your-document-id> \
-        --credentials ./credentials.json \
         --target-repo ../my-other-repo
 ```
 
@@ -100,7 +102,6 @@ bauer --doc-id <your-document-id> \
 
 ```bash
 bauer --doc-id <your-document-id> \
-        --credentials ./credentials.json \
         --page-refresh
 ```
 
@@ -116,6 +117,9 @@ From Repository root:
 task build-api
 ./bauer-api --config config.json
 ```
+
+The API requires HTTP basic auth for all endpoints except `/api/v1/health`.
+Use username `bauer` and password from `API_SECRET`.
 
 ### Endpoints
 
@@ -147,6 +151,7 @@ Example:
 
 ```bash
 curl -X POST http://localhost:8090/api/v1/job \
+        -u "bauer:${API_SECRET}" \
         -H 'Content-Type: application/json' \
         -d '{"doc_id":"<google-doc-id>","chunk_size":2,"page_refresh":false}'
 ```
@@ -171,7 +176,7 @@ curl http://localhost:8090/api/v1/health
 
 ## Steps
 
-1. Modify the [Taskfile](./Taskfile.yml) with your document ID and credentials path for convenience
+1. Modify the [Taskfile](./Taskfile.yml) with your document ID for convenience
 2. Run the project with task
 
 ```

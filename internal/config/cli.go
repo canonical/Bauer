@@ -8,6 +8,10 @@ import (
 
 // Load parses command-line flags and returns a validated Config.
 func Load() (*Config, error) {
+	if err := LoadEnvFiles(); err != nil {
+		return nil, err
+	}
+
 	// Define flags
 	// Note: We use a new FlagSet to facilitate testing if needed later,
 	// but for now relying on the default flag set is sufficient for the main entry point.
@@ -15,7 +19,6 @@ func Load() (*Config, error) {
 	// but standard `flag` usage usually assumes run once per process.
 
 	docID := flag.String("doc-id", "", "Google Doc ID to extract feedback from (required)")
-	credentialsPath := flag.String("credentials", "", "Path to service account JSON (required)")
 	configFile := flag.String("config", "", "Path to JSON config file")
 	dryRun := flag.Bool("dry-run", false, "Run extraction and planning only; skip Copilot and PR creation")
 	chunkSize := flag.Int("chunk-size", 0, "Total number of chunks to create (default: 1, or 5 if --page-refresh is set)")
@@ -28,7 +31,7 @@ func Load() (*Config, error) {
 	// Custom usage message
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage:\n\n")
-		fmt.Fprintf(os.Stderr, "\t%s --doc-id <doc-id> --credentials <path> [flags]\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "\t%s --doc-id <doc-id> [flags]\n\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Flags:\n\n")
 
 		// Manually format flags
@@ -39,7 +42,6 @@ func Load() (*Config, error) {
 		}{
 			{"--config", "<string>", "Path to JSON config file"},
 			{"--doc-id", "<string>", "Google Doc ID to extract feedback from (required)"},
-			{"--credentials", "<string>", "Path to service account JSON (required)"},
 			{"--dry-run", "", "Run extraction and planning only; skip Copilot and PR creation"},
 			{"--page-refresh", "", "Use page refresh mode with page-refresh-instructions template"},
 			{"--chunk-size", "<int>", "Total number of chunks to create (default: 1, or 5 if --page-refresh is set)"},
@@ -68,21 +70,20 @@ func Load() (*Config, error) {
 	}
 
 	// If no required flags are provided, show usage and exit
-	if *docID == "" && *credentialsPath == "" {
+	if *docID == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
 
 	cfg := &Config{
-		DocID:           *docID,
-		CredentialsPath: *credentialsPath,
-		DryRun:          *dryRun,
-		ChunkSize:       *chunkSize,
-		PageRefresh:     *pageRefresh,
-		OutputDir:       *outputDir,
-		Model:           *model,
-		SummaryModel:    *summaryModel,
-		TargetRepo:      *targetRepo,
+		DocID:        *docID,
+		DryRun:       *dryRun,
+		ChunkSize:    *chunkSize,
+		PageRefresh:  *pageRefresh,
+		OutputDir:    *outputDir,
+		Model:        *model,
+		SummaryModel: *summaryModel,
+		TargetRepo:   *targetRepo,
 	}
 
 	if err := cfg.Validate(); err != nil {

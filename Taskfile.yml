@@ -24,12 +24,11 @@ tasks:
   run:
     desc: Run the bau tool locally with specified document ID
     vars:
-      CREDS: "bau-test-creds.json"
       DOC_ID: "1WJ-N_Xkkx4r_6knxW7h200oIDyi4mVMzgh1xYt5xaU0"
       OUTPUT_DIR: "bauer-output"
       MODEL: "gpt-5-mini-high"
     cmds:
-      - go run cmd/bauer/main.go --doc-id "{{.DOC_ID}}" --credentials "{{.CREDS}}" --output-dir "{{.OUTPUT_DIR}}" --model "{{.MODEL}}"
+      - go run cmd/bauer/main.go --doc-id "{{.DOC_ID}}" --output-dir "{{.OUTPUT_DIR}}" --model "{{.MODEL}}"
     # requires:
     #   vars: [DOC_ID]
   

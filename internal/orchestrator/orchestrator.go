@@ -54,11 +54,10 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 
 	// 1. Initialize GDocs Client and extract from doc
 	extractionStart := time.Now()
-	gdocsClient, err := gdocs.NewClient(ctx, cfg.CredentialsPath)
+	gdocsClient, err := gdocs.NewClient(ctx)
 	if err != nil {
 		slog.Error("Failed to initialize Google Docs client",
 			slog.String("error", err.Error()),
-			slog.String("credentials_path", cfg.CredentialsPath),
 		)
 		return nil, fmt.Errorf("failed to initialize Google Docs client: %w", err)
 	}

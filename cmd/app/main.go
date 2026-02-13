@@ -28,13 +28,6 @@ func run() error {
 	}
 
 	if cfg.TargetRepo != "" {
-		// Convert credentials path to absolute before changing directory
-		absCredsPath, err := filepath.Abs(cfg.CredentialsPath)
-		if err != nil {
-			return fmt.Errorf("failed to resolve credentials path: %w", err)
-		}
-		cfg.CredentialsPath = absCredsPath
-
 		// Convert output directory to absolute before changing directory
 		absOutputDir, err := filepath.Abs(cfg.BaseOutputDir)
 		if err != nil {
@@ -57,8 +50,9 @@ func run() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/job", v1.JobPost(rc))
 	mux.HandleFunc("/api/v1/health", v1.GetHealth)
+	handler := middleware.RequestTrace(middleware.APIBasicAuth(mux, cfg.APISecret))
 	slog.Info("starting server", "address", ":8090")
-	err = http.ListenAndServe(":8090", middleware.RequestTrace(mux))
+	err = http.ListenAndServe(":8090", handler)
 
 	if err != nil {
 		slog.Error("server error", "error", err.Error())
