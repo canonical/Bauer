@@ -3,7 +3,6 @@ package gdocs
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/docs/v1"
@@ -17,12 +16,16 @@ type Client struct {
 	Drive *drive.Service
 }
 
-// NewClient creates a new Google Docs and Drive client using the provided credentials file.
-func NewClient(ctx context.Context, credentialsPath string) (*Client, error) {
-	// Read service account credentials
-	credentials, err := os.ReadFile(credentialsPath)
+// NewClient creates a new Google Docs and Drive client using service account credentials from environment variables.
+func NewClient(ctx context.Context) (*Client, error) {
+	credentials, err := LoadCredentialsFromEnv()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read service account file: %w", err)
+		return nil, fmt.Errorf("failed to load service account credentials from environment: %w", err)
+	}
+
+	credentialsJSON, err := credentials.JSON()
+	if err != nil {
+		return nil, err
 	}
 
 	// Scopes for both Docs and Drive
@@ -31,7 +34,7 @@ func NewClient(ctx context.Context, credentialsPath string) (*Client, error) {
 		"https://www.googleapis.com/auth/drive.readonly",
 	}
 
-	config, err := google.JWTConfigFromJSON(credentials, scopes...)
+	config, err := google.JWTConfigFromJSON(credentialsJSON, scopes...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create JWT config: %w", err)
 	}

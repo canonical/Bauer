@@ -20,7 +20,7 @@ func run() error {
 	slog.Info("startup", "status", "initializing API")
 	defer slog.Info("shutdown complete")
 
-	orchestrator := orchestrator.NewOrchestrator()
+	orch := orchestrator.NewOrchestrator()
 	cfg, err := types.LoadConfig()
 	if err != nil {
 		slog.Error("failed to load config", "error", err.Error())
@@ -28,13 +28,6 @@ func run() error {
 	}
 
 	if cfg.TargetRepo != "" {
-		// Convert credentials path to absolute before changing directory
-		absCredsPath, err := filepath.Abs(cfg.CredentialsPath)
-		if err != nil {
-			return fmt.Errorf("failed to resolve credentials path: %w", err)
-		}
-		cfg.CredentialsPath = absCredsPath
-
 		// Convert output directory to absolute before changing directory
 		absOutputDir, err := filepath.Abs(cfg.BaseOutputDir)
 		if err != nil {
@@ -45,22 +38,24 @@ func run() error {
 		if err := os.Chdir(cfg.TargetRepo); err != nil {
 			return fmt.Errorf("failed to change to target repository %q: %w", cfg.TargetRepo, err)
 		}
-		cwd, _ := os.Getwd()
+		cwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get working directory: %w", err)
+		}
 		slog.Info("Working directory", "path", cwd)
 	}
 
 	rc := types.RouteConfig{
 		APIConfig:    *cfg,
-		Orchestrator: orchestrator,
+		Orchestrator: orch,
 	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/job", v1.JobPost(rc))
 	mux.HandleFunc("/api/v1/health", v1.GetHealth)
+	handler := middleware.RequestTrace(middleware.APIBasicAuth(mux, cfg.APISecret))
 	slog.Info("starting server", "address", ":8090")
-	err = http.ListenAndServe(":8090", middleware.RequestTrace(mux))
-
-	if err != nil {
+	if err := http.ListenAndServe(":8090", handler); err != nil {
 		slog.Error("server error", "error", err.Error())
 		slog.Info("shutdown complete with errors")
 		return err

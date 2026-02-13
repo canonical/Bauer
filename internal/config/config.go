@@ -3,17 +3,19 @@ package config
 import (
 	"bauer/internal/gdocs"
 	"errors"
-	"fmt"
-	"os"
+)
+
+const (
+	DefaultChunkSize            = 1
+	DefaultPageRefreshChunkSize = 5
+	DefaultOutputDir            = "bauer-output"
+	DefaultModel                = "gpt-5-mini-high"
 )
 
 // Config holds the runtime configuration for BAU.
 type Config struct {
 	// DocID is the Google Doc ID to extract feedback from.
 	DocID string `json:"doc_id"`
-
-	// CredentialsPath is the path to the Google Cloud service account JSON key file.
-	CredentialsPath string `json:"credentials"`
 
 	// DryRun indicates if the tool should skip side-effect operations (Copilot CLI, PR creation).
 	DryRun bool `json:"dry_run"`
@@ -46,20 +48,19 @@ type Config struct {
 // Apply default config values
 func (c *Config) ApplyDefaults() {
 	if c.ChunkSize == 0 {
+		c.ChunkSize = DefaultChunkSize
 		if c.PageRefresh {
-			c.ChunkSize = 5
-		} else {
-			c.ChunkSize = 1
+			c.ChunkSize = DefaultPageRefreshChunkSize
 		}
 	}
 	if c.OutputDir == "" {
-		c.OutputDir = "bauer-output"
+		c.OutputDir = DefaultOutputDir
 	}
 	if c.Model == "" {
-		c.Model = "gpt-5-mini-high"
+		c.Model = DefaultModel
 	}
 	if c.SummaryModel == "" {
-		c.SummaryModel = "gpt-5-mini-high"
+		c.SummaryModel = DefaultModel
 	}
 }
 
@@ -78,25 +79,13 @@ func (c *Config) Validate() error {
 		return errors.New("chunk_size must be greater than 0")
 	}
 
-	return ValidateCredentialsPath(c.CredentialsPath)
+	if err := ValidateCredentialsEnv(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func ValidateCredentialsPath(path string) error {
-	// Verify credentials file exists
-	info, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return fmt.Errorf("credentials file not found: %s", path)
-	}
-	if err != nil {
-		return fmt.Errorf("error checking credentials file: %w", err)
-	}
-	if info.IsDir() {
-		return fmt.Errorf("credentials path is a directory, expected a file: %s", path)
-	}
-
-	// Validate credentials content
-	if err := gdocs.ValidateCredentialsFile(path); err != nil {
-		return fmt.Errorf("%w", err)
-	}
-	return nil
+func ValidateCredentialsEnv() error {
+	return gdocs.ValidateCredentialsEnv()
 }
