@@ -144,22 +144,9 @@ func TestChunkSizeDefaults(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			setValidGoogleEnv(t)
 
-			effectiveChunkSize := tt.chunkSizeFlag
-			if effectiveChunkSize == 0 {
-				if tt.pageRefreshFlag {
-					effectiveChunkSize = 5
-				} else {
-					effectiveChunkSize = 1
-				}
-			}
-
-			if effectiveChunkSize != tt.expectedChunkSize {
-				t.Errorf("Expected chunk size %d, got %d", tt.expectedChunkSize, effectiveChunkSize)
-			}
-
 			cfg := Config{
 				DocID:        "test-doc-id",
-				ChunkSize:    effectiveChunkSize,
+				ChunkSize:    tt.chunkSizeFlag,
 				PageRefresh:  tt.pageRefreshFlag,
 				OutputDir:    "bauer-output",
 				Model:        "gpt-5-mini-high",

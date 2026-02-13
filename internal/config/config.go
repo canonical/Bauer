@@ -5,6 +5,13 @@ import (
 	"errors"
 )
 
+const (
+	DefaultChunkSize            = 1
+	DefaultPageRefreshChunkSize = 5
+	DefaultOutputDir            = "bauer-output"
+	DefaultModel                = "gpt-5-mini-high"
+)
+
 // Config holds the runtime configuration for BAU.
 type Config struct {
 	// DocID is the Google Doc ID to extract feedback from.
@@ -41,20 +48,19 @@ type Config struct {
 // Apply default config values
 func (c *Config) ApplyDefaults() {
 	if c.ChunkSize == 0 {
+		c.ChunkSize = DefaultChunkSize
 		if c.PageRefresh {
-			c.ChunkSize = 5
-		} else {
-			c.ChunkSize = 1
+			c.ChunkSize = DefaultPageRefreshChunkSize
 		}
 	}
 	if c.OutputDir == "" {
-		c.OutputDir = "bauer-output"
+		c.OutputDir = DefaultOutputDir
 	}
 	if c.Model == "" {
-		c.Model = "gpt-5-mini-high"
+		c.Model = DefaultModel
 	}
 	if c.SummaryModel == "" {
-		c.SummaryModel = "gpt-5-mini-high"
+		c.SummaryModel = DefaultModel
 	}
 }
 

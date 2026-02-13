@@ -32,6 +32,7 @@ func JobPost(rc types.RouteConfig) func(w http.ResponseWriter, r *http.Request) 
 		if err != nil {
 			return
 		}
+
 		cfg := config.Config{
 			DocID:        payload.DocID,
 			ChunkSize:    payload.ChunkSize,
@@ -43,8 +44,7 @@ func JobPost(rc types.RouteConfig) func(w http.ResponseWriter, r *http.Request) 
 
 		go executeJob(requestID, cfg, rc)
 
-		err = types.Accepted().Render(w, r)
-		if err != nil {
+		if err := types.Accepted().Render(w, r); err != nil {
 			slog.Error("error writing response", "error", err.Error(), "requestID", requestID)
 		}
 	}
@@ -52,15 +52,15 @@ func JobPost(rc types.RouteConfig) func(w http.ResponseWriter, r *http.Request) 
 
 func getJobFromRequest(w http.ResponseWriter, r *http.Request, requestID string) (*models.JobPost, error) {
 	payload := models.JobPost{}
-	err := json.NewDecoder(r.Body).Decode(&payload)
-	if err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		slog.Error("failed to decode request body", "error", err.Error(), "requestID", requestID)
-		err := types.BadRequest(fmt.Errorf("invalid request body: %w", err)).Render(w, r)
-		if err != nil {
-			slog.Error("error writing response", "error", err.Error(), "requestID", requestID)
+		renderErr := types.BadRequest(fmt.Errorf("invalid request body: %w", err)).Render(w, r)
+		if renderErr != nil {
+			slog.Error("error writing response", "error", renderErr.Error(), "requestID", requestID)
 		}
-		return nil, err
+		return nil, renderErr
 	}
+
 	return &payload, nil
 }
 

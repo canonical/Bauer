@@ -38,31 +38,26 @@ type ServiceAccountCredentials struct {
 
 func LoadCredentialsFromEnv() (*ServiceAccountCredentials, error) {
 	creds := &ServiceAccountCredentials{}
+	requiredFields := []struct {
+		envKey string
+		target *string
+	}{
+		{envKey: envGoogleType, target: &creds.Type},
+		{envKey: envGoogleProjectID, target: &creds.ProjectID},
+		{envKey: envGooglePrivateKeyID, target: &creds.PrivateKeyID},
+		{envKey: envGooglePrivateKey, target: &creds.PrivateKey},
+		{envKey: envGoogleClientEmail, target: &creds.ClientEmail},
+		{envKey: envGoogleClientID, target: &creds.ClientID},
+		{envKey: envGoogleAuthURI, target: &creds.AuthURI},
+		{envKey: envGoogleTokenURI, target: &creds.TokenURI},
+	}
 
-	var err error
-	if creds.Type, err = requiredEnv(envGoogleType); err != nil {
-		return nil, err
-	}
-	if creds.ProjectID, err = requiredEnv(envGoogleProjectID); err != nil {
-		return nil, err
-	}
-	if creds.PrivateKeyID, err = requiredEnv(envGooglePrivateKeyID); err != nil {
-		return nil, err
-	}
-	if creds.PrivateKey, err = requiredEnv(envGooglePrivateKey); err != nil {
-		return nil, err
-	}
-	if creds.ClientEmail, err = requiredEnv(envGoogleClientEmail); err != nil {
-		return nil, err
-	}
-	if creds.ClientID, err = requiredEnv(envGoogleClientID); err != nil {
-		return nil, err
-	}
-	if creds.AuthURI, err = requiredEnv(envGoogleAuthURI); err != nil {
-		return nil, err
-	}
-	if creds.TokenURI, err = requiredEnv(envGoogleTokenURI); err != nil {
-		return nil, err
+	for _, field := range requiredFields {
+		value, err := requiredEnv(field.envKey)
+		if err != nil {
+			return nil, err
+		}
+		*field.target = value
 	}
 
 	creds.PrivateKey = strings.ReplaceAll(creds.PrivateKey, `\n`, "\n")
