@@ -2,6 +2,7 @@ output.json
 bauer-doc-suggestions.json
 bauer-log.json
 *-creds.json
+*-credentials.json
 *.log
 /.github/copilot-instructions.md
 .env.local-e

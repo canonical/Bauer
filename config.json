@@ -1,11 +1,13 @@
 {
   "doc_id": "1WJ-N_Xkkx4r_6knxW7h200oIDyi4mVMzgh1xYt5xaU0",
-  "credentials": "bau-test-creds.json",
+  "credentials": "bau-credentials.json",
   "chunk_size": 1,
   "page_refresh": false,
   "output_dir": "bauer-output",
+  "branch_prefix": "bauer",
   "model": "gpt-5-mini-high",
+  "dry_run": true,
   "summary_model": "gpt-5-mini-high",
-  "target_repo": "../canonical.com",
-  "dry_run": false
+  "local_repo_path": "/tmp/ubuntu.com",
+  "github_repo": "canonical/ubuntu.com"
 }

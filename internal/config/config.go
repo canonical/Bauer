@@ -12,6 +12,9 @@ type Config struct {
 	// DocID is the Google Doc ID to extract feedback from.
 	DocID string `json:"doc_id"`
 
+	// GitHubRepo is the GitHub repository in the format "owner/repo" or as an HTTPS URL.
+	GitHubRepo string `json:"github_repo"`
+
 	// CredentialsPath is the path to the Google Cloud service account JSON key file.
 	CredentialsPath string `json:"credentials"`
 
@@ -41,6 +44,13 @@ type Config struct {
 	// TargetRepo is the path (relative or absolute) to the target repository
 	// where tasks should be executed. If not specified, uses the current directory.
 	TargetRepo string `json:"target_repo"`
+
+	// LocalRepoPath is the local path for cloned repository.
+	// Used when executing workflow with GitHub repository.
+	LocalRepoPath string `json:"local_repo_path"`
+
+	// BranchPrefix is the prefix for branch naming.
+	BranchPrefix string `json:"branch_prefix"`
 }
 
 // Apply default config values
@@ -72,6 +82,10 @@ func (c *Config) Validate() error {
 	// Validate required fields
 	if c.DocID == "" {
 		return errors.New("missing required field: doc_id")
+	}
+
+	if c.GitHubRepo == "" {
+		return errors.New("missing required field: github_repo")
 	}
 
 	if c.ChunkSize <= 0 {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bauer/internal/config"
 	"bauer/internal/github"
 	"bauer/internal/orchestrator"
 	"bauer/internal/workflow"
@@ -13,6 +14,7 @@ import (
 
 func main() {
 	// Parse CLI flags
+	configFile := flag.String("config", "", "Path to JSON config file")
 	githubRepo := flag.String("github-repo", "", "GitHub repository (owner/repo or HTTPS URL)")
 	docID := flag.String("doc-id", "", "Google Doc ID")
 	credentialsPath := flag.String("credentials", "bau-test-creds.json", "Path to service account credentials JSON")
@@ -23,14 +25,26 @@ func main() {
 
 	flag.Parse()
 
-	// Validate required flags
-	if *githubRepo == "" {
-		fmt.Fprintf(os.Stderr, "ERROR: --github-repo is required\n")
-		os.Exit(1)
-	}
-	if *docID == "" {
-		fmt.Fprintf(os.Stderr, "ERROR: --doc-id is required\n")
-		os.Exit(1)
+	// Load from config file if provided, otherwise use command-line flags
+	var cfg *config.Config
+	var err error
+
+	if *configFile != "" {
+		cfg, err = config.LoadFromJSONFile(*configFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: Failed to load config file: %v\n", err)
+			os.Exit(1)
+		}
+	} else {
+		// Validate required flags
+		if *githubRepo == "" {
+			fmt.Fprintf(os.Stderr, "ERROR: --github-repo is required\n")
+			os.Exit(1)
+		}
+		if *docID == "" {
+			fmt.Fprintf(os.Stderr, "ERROR: --doc-id is required\n")
+			os.Exit(1)
+		}
 	}
 
 	fmt.Println(strings.Repeat("=", 80))
@@ -38,22 +52,58 @@ func main() {
 	fmt.Println(strings.Repeat("=", 80))
 	fmt.Println()
 
-	// Create workflow input from CLI flags/config
+	// Prepare workflow input from config
 	ghToken, err := github.GetGitHubToken()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "WARNING: Could not get GitHub token: %v\n", err)
 		ghToken = ""
 	}
 
+	// Determine values to use (CLI flags override config file values)
+	repoToUse := *githubRepo
+	if repoToUse == "" && cfg != nil {
+		repoToUse = cfg.GitHubRepo
+	}
+
+	docToUse := *docID
+	if docToUse == "" && cfg != nil {
+		docToUse = cfg.DocID
+	}
+
+	credsToUse := *credentialsPath
+	if cfg != nil && cfg.CredentialsPath != "" {
+		credsToUse = cfg.CredentialsPath
+	}
+
+	localRepoToUse := *localRepoPath
+	if cfg != nil && cfg.LocalRepoPath != "" {
+		localRepoToUse = cfg.LocalRepoPath
+	}
+
+	dryRunToUse := *dryRun
+	if cfg != nil {
+		dryRunToUse = cfg.DryRun
+	}
+
+	outputDirToUse := *outputDir
+	if cfg != nil && cfg.OutputDir != "" {
+		outputDirToUse = cfg.OutputDir
+	}
+
+	branchPrefixToUse := *branchPrefix
+	if cfg != nil && cfg.BranchPrefix != "" {
+		branchPrefixToUse = cfg.BranchPrefix
+	}
+
 	workflowInput := workflow.WorkflowInput{
-		GitHubRepo:    *githubRepo,
+		GitHubRepo:    repoToUse,
 		GitHubToken:   ghToken,
-		BranchPrefix:  *branchPrefix,
-		DocID:         *docID,
-		Credentials:   *credentialsPath,
-		LocalRepoPath: *localRepoPath,
-		DryRun:        *dryRun,
-		OutputDir:     *outputDir,
+		BranchPrefix:  branchPrefixToUse,
+		DocID:         docToUse,
+		Credentials:   credsToUse,
+		LocalRepoPath: localRepoToUse,
+		DryRun:        dryRunToUse,
+		OutputDir:     outputDirToUse,
 	}
 
 	orch := orchestrator.NewOrchestrator()
