@@ -33,11 +33,11 @@ N.B. You need to install [Copilot CLI](https://docs.github.com/en/copilot/how-to
 1. Clone the project
 2. Build the project with `task build`
 3. Create a copy of the copy document and share it with the service account
-4. Update `config.json` with `doc_id` and `github_repo` (default is ubuntu.com repository)
+4. Update `config.json` with `doc_id`, `github_repo` and `local_repo_path` (default is ubuntu.com repository)
 5. Run Bauer
 
 ```bash
-./bauer --config config.json
+./bauer
 ```
 
 ### Parameters
@@ -47,7 +47,7 @@ Update `config.json` with the following parameters:
 | Key                 | Type   | Default           | Description                                                                  |
 | ------------------- | ------ | ----------------- | ---------------------------------------------------------------------------- |
 | `doc_id`            | string | -                 | Google Doc ID to extract feedback from (required)                            |
-| `credentials`       | string | -                 | Path to service account JSON (required)                                      |
+| `credentials`       | string | `bau-credentials.json`                 | Path to service account JSON (required)                                      |
 | `github_repo`       | string | -                 | GitHub repository in format "owner/repo" or HTTPS URL (required)             |
 | `chunk_size`        | int    | `1`               | Total number of chunks to create (default: 1, or 5 if page_refresh is true)  |
 | `dry_run`           | bool   | `false`           | Run extraction and planning only; skip Copilot execution and PR creation     |
@@ -56,7 +56,7 @@ Update `config.json` with the following parameters:
 | `summary_model`     | string | `gpt-5-mini-high` | Copilot model to use for summary generation                                  |
 | `page_refresh`      | bool   | `false`           | Whether this is a page refresh, or the default copy update                   |
 | `branch_prefix`     | string | `bauer`           | Branch naming prefix                                                         |
-| `local_repo_path`   | string | `/tmp/ubuntu.com` | Local path where repository will be cloned                                    |
+| `local_repo_path`   | string | `/tmp/ubuntu.com` | Local path where repository will be cloned                                   |
 
 #### Example config.json
 
@@ -77,7 +77,7 @@ Update `config.json` with the following parameters:
 ```
 
 
-## API usage
+## API usage (on-going development)
 
 The API server exposes a small HTTP surface for submitting jobs and checking health. Jobs run asynchronously and write outputs to `base-output-dir/<request-id>`.
 
