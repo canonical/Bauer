@@ -2,13 +2,7 @@
 
 A proof-of-concept Go application that extracts document content, suggestions (proposed edits), and comments from Google Docs using the Google Docs API and Google Drive API.
 
-## Installation
-
-### [Snap](https://snapcraft.io/bauer)
-
-```
-sudo snap install bauer
-```
+<!-- ## Installation
 
 ### Homebrew
 
@@ -25,84 +19,63 @@ brew update
 brew upgrade bauer
 ```
 
-N.B. You need to install [Copilot CLI](https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli) which is used by Bauer.
+N.B. You need to install [Copilot CLI](https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli) which is used by Bauer. -->
 
 ## Configuration
 
 1. Install [Copilot CLI](https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli)
-2. Create `credentials.json` file and copy the structure from the [default file](https://github.com/muhammadbassiony/Bauer/blob/main/credentials.json)
+2. Create a local credentials file: `cp credentials.json bau-credentials.json`
 3. Get credentials from Google Cloud service or Bitwarden (internally)
-4. Fill up `credentials.json` with Google Cloud credentials (see [Generating Google Cloud credentials](https://developers.google.com/workspace/guides/create-credentials)).
+4. Fill up `bau-credentials.json` with Google Cloud credentials (see [Generating Google Cloud credentials](https://developers.google.com/workspace/guides/create-credentials)).
 5. Share copy document with service account
 
 ## Usage
-
-1. Install bauer using the instructions above
-2. Check that `copilot` and `bauer` are installed
-3. Get document ID from Google Document & share the document with the service account
-4. Run Bauer
-
-```bash
-bauer --doc-id <your-document-id> --credentials ./credentials.json
-```
-
-6. Optional parameters
-
-| Flag             | Type   | Default           | Description                                                                  |
-| ---------------- | ------ | ----------------- | ---------------------------------------------------------------------------- |
-| `--chunk-size`   | int    | `1`               | Total number of chunks to create (default: 1, or 5 if --page-refresh is set) |
-| `--dry-run`      | bool   | `false`           | Run extraction and planning only; skip Copilot execution and PR creation     |
-| `--output-dir`   | string | `bauer-output`    | Output directory for generated files                                         |
-| `--model`        | string | `gpt-5-mini-high` | Copilot model to use for code generation                                     |
-| `--page-refresh` | bool   | `false`           | Whether this is a page refresh, or the default copy update                   |
-| `--target-repo`  | string | current directory | Path to target repository where tasks should be executed                     |
-### Examples
-
-#### Basic run
+1. Clone the project
+2. Build the project with `task build`
+3. Create a copy of the copy document and share it with the service account
+4. Update `config.json` with `doc_id` and `github_repo` (default is ubuntu.com repository)
+5. Run Bauer
 
 ```bash
-bauer --doc-id <your-document-id> --credentials ./credentials.json
+./bauer --config config.json
 ```
 
-#### Dry run (test without executing changes)
+### Parameters
 
-```bash
-bauer --doc-id <your-document-id> \
-        --credentials ./credentials.json \
-        --dry-run
+Update `config.json` with the following parameters:
+
+| Key                 | Type   | Default           | Description                                                                  |
+| ------------------- | ------ | ----------------- | ---------------------------------------------------------------------------- |
+| `doc_id`            | string | -                 | Google Doc ID to extract feedback from (required)                            |
+| `credentials`       | string | -                 | Path to service account JSON (required)                                      |
+| `github_repo`       | string | -                 | GitHub repository in format "owner/repo" or HTTPS URL (required)             |
+| `chunk_size`        | int    | `1`               | Total number of chunks to create (default: 1, or 5 if page_refresh is true)  |
+| `dry_run`           | bool   | `false`           | Run extraction and planning only; skip Copilot execution and PR creation     |
+| `output_dir`        | string | `bauer-output`    | Output directory for generated files                                         |
+| `model`             | string | `gpt-5-mini-high` | Copilot model to use for code generation                                     |
+| `summary_model`     | string | `gpt-5-mini-high` | Copilot model to use for summary generation                                  |
+| `page_refresh`      | bool   | `false`           | Whether this is a page refresh, or the default copy update                   |
+| `branch_prefix`     | string | `bauer`           | Branch naming prefix                                                         |
+| `local_repo_path`   | string | `/tmp/ubuntu.com` | Local path where repository will be cloned                                    |
+
+#### Example config.json
+
+```json
+{
+  "doc_id": "XXX",
+  "credentials": "bau-credentials.json",
+  "github_repo": "canonical/ubuntu.com",
+  "chunk_size": 1,
+  "dry_run": false,
+  "output_dir": "bauer-output",
+  "model": "gpt-5-mini-high",
+  "summary_model": "gpt-5-mini-high",
+  "page_refresh": false,
+  "branch_prefix": "bauer",
+  "local_repo_path": "/tmp/ubuntu.com"
+}
 ```
 
-#### Custom chunk size and output directory
-
-```bash
-bauer --doc-id <your-document-id> \
-        --credentials ./credentials.json \
-        --chunk-size 5 \
-        --output-dir ./results
-```
-
-#### Specify model
-
-```bash
-bauer --doc-id <your-document-id> \
-        --credentials ./credentials.json \
-        --model "claude-sonnet-4.5"
-```
-
-#### Run on a different repository
-```bash
-bauer --doc-id <your-document-id> \
-        --credentials ./credentials.json \
-        --target-repo ../my-other-repo
-```
-
-### Page refresh
-
-```bash
-bauer --doc-id <your-document-id> \
-        --credentials ./credentials.json \
-        --page-refresh
-```
 
 ## API usage
 
