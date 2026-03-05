@@ -48,7 +48,7 @@ Update `config.json` with the following parameters:
 | ------------------- | ------ | ----------------- | ---------------------------------------------------------------------------- |
 | `doc_id`            | string | -                 | Google Doc ID to extract feedback from (required)                            |
 | `credentials`       | string | `bau-credentials.json`                 | Path to service account JSON (required)                                      |
-| `github_repo`       | string | -                 | GitHub repository in format "owner/repo" or HTTPS URL (required)             |
+| `github_repo`       | string | `<owner>/<repo>`                | GitHub repository in format "owner/repo" or HTTPS URL (required)             |
 | `chunk_size`        | int    | `1`               | Total number of chunks to create (default: 1, or 5 if page_refresh is true)  |
 | `dry_run`           | bool   | `false`           | Run extraction and planning only; skip Copilot execution and PR creation     |
 | `output_dir`        | string | `bauer-output`    | Output directory for generated files                                         |
@@ -56,7 +56,7 @@ Update `config.json` with the following parameters:
 | `summary_model`     | string | `gpt-5-mini-high` | Copilot model to use for summary generation                                  |
 | `page_refresh`      | bool   | `false`           | Whether this is a page refresh, or the default copy update                   |
 | `branch_prefix`     | string | `bauer`           | Branch naming prefix                                                         |
-| `local_repo_path`   | string | `/tmp/ubuntu.com` | Local path where repository will be cloned                                   |
+| `local_repo_path`   | string | `/tmp/<repo>` | Local path where repository will be cloned                                   |
 
 #### Example config.json
 

@@ -1,5 +1,5 @@
 {
-  "doc_id": "1WJ-N_Xkkx4r_6knxW7h200oIDyi4mVMzgh1xYt5xaU0",
+  "doc_id": "",
   "credentials": "bau-credentials.json",
   "chunk_size": 1,
   "page_refresh": false,
@@ -8,6 +8,6 @@
   "model": "gpt-5-mini-high",
   "dry_run": true,
   "summary_model": "gpt-5-mini-high",
-  "local_repo_path": "/tmp/ubuntu.com",
-  "github_repo": "canonical/ubuntu.com"
+  "local_repo_path": "/tmp/<repo>",
+  "github_repo": "<owner>/<repo>"
 }
