@@ -14,7 +14,7 @@ import (
 
 func main() {
 	// Parse CLI flags
-	configFile := flag.String("config", "", "Path to JSON config file")
+	configFile := flag.String("config", "config.json", "Path to JSON config file")
 	githubRepo := flag.String("github-repo", "", "GitHub repository (owner/repo or HTTPS URL)")
 	docID := flag.String("doc-id", "", "Google Doc ID")
 	credentialsPath := flag.String("credentials", "bau-test-creds.json", "Path to service account credentials JSON")
