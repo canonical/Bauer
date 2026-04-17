@@ -1,3 +1,8 @@
+> [!WARNING]
+> **This is the v1 architecture document and is no longer current.** It describes the original CLI-only design before the API and workflow layers were introduced. For the current target architecture, see [ARCHITECTURE_v2.md](./ARCHITECTURE_v2.md).
+
+---
+
 # Bauer architecture (current)
 
 ## Architecture (code organization)
