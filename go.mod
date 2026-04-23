@@ -3,7 +3,7 @@ module bauer
 go 1.24.0
 
 require (
-	github.com/github/copilot-sdk/go v0.1.15
+	github.com/github/copilot-sdk/go v0.2.1-preview.1
 	github.com/google/go-cmp v0.7.0
 	golang.org/x/oauth2 v0.33.0
 	google.golang.org/api v0.257.0
