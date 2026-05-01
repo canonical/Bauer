@@ -26,8 +26,11 @@ graph TD
     subgraph Shared Core
         Config["internal/config"]
         Orchestrator["internal/orchestrator"]
+        Source["internal/source"]
         GDocs["internal/gdocs"]
         Prompt["internal/prompt"]
+        Artifacts["internal/artifacts"]
+        Agent["internal/agent\n(interface)"]
         Copilot["internal/copilotcli"]
         GitHub["internal/github"]
     end
@@ -39,9 +42,12 @@ graph TD
     CLI --> Orchestrator
     API --> Orchestrator
 
-    Orchestrator --> GDocs
+    Orchestrator --> Source
+    Source --> GDocs
     Orchestrator --> Prompt
-    Orchestrator --> Copilot
+    Orchestrator --> Artifacts
+    Orchestrator --> Agent
+    Copilot -. implements .-> Agent
 
     CLI --> GitHub
     API --> GitHub
@@ -53,10 +59,10 @@ Both `cmd/bauer` and `cmd/app` are thin wiring layers — all business logic liv
 
 ## Entry Points
 
-| Binary | Package | Purpose |
-|---|---|---|
-| `bauer` | `cmd/bauer/` | CLI — runs inside the target repo |
-| `bauer-api` | `cmd/app/` | HTTP API server |
+| Binary      | Package      | Purpose                           |
+| ----------- | ------------ | --------------------------------- |
+| `bauer`     | `cmd/bauer/` | CLI — runs inside the target repo |
+| `bauer-api` | `cmd/app/`   | HTTP API server                   |
 
 ---
 
@@ -64,15 +70,17 @@ Both `cmd/bauer` and `cmd/app` are thin wiring layers — all business logic liv
 
 Sharing core logic between the CLI and API is the right call here. The internal packages are already designed to be entry-point-agnostic — the `cmd/` layer just wires them together differently.
 
-| Package | Responsibility |
-|---|---|
-| `internal/gdocs` | Google Docs auth, doc fetch, suggestion extraction and grouping |
-| `internal/prompt` | Chunk prompt generation from suggestions, template rendering |
-| `internal/agent` | Defines the `Agent` interface that all AI execution backends implement |
-| `internal/copilotcli` | Implements `agent.Agent`; manages Copilot SDK process lifecycle, sessions, streaming |
-| `internal/orchestrator` | Wires gdocs → prompt → copilotcli into a single `Execute()` call |
-| `internal/github` | GitHub auth, branch ops, commits, issue creation, PR creation |
-| `internal/config` | Configuration loading and resolution (shared by CLI and API) |
+| Package                 | Responsibility                                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `internal/gdocs`        | Google Docs auth, doc fetch, suggestion extraction and grouping                                                          |
+| `internal/source`       | Source adapters and normalized `SourceBundle` — the orchestrator depends on this, not directly on `internal/gdocs`       |
+| `internal/prompt`       | Chunk prompt generation from suggestions, template rendering; directly aware of gdocs and figma source types             |
+| `internal/agent`        | Defines the `Agent` interface that all AI execution backends implement                                                   |
+| `internal/copilotcli`   | Implements `agent.Agent`; manages Copilot SDK process lifecycle, sessions, streaming                                     |
+| `internal/orchestrator` | Wires source → prompt → agent into a single `Execute()` call; depends on `agent.Agent`, not concrete client              |
+| `internal/artifacts`    | Append-only run artifact storage; writes extraction, prompts, outputs, and screenshots under timestamped run directories |
+| `internal/github`       | GitHub auth, branch ops, commits, issue creation, PR creation                                                            |
+| `internal/config`       | Configuration loading and resolution (shared by CLI and API)                                                             |
 
 ---
 
@@ -147,21 +155,23 @@ flowchart TD
 
 ### Flags
 
-| Flag | Default | Description |
-|---|---|---|
-| `--doc-id` | required | Google Doc ID |
-| `--credentials` | required (or BAUER_CREDENTIALS_PATH / GOOGLE_APPLICATION_CREDENTIALS env var) | Path to Google service account JSON |
-| `--chunk-size` | `1` | Suggestion groups per chunk |
-| `--page-refresh` | `false` | Use page-refresh instruction mode |
-| `--model` | `gpt-5-mini-high` | Copilot model |
-| `--summary-model` | `gpt-5-mini-high` | Model for summary session (when >1 chunk) |
-| `--output-dir` | `bauer-output` | Directory for chunk files |
-| `--dry-run` | `false` | Skip Copilot execution, just write chunk files |
-| `--open-pr` | `false` | After applying changes, create a branch and open a PR |
-| `--open-issue` | `false` | Skip Copilot execution, open a GitHub issue with the plan instead |
-| `--branch-prefix` | `bauer` | Branch name prefix (used with `--open-pr`) |
+| Flag              | Default                                                                       | Description                                                       |
+| ----------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `--doc-id`        | required                                                                      | Google Doc ID                                                     |
+| `--credentials`   | required (or BAUER_CREDENTIALS_PATH / GOOGLE_APPLICATION_CREDENTIALS env var) | Path to Google service account JSON                               |
+| `--chunk-size`    | `1`                                                                           | Suggestion groups per chunk                                       |
+| `--page-refresh`  | `false`                                                                       | Use page-refresh instruction mode                                 |
+| `--model`         | `gpt-5-mini-high`                                                             | Copilot model                                                     |
+| `--summary-model` | `gpt-5-mini-high`                                                             | Model for summary session (when >1 chunk)                         |
+| `--artifacts-dir` | `./bauer-artifacts`                                                           | Directory for run artifacts (replaces old `--output-dir`)         |
+| `--figma-url`     | `""`                                                                          | Optional Figma link; enables the full Figma ingestion pipeline    |
+| `--dry-run`       | `false`                                                                       | Skip Copilot execution, just write chunk files                    |
+| `--open-pr`       | `false`                                                                       | After applying changes, create a branch and open a PR             |
+| `--open-issue`    | `false`                                                                       | Skip Copilot execution, open a GitHub issue with the plan instead |
+| `--branch-prefix` | `bauer`                                                                       | Branch name prefix (used with `--open-pr`)                        |
 
 Notes:
+
 - `--open-pr` and `--open-issue` require GitHub auth. The CLI resolves the token in this order: `BAUER_GITHUB_TOKEN` → `GITHUB_TOKEN` → `GH_TOKEN` → `gh auth token`. Never a CLI flag.
 - `--open-issue` and `--open-pr` are mutually exclusive.
 - The CLI reads the GitHub remote from the current repo's git config — no `--github-repo` flag needed.
@@ -177,6 +187,7 @@ The API exposes the same flows over HTTP. Two endpoints cover the two main use c
 Generates a detailed implementation plan from the Google Doc and opens a GitHub issue. No code changes are applied.
 
 **Request:**
+
 ```json
 {
   "doc_id": "1abc...",
@@ -188,6 +199,7 @@ Generates a detailed implementation plan from the Google Doc and opens a GitHub 
 ```
 
 **Response:**
+
 ```json
 {
   "status": "success",
@@ -203,6 +215,7 @@ Generates a detailed implementation plan from the Google Doc and opens a GitHub 
 Full flow: clone repo → apply changes via Copilot → open PR.
 
 **Request:**
+
 ```json
 {
   "doc_id": "1abc...",
@@ -217,6 +230,7 @@ Full flow: clone repo → apply changes via Copilot → open PR.
 ```
 
 **Response:**
+
 ```json
 {
   "status": "success",
@@ -347,6 +361,7 @@ The API needs to act on GitHub to open issues, push branches, and create PRs. Tw
 ### Option A: Personal Access Token (PAT)
 
 Create a dedicated bot GitHub account, generate a fine-grained PAT with:
+
 - `Contents: Read & Write`
 - `Pull requests: Read & Write`
 - `Issues: Read & Write`
@@ -388,6 +403,7 @@ CMD ["bauer-api"]
 ```
 
 Required at runtime:
+
 - `BAUER_GITHUB_TOKEN` / `GH_TOKEN`
 - `BAUER_CREDENTIALS_PATH` + mounted Google credentials volume
 
@@ -406,17 +422,20 @@ Secrets are injected as environment variables or mounted volumes. The `BAUER_CRE
 
 ## Key Design Decisions
 
-| Decision | Choice | Reason |
-|---|---|---|
-| CLI runs in current directory | Yes | It's a CLI — no cloning needed, feels native |
-| CLI doesn't take `--github-repo` | Yes | It reads the remote from local git config instead |
-| Shared `internal/` packages | Yes | Single source of truth, no drift between CLI and API |
-| Secrets in env vars only (API) | Yes | Security + K8s/container compatibility |
-| `.env` + `.env.local` for API | Yes | Standard pattern, clear separation of defaults vs secrets |
-| Jira calls internal logic (not HTTP) | Yes | Cleaner, no loopback, same process |
-| Two API endpoints (issues vs workflows) | Yes | Clean separation — different flows, different use cases |
-| `agent.Agent` interface | Yes | Orchestrator is backend-agnostic; swap AI provider without touching core logic |
-| No JSON config files | Yes | Env vars for API, flags + env vars for CLI — cleaner, no third config mechanism |
+| Decision                                | Choice | Reason                                                                                                                                                                                                                                                                                   |
+| --------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CLI runs in current directory           | Yes    | It's a CLI — no cloning needed, feels native                                                                                                                                                                                                                                             |
+| CLI doesn't take `--github-repo`        | Yes    | It reads the remote from local git config instead                                                                                                                                                                                                                                        |
+| Shared `internal/` packages             | Yes    | Single source of truth, no drift between CLI and API                                                                                                                                                                                                                                     |
+| Secrets in env vars only (API)          | Yes    | Security + K8s/container compatibility                                                                                                                                                                                                                                                   |
+| `.env` + `.env.local` for API           | Yes    | Standard pattern, clear separation of defaults vs secrets                                                                                                                                                                                                                                |
+| Jira calls internal logic (not HTTP)    | Yes    | Cleaner, no loopback, same process                                                                                                                                                                                                                                                       |
+| Two API endpoints (issues vs workflows) | Yes    | Clean separation — different flows, different use cases                                                                                                                                                                                                                                  |
+| `agent.Agent` interface                 | Yes    | Orchestrator is backend-agnostic; swap AI provider without touching core logic                                                                                                                                                                                                           |
+| No JSON config files                    | Yes    | Env vars for API, flags + env vars for CLI — cleaner, no third config mechanism                                                                                                                                                                                                          |
+| `internal/source` abstraction           | Yes    | Orchestrator must not be coupled to Google Docs directly; source layer normalizes all upstream inputs so future sources (Figma, Jira, etc.) fit the same pipeline without touching the orchestrator                                                                                      |
+| Append-only run artifacts               | Yes    | Overwriting extraction outputs and prompt files blocks traceability, debugging, and later design-aware features; every run gets a timestamped directory under `bauer-artifacts/`                                                                                                         |
+| Prompt pkg knows its sources directly   | Yes    | The prompt package is intentionally coupled to gdocs and figma types — it is not source-agnostic. It always handles gdocs data and adds figma-specific sections when figma data is present. Abstracting sources at the prompt level would hide important per-source prompting decisions. |
 
 ---
 

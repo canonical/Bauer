@@ -1,5 +1,8 @@
 # Bauer
 
+> Info
+> Start with [docs/specs](./docs/specs/). The current README may be out of date while the v2 and v2.1 work is in progress.
+
 A proof-of-concept Go application that extracts document content, suggestions (proposed edits), and comments from Google Docs using the Google Docs API and Google Drive API.
 
 ## Installation
