@@ -1,6 +1,6 @@
 # v2 Reconciliation Plan
 
-*Last updated: 2026-04-17*
+_Last updated: 2026-04-29_
 
 > Everything in one place: what's broken, what we're building, how we're going to get there.
 
@@ -24,6 +24,8 @@ Bauer started as a clean CLI tool (v1) that extracts suggestions from a Google D
 8. **Stale Taskfile** — `task run` uses old flags. `task build-api` doesn't exist.
 9. **Stale README** — documents old CLI, doesn't mention `/api/v1/workflow`, broken examples.
 10. **No agent abstraction** — the orchestrator is tightly coupled to `copilotcli`. Swapping the AI backend requires modifying the orchestrator itself.
+11. **No source abstraction** — the orchestration flow is still effectively hard-wired to Google Docs as the only upstream source.
+12. **Overwrite-only run outputs** — extracted data and prompt files are overwritten on each run, which blocks traceability and later design-aware features.
 
 ## Known Limitations
 
@@ -45,9 +47,11 @@ These are deliberate trade-offs, not bugs. Good to be aware of:
 - **`--open-pr` flag**: after applying changes, create a branch from `main`, commit, push, open a PR.
 - **`--open-issue` flag**: skip Copilot entirely, generate an implementation plan, open a GitHub issue.
 - `--open-pr` and `--open-issue` are **mutually exclusive** — passing both must exit immediately with a clear error before any work starts.
-- All original flags restored: `--doc-id`, `--credentials`, `--chunk-size`, `--page-refresh`, `--model`, `--summary-model`, `--output-dir`, `--dry-run`.
+- All original flags restored: `--doc-id`, `--credentials`, `--chunk-size`, `--page-refresh`, `--model`, `--summary-model`, `--dry-run`. Note: `--output-dir` is superseded by the artifact history system — outputs now live under a timestamped run directory inside the artifacts dir.
+- Two new flags from this spec: `--artifacts-dir` (default `./bauer-artifacts`) and `--figma-url` (added in 002/T2F.2; empty by default).
 - `--credentials` falls back to `BAUER_CREDENTIALS_PATH`, then `GOOGLE_APPLICATION_CREDENTIALS`. Env var support for credentials is a reasonable assumption for the CLI too — it's the standard practice in CI pipelines, and `GOOGLE_APPLICATION_CREDENTIALS` is Google's own Application Default Credentials (ADC) standard, so many developers already have it set.
 - GitHub auth (for `--open-pr`/`--open-issue`) comes from `BAUER_GITHUB_TOKEN` → `GITHUB_TOKEN` → `GH_TOKEN` → `gh auth token`. Never a CLI flag.
+- Figma auth (for `--figma-url`) comes from `BAUER_FIGMA_TOKEN` → `FIGMA_TOKEN`. Never a CLI flag. If `--figma-url` is supplied but neither env var is set, Bauer exits with a clear error before any API calls.
 - All `BAUER_*` env vars work as fallbacks for all flags.
 
 ### API
@@ -71,6 +75,9 @@ These are deliberate trade-offs, not bugs. Good to be aware of:
 ### Shared / General
 
 - All logic in `internal/`, `cmd/` is wiring only — no business logic.
+- A new `internal/source` package defines source adapters and a normalized combined output contract. The orchestrator depends on that contract, not directly on `internal/gdocs`.
+- The prompt package uses explicit named fields (`SuggestionsJSON` for gdocs data, `FigmaContextJSON` for Figma data added in 002). It does **not** abstract its inputs behind a generic blob — it must always know exactly what it is rendering.
+- Run outputs are append-only per run. Extraction, prompts, logs, and future screenshots live under timestamped artifact directories.
 - `config.json` and `internal/config/json.go` are deleted entirely — no JSON config support anywhere. `.env.example` is the canonical reference for all configurable values.
 - Taskfile: `build`, `build-api`, `run`, `run-api`, `docker-build` all work.
 - Testing and docs are **part of each task**, not separate tasks.
@@ -90,9 +97,11 @@ graph TD
 
     subgraph internal
         Config["config"]
+        Source["source"]
         Orch["orchestrator"]
         GDocs["gdocs"]
         Prompt["prompt"]
+        Artifacts["artifacts"]
         Agent["agent\n(interface)"]
         Copilot["copilotcli"]
         GitHub["github"]
@@ -104,13 +113,49 @@ graph TD
     API --> Orch
     CLI --> GitHub
     API --> GitHub
-    Orch --> GDocs
+    Orch --> Source
+    Source --> GDocs
     Orch --> Prompt
+    Orch --> Artifacts
     Orch --> Agent
     Copilot -. implements .-> Agent
 ```
 
-The `agent.Agent` interface is the key new addition. The orchestrator no longer knows about `copilotcli` — it talks to the interface. This makes the AI backend pluggable and the orchestrator testable with a mock.
+The `agent.Agent` interface is one key new addition. The other is the source layer: the orchestrator should no longer assume Google Docs is the only upstream input. The prompt package should consume normalized prompt bundles so future sources such as Figma can enrich prompts without special-casing the orchestrator.
+
+---
+
+## Artifact History: Goals and Rationale
+
+Bauer currently overwrites the same output files on every run. This means:
+
+- if a run produces bad output, the previous good output is gone
+- there is no way to compare what changed between two runs over the same document
+- screenshots and extracted data from Figma cannot be stored reliably — they would be overwritten the moment a new run begins
+- when the API becomes active, multiple concurrent runs from different clients would collide on the same output paths
+
+The goal of the artifact system is to make every run independently inspectable, reproducible, and non-destructive.
+
+**What "append-only" means in this context:**
+
+Each run gets its own directory named by a unique run ID. Outputs are written once and never overwritten. Later runs add new directories alongside existing ones. The global `runs.jsonl` file receives one new line per run (append-only, never rewritten).
+
+**Why file system now and not a DB?**
+
+For the current Bauer scope, the simplest correct solution is file system only:
+
+- works in CLI mode with no service dependencies
+- preserves prompts and extraction payloads exactly as produced
+- handles screenshots naturally as binary files
+- the whole artifact directory for a run can be zipped and shared for debugging
+
+A DB (SQLite or otherwise) becomes appropriate later when:
+
+- the API needs to query across runs (e.g. "all runs for doc X")
+- mapping manifests need to be indexed by section key for fast lookup
+- the API needs pagination and filtering of run history
+
+That is a future concern. The file system layout chosen here is structured so that a future migration to SQLite for the index layer requires only adding a DB write alongside the existing file write — not restructuring the artifact layout.
 
 ---
 
@@ -121,6 +166,7 @@ The `agent.Agent` interface is the key new addition. The orchestrator no longer 
 Opens a GitHub issue with a detailed implementation plan. Runs extraction + prompt generation only — Copilot never executes.
 
 **Request:**
+
 ```json
 {
   "doc_id": "1abc...",
@@ -132,6 +178,7 @@ Opens a GitHub issue with a detailed implementation plan. Runs extraction + prom
 ```
 
 **Response:**
+
 ```json
 {
   "status": "success",
@@ -147,6 +194,7 @@ Opens a GitHub issue with a detailed implementation plan. Runs extraction + prom
 Full flow: clone repo → apply changes via Copilot → open PR.
 
 **Request:**
+
 ```json
 {
   "doc_id": "1abc...",
@@ -161,6 +209,7 @@ Full flow: clone repo → apply changes via Copilot → open PR.
 ```
 
 **Response:**
+
 ```json
 {
   "status": "success",
@@ -185,6 +234,7 @@ The API needs to push branches, create PRs, and open issues. This runs in an org
 ### Why Not a PAT?
 
 PATs have real drawbacks for org automation:
+
 - Tied to a user account — if that person leaves or loses access, everything breaks.
 - Org-level fine-grained PATs often require org owner approval to enable.
 - Actions show as "the user did this" rather than "the automation did this" — messy audit trail.
@@ -216,6 +266,7 @@ PATs have real drawbacks for org automation:
 Send the org admin a link to: `https://github.com/apps/{your-app-slug}/installations/new`
 
 Ask them to:
+
 1. Click Install
 2. Choose the org
 3. Select the specific repos Bauer needs access to (don't grant all repos)
@@ -225,6 +276,7 @@ After installation, get the **Installation ID** from the URL: `https://github.co
 #### Step 3: Store secrets
 
 Two values needed at runtime:
+
 - `GITHUB_APP_ID` — the integer App ID from step 1
 - `GITHUB_APP_PRIVATE_KEY` — full PEM content (or `GITHUB_APP_PRIVATE_KEY_PATH` pointing to the file)
 - `GITHUB_APP_INSTALLATION_ID` — from step 2
@@ -234,6 +286,7 @@ These go in `.env.local` for local dev, K8s Secrets for production. Never commit
 #### Step 4: Runtime token generation (how it works)
 
 At runtime, Bauer:
+
 1. Creates a JWT signed with the private key (valid max 10 minutes)
 2. Calls `POST https://api.github.com/app/installations/{id}/access_tokens` with `Authorization: Bearer {jwt}`
 3. Gets back an installation access token valid for 1 hour
@@ -305,6 +358,7 @@ Bauer:
 This is the **OAuth 2.0 Client Credentials** grant — the standard pattern for machine-to-machine auth. No user interaction, no browser redirect. Each service that wants to call Bauer registers as a client in the IdP, gets a `client_id` + `client_secret`, and exchanges them for short-lived tokens.
 
 **Registering the app with your IdP:**
+
 1. Register a new application in your IdP (steps vary by IdP — Keycloak, Auth0, Okta, etc.)
 2. Select "Machine to Machine" / "Client Credentials" as the grant type
 3. Create a scope called `bauer:write` (or similar)
@@ -341,7 +395,7 @@ Using `GOOGLE_APPLICATION_CREDENTIALS` as a fallback aligns with Google's own to
 
 ### A note on timing
 
-The `.env.example` reference file (documenting all supported env vars) is created in **T0.5** as part of Phase 0 cleanup — useful immediately. The actual `.env`/`.env.local` *loading code* (`godotenv`) is API-specific and lives in **T3.1**. For CLI phases (0–2), the Taskfile provides sufficient local configuration — no env file loading needed in the CLI binary.
+The `.env.example` reference file (documenting all supported env vars) is created in **T0.5** as part of Phase 0 cleanup — useful immediately. The actual `.env`/`.env.local` _loading code_ (`godotenv`) is API-specific and lives in **T3.1**. For CLI phases (0–2), the Taskfile provides sufficient local configuration — no env file loading needed in the CLI binary.
 
 ### API: `.env` + `.env.local`
 
@@ -368,18 +422,24 @@ No `.env` files for the CLI — that would be unexpected UX for a command-line t
 ## Roadmap
 
 **Phase 0 — Foundation**
+
 - T0.1: Create `internal/agent` interface
 - T0.2: Refactor `copilotcli` to implement `agent.Agent`
+- T0.2a: Create `internal/source` interfaces + normalized source bundle
+- T0.2b: Refactor orchestrator and prompt contract to consume normalized source bundles
+- T0.2c: Add append-only artifact history foundation
 - T0.3: Create `internal/config/manager.go`
 - T0.4: Env var support for Google + GitHub credentials
 - T0.5: Remove JSON config entirely + create `.env.example`
 
 **Phase 1 — CLI Restoration**
+
 - T1.1: Restore `cmd/bauer/main.go` (all flags, modes, config manager)
 - T1.2: Fix dry-run semantics
 - T1.3: Update Taskfile (`build`, `run`)
 
 **Phase 2 — CLI Feature Completeness**
+
 - T2.1: Implement `--open-pr`
 - T2.2: Implement `--open-issue`
 - T2.3: Enforce mutual exclusion of `--open-pr` and `--open-issue`
@@ -395,11 +455,13 @@ No `.env` files for the CLI — that would be unexpected UX for a command-line t
 - T3.4: Add `task build-api` to Taskfile
 
 **Phase 4 — New API Endpoints**
+
 - T4.1: Implement `POST /api/v1/issues`
 - T4.2: Implement `GET /api/v1/health/ready`
 - T4.3: Implement `POST /api/v1/webhooks/jira`
 
 **Phase 5 — Auth & Security**
+
 - T5.1: GitHub App integration in `internal/github/auth.go`
 - T5.2: OIDC M2M JWT middleware for API
 - T5.3: Secret masking in structured logs
@@ -408,30 +470,33 @@ No `.env` files for the CLI — that would be unexpected UX for a command-line t
 
 ## Task Overview
 
-| Task | Description |
-|---|---|
-| T0.1 | Create `internal/agent/agent.go` with `Agent` interface: `Start`, `ExecuteChunk`, `GenerateSummary`, `Stop` |
-| T0.2 | Make `copilotcli.Client` implement `agent.Agent`; update orchestrator to depend on the interface |
-| T0.3 | Build `internal/config/manager.go` with `Resolve()` that merges env vars → flags/request → defaults (three sources; no file/JSON config) |
-| T0.4 | Add `BAUER_CREDENTIALS_PATH` + `GOOGLE_APPLICATION_CREDENTIALS` fallback for credentials; add `BAUER_GITHUB_TOKEN` to token resolution |
-| T0.5 | Delete `config.json` + `internal/config/json.go`, remove `--config` flag, add to `.gitignore`, create `.env.example` as the canonical env var reference |
-| T1.1 | Rewrite `cmd/bauer/main.go` to use `internal/config/cli.go` for all flag parsing; restore all original flags; wire to config manager |
-| T1.2 | Fix `--dry-run`: skip Copilot in standalone mode; skip PR creation (not Copilot) in `--open-pr` mode |
-| T1.3 | Update `Taskfile.yml`: fix `task run` flags, ensure `task build` works, add `task run-api` |
-| T2.1 | After Copilot applies changes, read remote from git config, create branch from `main`, commit, push, open PR |
-| T2.2 | Skip Copilot; run extraction only; format suggestions as markdown; open GitHub issue; print issue URL |
-| T2.3 | Early validation in `main.go`: if both `--open-pr` and `--open-issue` are set, exit 1 with clear error before any API calls |
-| T3.0 | Create `Dockerfile` and `.dockerignore` for the API server; add `docker-build` and `docker-run` Taskfile tasks |
-| T3.1 | `go get github.com/joho/godotenv`; load `.env` then `.env.local` at API startup (`.env.example` already exists from T0.5) |
-| T3.2 | Remove `credentials` + `github_token` from `APIRequest`; handler reads from env vars; per-request fields override server config |
-| T3.3 | Rename `/api/v1/workflow` → `/api/v1/workflows`; use Go 1.22 method+path routing; consolidate route registration |
-| T3.4 | Add `build-api` task to `Taskfile.yml` |
-| T4.1 | New handler: runs orchestrator in dry-run, formats result as issue body, creates GitHub issue, returns `{ issue_url, issue_number }` |
-| T4.2 | New handler: checks credentials file readable + GH token set + `gh` in PATH; returns `503` with failure map if any check fails |
-| T4.3 | New handler: validates shared secret, parses Jira payload, extracts doc ID from configured custom field, fires workflow in goroutine |
-| T5.1 | Add GitHub App token generation to `internal/github/auth.go`: JWT → installation token; `GITHUB_APP_ID` + `GITHUB_APP_PRIVATE_KEY` env vars |
-| T5.2 | New `internal/auth/middleware.go`: optional JWT validation using IdP JWKS; `BAUER_OIDC_ISSUER` + `BAUER_OIDC_AUDIENCE` env vars; bypassed if unset |
-| T5.3 | `MaskSecret()` + `MaskPath()` helpers in `internal/logging/masking.go`; audit all `slog` calls; mask tokens and paths |
+| Task  | Description                                                                                                                                             |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T0.1  | Create `internal/agent/agent.go` with `Agent` interface: `Start`, `ExecuteChunk`, `GenerateSummary`, `Stop`                                             |
+| T0.2  | Make `copilotcli.Client` implement `agent.Agent`; update orchestrator to depend on the interface                                                        |
+| T0.2a | Create `internal/source` with source adapters and a normalized `SourceBundle` output that can combine multiple upstream sources                         |
+| T0.2b | Refactor orchestrator to call the source layer (via `source.Manager.Fetch`); do NOT change `PromptData` field structure — prompt keeps explicit named fields |
+| T0.2c | Add `--artifacts-dir` flag + `BAUER_ARTIFACTS_DIR` env var; write timestamped run directories with `runs.jsonl` index (default `./bauer-artifacts/`); remove old `--output-dir` |
+| T0.3  | Build `internal/config/manager.go` with `Resolve()` that merges env vars → flags/request → defaults (three sources; no file/JSON config)                |
+| T0.4  | Add `BAUER_CREDENTIALS_PATH` + `GOOGLE_APPLICATION_CREDENTIALS` fallback for credentials; add `BAUER_GITHUB_TOKEN` to token resolution                  |
+| T0.5  | Delete `config.json` + `internal/config/json.go`, remove `--config` flag, add to `.gitignore`, create `.env.example` as the canonical env var reference |
+| T1.1  | Rewrite `cmd/bauer/main.go` to use `internal/config/cli.go` for all flag parsing; restore all original flags; wire to config manager                    |
+| T1.2  | Fix `--dry-run`: skip Copilot in standalone mode; skip PR creation (not Copilot) in `--open-pr` mode                                                    |
+| T1.3  | Update `Taskfile.yml`: fix `task run` flags, ensure `task build` works, add `task run-api`                                                              |
+| T2.1  | After Copilot applies changes, read remote from git config, create branch from `main`, commit, push, open PR                                            |
+| T2.2  | Skip Copilot; run extraction only; format suggestions as markdown; open GitHub issue; print issue URL                                                   |
+| T2.3  | Early validation in `main.go`: if both `--open-pr` and `--open-issue` are set, exit 1 with clear error before any API calls                             |
+| T3.0  | Create `Dockerfile` and `.dockerignore` for the API server; add `docker-build` and `docker-run` Taskfile tasks                                          |
+| T3.1  | `go get github.com/joho/godotenv`; load `.env` then `.env.local` at API startup (`.env.example` already exists from T0.5)                               |
+| T3.2  | Remove `credentials` + `github_token` from `APIRequest`; handler reads from env vars; per-request fields override server config                         |
+| T3.3  | Rename `/api/v1/workflow` → `/api/v1/workflows`; use Go 1.22 method+path routing; consolidate route registration                                        |
+| T3.4  | Add `build-api` task to `Taskfile.yml`                                                                                                                  |
+| T4.1  | New handler: runs orchestrator in dry-run, formats result as issue body, creates GitHub issue, returns `{ issue_url, issue_number }`                    |
+| T4.2  | New handler: checks credentials file readable + GH token set + `gh` in PATH; returns `503` with failure map if any check fails                          |
+| T4.3  | New handler: validates shared secret, parses Jira payload, extracts doc ID from configured custom field, fires workflow in goroutine                    |
+| T5.1  | Add GitHub App token generation to `internal/github/auth.go`: JWT → installation token; `GITHUB_APP_ID` + `GITHUB_APP_PRIVATE_KEY` env vars             |
+| T5.2  | New `internal/auth/middleware.go`: optional JWT validation using IdP JWKS; `BAUER_OIDC_ISSUER` + `BAUER_OIDC_AUDIENCE` env vars; bypassed if unset      |
+| T5.3  | `MaskSecret()` + `MaskPath()` helpers in `internal/logging/masking.go`; audit all `slog` calls; mask tokens and paths                                   |
 
 ---
 
@@ -444,6 +509,7 @@ No `.env` files for the CLI — that would be unexpected UX for a command-line t
 **Why**: The orchestrator currently imports `copilotcli` directly. Without an interface, swapping the AI backend (future model, REST agent, test mock) means modifying the orchestrator. Depending on an interface keeps the orchestrator backend-agnostic.
 
 **Files touched**:
+
 - `internal/agent/agent.go` — **create**
 
 **Implementation**:
@@ -478,6 +544,7 @@ type Agent interface {
 No other files change in this task.
 
 **Acceptance criteria**:
+
 - [ ] `internal/agent/agent.go` exists and compiles: `go build ./internal/agent/...`
 - [ ] Interface has exactly the four methods with the signatures above
 - [ ] Package doc comment explains its purpose
@@ -494,6 +561,7 @@ No other files change in this task.
 **Why**: Without this, T0.1 is just a floating interface. This task completes the abstraction and makes the orchestrator testable.
 
 **Files touched**:
+
 - `internal/copilotcli/client.go` — **modify** (adjust method signatures if needed + add compile-time check)
 - `internal/orchestrator/orchestrator.go` — **modify** (change field type and constructor parameter)
 
@@ -531,6 +599,7 @@ func New(a agent.Agent) *DefaultOrchestrator {
 The call sites in `cmd/bauer/main.go` and `cmd/app/main.go` still create a `copilotcli.Client` and pass it in — the concrete type stays at the wiring layer.
 
 **Acceptance criteria**:
+
 - [ ] `var _ agent.Agent = (*Client)(nil)` compiles without errors
 - [ ] `internal/orchestrator` does not import `internal/copilotcli` anywhere
 - [ ] All existing orchestrator tests still pass with `go test ./internal/orchestrator/...`
@@ -541,6 +610,173 @@ The call sites in `cmd/bauer/main.go` and `cmd/app/main.go` still create a `copi
 
 ---
 
+### T0.2a — Create `internal/source` interfaces and normalized source bundle
+
+**What**: Add a new `internal/source` package that owns source adapters and the combined output contract used by the orchestrator.
+
+**Why**: Bauer is about to ingest both Google Docs and Figma. Hard-wiring orchestration to `internal/gdocs` would immediately create source-specific technical debt.
+
+**Files touched**:
+
+- `internal/source/source.go` — **create**
+- `internal/source/types.go` — **create**
+- `internal/source/manager.go` — **create**
+
+**Implementation**:
+
+```go
+// internal/source/source.go
+package source
+
+import "context"
+
+type Adapter interface {
+    Name() string
+    Fetch(ctx context.Context, req Request) (any, error)
+}
+```
+
+```go
+// internal/source/types.go
+package source
+
+import "bauer/internal/gdocs"
+
+type Request struct {
+    DocID string
+}
+
+type SourceBundle struct {
+    Document *gdocs.ProcessingResult `json:"document,omitempty"`
+    Design   any                     `json:"design,omitempty"`
+}
+```
+
+**Acceptance criteria**:
+
+- [ ] `internal/source` exists and compiles
+- [ ] The orchestrator can depend on `source.SourceBundle` instead of `gdocs.ProcessingResult` directly
+- [ ] The source layer is shaped to allow a later Figma adapter without reworking the orchestrator again
+
+**End result**: Bauer has an explicit source-intake seam instead of assuming Google Docs is the only upstream source.
+
+---
+
+### T0.2b — Refactor orchestrator to consume the source layer
+
+**What**: Make the orchestrator call `internal/source` to obtain its input bundle instead of calling `internal/gdocs` directly.
+
+**Why**: The orchestrator must not be coupled to any specific source. With `internal/source` in place (T0.2a), the orchestrator should depend on `source.SourceBundle`, not on `gdocs.ProcessingResult`. This is the seam that allows Figma (and any future source) to be added without touching the orchestrator again.
+
+**What this task does NOT do**: It does not change the `PromptData` type or the prompt package's field structure. The prompt package intentionally uses explicit, named fields (`SuggestionsJSON` for gdocs data; `FigmaContextJSON` added later in T2F.6 when Figma support lands). Abstracting the prompt contract behind a generic blob (e.g., `WorkUnitsJSON string`) would hide per-source prompt logic and make templates unreadable. The prompt package must always know exactly what it is rendering.
+
+**Files touched**:
+
+- `internal/orchestrator/orchestrator.go` — **modify** (call `source.Manager.Fetch()` instead of calling `gdocs` directly)
+
+**Implementation**:
+
+```go
+// internal/orchestrator/orchestrator.go
+// Before: orchestrator directly imported and called internal/gdocs
+// After: orchestrator calls the source manager and receives a SourceBundle
+
+func (o *Orchestrator) Execute(ctx context.Context, req source.Request) error {
+    bundle, err := o.sources.Fetch(ctx, req)
+    if err != nil {
+        return fmt.Errorf("source fetch: %w", err)
+    }
+    // bundle.Document is *gdocs.ProcessingResult
+    // bundle.Design will be *figma.NormalizedDesign once T2F.4 lands (nil until then)
+
+    chunks, err := o.prompt.GenerateAllChunks(bundle.Document, nil /* no figma yet */)
+    // ...
+}
+```
+
+**Acceptance criteria**:
+
+- [ ] The orchestrator no longer imports `internal/gdocs` directly
+- [ ] The orchestrator calls `source.Manager.Fetch()` and receives a `SourceBundle`
+- [ ] Existing Google Docs-only behavior still produces the same output
+- [ ] `internal/prompt` and `PromptData` are unchanged by this task
+
+**End result**: The orchestrator is decoupled from any specific source. Adding Figma in T2F.5–T2F.6 requires no changes to the orchestrator itself.
+
+---
+
+### T0.2c — Add append-only artifact history foundation
+
+**What**: Replace overwrite-only output behavior with timestamped run directories and a stable artifact layout. Introduce `--artifacts-dir` as the CLI flag and `BAUER_ARTIFACTS_DIR` as the env var that controls where artifacts are written.
+
+**Why**: See [Artifact History: Goals and Rationale](#artifact-history-goals-and-rationale) above for the full motivation. This task is the implementation.
+
+**Where `runs.jsonl` lives:**
+
+- Default location: `./bauer-artifacts/runs.jsonl` — relative to the current working directory where `bauer` is invoked (typically the root of the target repo)
+- Configurable via `BAUER_ARTIFACTS_DIR` env var or `--artifacts-dir` flag
+- Format: one JSON object per line, appended at the end of each run (never rewritten in full)
+- Full schema is defined in 002/Artifact History section
+
+**Files touched**:
+
+- `internal/artifacts/manager.go` — **create**
+- `internal/config/config.go` — **modify** (add `ArtifactsDir` field)
+- `internal/config/cli.go` — **modify** (add `--artifacts-dir` flag)
+- `internal/orchestrator/orchestrator.go` — **modify** (call artifact manager)
+
+**Implementation**:
+
+New CLI flag:
+
+```go
+// internal/config/cli.go
+fs.StringVar(&f.ArtifactsDir, "artifacts-dir", "",
+    "Directory for run artifacts (extraction, prompts, outputs, screenshots). Defaults to ./bauer-artifacts")
+```
+
+Resolution order (consistent with all other config values):
+
+```
+--artifacts-dir flag → BAUER_ARTIFACTS_DIR env var → "./bauer-artifacts"
+```
+
+Directory layout written by the artifact manager:
+
+```text
+{artifacts-dir}/
+  runs.jsonl                          ← append-only index; one JSON line per completed run
+  manifest.json                       ← latest mapping manifest for cache reuse (overwritten per run)
+  <run-id>/
+    metadata.json                     ← doc ID, timestamps, mode, chunk count
+    extraction/
+      gdocs.json
+    prompts/
+      chunk-1-of-N.md
+    outputs/
+      chunk-1-output.md
+      summary.md
+      issue-body.md
+    logs/
+      execution.jsonl
+```
+
+The `figma.json`, `mappings.json`, `comments.json`, and `screenshots/` subdirectory are added to the layout when Figma support lands in T2F.7 (002).
+
+**Acceptance criteria**:
+
+- [ ] Each run gets a unique timestamped directory under the configured artifacts dir
+- [ ] `runs.jsonl` is created on first run and appended to on subsequent runs; never overwritten
+- [ ] `--artifacts-dir` flag overrides `BAUER_ARTIFACTS_DIR`; defaults to `./bauer-artifacts`
+- [ ] `BAUER_ARTIFACTS_DIR` is documented in `.env.example`
+- [ ] Extraction and prompt outputs are no longer overwritten across runs
+- [ ] The old `--output-dir` flag is removed (outputs now live inside the artifact directory)
+- [ ] Metadata for a run can be inspected after execution completes
+
+**End result**: Bauer gets the traceability foundation needed for both v2 cleanup and later Figma-aware work. Every run is independently inspectable and non-destructive.
+
+---
+
 ### T0.3 — Create `internal/config/manager.go`
 
 **What**: A unified config resolver used by both CLI and API. Takes sources in priority order and merges them, returning a fully-resolved `*Config`.
@@ -548,6 +784,7 @@ The call sites in `cmd/bauer/main.go` and `cmd/app/main.go` still create a `copi
 **Why**: Four overlapping config systems with no precedence model. This replaces them all with one consistent resolver. Every new config field is registered once.
 
 **Files touched**:
+
 - `internal/config/manager.go` — **create**
 - `internal/config/manager_test.go` — **create**
 - `internal/config/config.go` (or `types.go`) — **verify** the `Config` struct has all needed fields
@@ -692,11 +929,13 @@ func (d *DefaultsSource) Load() (*Config, error) {
 ```
 
 Write `manager_test.go` with tests for:
+
 - Env var overrides flag value; flag value overrides hardcoded default
 - Zero value does not override lower-priority non-zero
 - `Validate()` errors on missing doc-id and credentials
 
 **Acceptance criteria**:
+
 - [ ] `go test ./internal/config/...` passes
 - [ ] Precedence is verified by tests: env var overrides flag value; flag value overrides hardcoded default
 - [ ] Boolean fields (`PageRefresh`, `DryRun`) use `*bool` — a `FlagsSource` setting `false` correctly overrides a `DefaultsSource` of `true`
@@ -715,6 +954,7 @@ Write `manager_test.go` with tests for:
 **Why**: Without env var support for credentials, CI pipelines and container deployments are unnecessarily awkward. `GOOGLE_APPLICATION_CREDENTIALS` is already a Google standard — aligning with it means zero extra setup for developers already using Google tooling.
 
 **Files touched**:
+
 - `internal/config/manager.go` — **modify** (`EnvVarSource.Load()` — already has this in T0.3 if done together)
 - `internal/github/auth.go` — **modify** (add `BAUER_GITHUB_TOKEN` to token resolution)
 - `.env.example` — **create/update** (document all env vars)
@@ -743,6 +983,7 @@ func GetGitHubToken() (string, error) {
 ```
 
 **Acceptance criteria**:
+
 - [ ] `BAUER_CREDENTIALS_PATH` set → `--credentials` flag not required
 - [ ] `GOOGLE_APPLICATION_CREDENTIALS` set → works as fallback when `BAUER_CREDENTIALS_PATH` is absent
 - [ ] `BAUER_GITHUB_TOKEN` takes priority over `GITHUB_TOKEN` and `GH_TOKEN`
@@ -759,6 +1000,7 @@ func GetGitHubToken() (string, error) {
 **Why**: JSON config files are not ergonomic for either the API (env vars are the right approach for servers) or the CLI (flags + env vars are the right approach for command-line tools). Having a third config mechanism adds complexity with no benefit. Removing it simplifies the config manager to three clean sources.
 
 **Files touched**:
+
 - `config.json` — **delete** (`git rm --cached config.json`)
 - `internal/config/json.go` — **delete**
 - `internal/config/cli.go` — **modify** (remove `--config` flag and `ConfigPath` field)
@@ -768,6 +1010,7 @@ func GetGitHubToken() (string, error) {
 **Implementation**:
 
 Remove from `internal/config/cli.go`:
+
 ```go
 // DELETE these:
 fs.StringVar(&f.ConfigPath, "config", "", "Path to a JSON config file for default values")
@@ -775,6 +1018,7 @@ fs.StringVar(&f.ConfigPath, "config", "", "Path to a JSON config file for defaul
 ```
 
 Create `.env.example`:
+
 ```bash
 # .env.example — copy relevant parts to .env.local and fill in secrets.
 # .env.local is gitignored. Never commit secrets.
@@ -812,17 +1056,20 @@ BAUER_BRANCH_PREFIX=bauer
 ```
 
 Add to `.gitignore`:
+
 ```
 config.json
 .env.local
 ```
 
 Remove `config.json` from git tracking:
+
 ```bash
 git rm --cached config.json
 ```
 
 **Acceptance criteria**:
+
 - [ ] `internal/config/json.go` does not exist
 - [ ] `config.json` is not tracked in git (listed in `.gitignore`)
 - [ ] `bauer --config` flag no longer exists (check `bauer --help`)
@@ -842,6 +1089,7 @@ git rm --cached config.json
 **Why**: PR #23 replaced the CLI's config wiring with inline flag parsing and made `--github-repo` required. This task undoes that.
 
 **Files touched**:
+
 - `cmd/bauer/main.go` — **full rewrite**
 - `internal/config/cli.go` — **modify** (add `--open-pr`, `--open-issue`, `--branch-prefix` flags)
 
@@ -912,6 +1160,7 @@ func main() {
 ```
 
 **Acceptance criteria**:
+
 - [ ] `bauer --doc-id X --credentials Y` runs standalone mode successfully
 - [ ] `bauer --doc-id X --credentials Y --dry-run` writes chunk files and exits without Copilot
 - [ ] `bauer --open-pr --open-issue ...` exits with code 1 and a clear message immediately
@@ -930,6 +1179,7 @@ func main() {
 **Why**: Right now `--dry-run` only skips PR creation, which is wrong for standalone mode.
 
 **Files touched**:
+
 - `cmd/bauer/main.go` — **modify** (pass dry-run intent to the right place)
 - `internal/orchestrator/orchestrator.go` — **verify** (should already respect `cfg.DryRun`)
 
@@ -960,12 +1210,14 @@ case flags.OpenPR:
 ```
 
 Update `--dry-run` help text to make both behaviors explicit:
+
 ```
 In standalone mode: skip Copilot, write chunk files only.
 In --open-pr mode: apply changes locally, skip PR creation.
 ```
 
 **Acceptance criteria**:
+
 - [ ] Standalone + `--dry-run`: writes chunk files, does NOT invoke Copilot SDK, exits 0
 - [ ] `--open-pr` + `--dry-run`: invokes Copilot SDK, applies changes, does NOT create PR, prints "dry-run" message
 - [ ] Both behaviors described in `--help`
@@ -980,12 +1232,13 @@ In --open-pr mode: apply changes locally, skip PR creation.
 **What**: Fix `task run` (uses old flags), ensure `task build` works, add `task run-api`.
 
 **Files touched**:
+
 - `Taskfile.yml` — **modify**
 
 **Implementation**:
 
 ```yaml
-version: '3'
+version: "3"
 
 tasks:
   build:
@@ -1024,6 +1277,7 @@ tasks:
 ```
 
 **Acceptance criteria**:
+
 - [ ] `task build` produces `./bauer`
 - [ ] `task build-api` produces `./bauer-api`
 - [ ] `task run -- --doc-id X --credentials Y` runs CLI
@@ -1039,6 +1293,7 @@ tasks:
 **Why**: This is the "full CLI GitHub flow" — same end result as the API's `/api/v1/workflows`, but triggered locally from the dev's machine.
 
 **Files touched**:
+
 - `cmd/bauer/main.go` — **modify** (`runOpenPR` function)
 - `internal/github/repo.go` — **modify or extend** (add `ReadRemoteFromGitConfig`)
 - `internal/github/` — **verify** `CreateBranch`, `CommitAndPush`, `CreatePR` exist and work from a local path
@@ -1094,6 +1349,7 @@ func runOpenPR(ctx context.Context, cfg *config.Config, result *orchestrator.Orc
 ```
 
 **Acceptance criteria**:
+
 - [ ] Running `bauer --doc-id X --credentials Y --open-pr` in a git repo with an `origin` remote creates a PR
 - [ ] Branch is named `<prefix>/doc-suggestions-<unix-timestamp>`
 - [ ] PR URL is printed to stdout
@@ -1110,6 +1366,7 @@ func runOpenPR(ctx context.Context, cfg *config.Config, result *orchestrator.Orc
 **What**: Skip Copilot. Run extraction only. Format the extracted suggestions as a structured GitHub issue body. Open the issue. Print the URL.
 
 **Files touched**:
+
 - `cmd/bauer/main.go` — **modify** (`runOpenIssue` function)
 - `internal/github/issues.go` — **create**
 - `internal/orchestrator/orchestrator.go` — **verify** dry-run stops before Copilot
@@ -1168,6 +1425,7 @@ func runOpenIssue(ctx context.Context, cfg *config.Config, orch *orchestrator.De
 ```
 
 `formatIssueBody` produces a markdown body like:
+
 ```
 ## BAU Suggestions from Google Doc
 
@@ -1179,6 +1437,7 @@ func runOpenIssue(ctx context.Context, cfg *config.Config, orch *orchestrator.De
 ```
 
 **Acceptance criteria**:
+
 - [ ] `bauer --doc-id X --credentials Y --open-issue` does NOT invoke Copilot
 - [ ] GitHub issue is created and URL is printed
 - [ ] Issue body is well-formatted markdown with doc ID and suggestion summary
@@ -1194,6 +1453,7 @@ func runOpenIssue(ctx context.Context, cfg *config.Config, orch *orchestrator.De
 **What**: Exit immediately with a clear error if both `--open-pr` and `--open-issue` are set. No work should start before this check.
 
 **Files touched**:
+
 - `cmd/bauer/main.go` — **modify** (already handled in T1.1 structure, verify it's there)
 
 **Implementation**:
@@ -1209,6 +1469,7 @@ if flags.OpenPR && flags.OpenIssue {
 ```
 
 **Acceptance criteria**:
+
 - [ ] `bauer --open-pr --open-issue` exits with code 1 before reading any config or making any API calls
 - [ ] Error message mentions both flags and briefly explains what each does
 - [ ] Unit test covers this path
@@ -1222,6 +1483,7 @@ if flags.OpenPR && flags.OpenIssue {
 **Why**: The API is meant to run in a container. Having a working Docker image before building out new API features means every feature is tested in a prod-like environment from the start. It also makes the deployment story concrete rather than theoretical.
 
 **Files touched**:
+
 - `Dockerfile` — **create**
 - `.dockerignore` — **create**
 - `Taskfile.yml` — **modify** (add `docker-build`, `docker-run`)
@@ -1229,6 +1491,7 @@ if flags.OpenPR && flags.OpenIssue {
 **Implementation**:
 
 `Dockerfile`:
+
 ```dockerfile
 # --- Build stage ---
 FROM golang:1.22-bookworm AS builder
@@ -1266,6 +1529,7 @@ CMD ["./bauer-api"]
 ```
 
 `.dockerignore`:
+
 ```
 .env.local
 config.json
@@ -1279,6 +1543,7 @@ bauer-doc-suggestions.json
 ```
 
 Add to `Taskfile.yml`:
+
 ```yaml
 docker-build:
   desc: Build the Bauer API Docker image
@@ -1292,13 +1557,14 @@ docker-run:
     The credentials file is mounted read-only into the container.
   cmds:
     - docker run -p 8090:8090
-        --env-file .env.local
-        -v "${BAUER_CREDENTIALS_PATH}:/creds/service-account.json:ro"
-        -e BAUER_CREDENTIALS_PATH=/creds/service-account.json
-        bauer-api:latest
+      --env-file .env.local
+      -v "${BAUER_CREDENTIALS_PATH}:/creds/service-account.json:ro"
+      -e BAUER_CREDENTIALS_PATH=/creds/service-account.json
+      bauer-api:latest
 ```
 
 **Acceptance criteria**:
+
 - [ ] `docker build -t bauer-api:latest .` completes without errors
 - [ ] Container starts: `docker run -p 8090:8090 bauer-api:latest` and `/api/v1/health` returns `200`
 - [ ] `gh` and `git` are available inside the container: `docker run --rm bauer-api:latest sh -c "gh --version && git --version"`
@@ -1314,6 +1580,7 @@ docker-run:
 **What**: Load `.env` then `.env.local` at API startup before config resolution. Neither file is required.
 
 **Files touched**:
+
 - `cmd/app/main.go` — **modify**
 - `go.mod` + `go.sum` — **modify**
 - `.env` — **create** (committed, non-sensitive defaults)
@@ -1342,6 +1609,7 @@ func main() {
 ```
 
 `.env` (committed):
+
 ```bash
 # API Server
 BAUER_API_PORT=8090
@@ -1360,6 +1628,7 @@ BAUER_BRANCH_PREFIX=bauer
 > `.env.example` was already created in T0.5. This task only adds the `godotenv` loading code to the API binary and creates the committed `.env` file with non-sensitive defaults.
 
 **Acceptance criteria**:
+
 - [ ] API starts without `.env` and `.env.local` present (no error)
 - [ ] Values from `.env.local` override values in `.env`
 - [ ] OS env vars override both
@@ -1373,6 +1642,7 @@ BAUER_BRANCH_PREFIX=bauer
 **What**: Remove `credentials` and `github_token` from `APIRequest`. Handler reads both from env vars. Per-request fields override server-level config defaults.
 
 **Files touched**:
+
 - `internal/workflow/api.go` (or wherever `APIRequest` is defined) — **modify**
 - Workflow handler — **modify**
 - `cmd/app/types/config.go` — **verify** server-level defaults are properly surfaced
@@ -1380,6 +1650,7 @@ BAUER_BRANCH_PREFIX=bauer
 **Implementation**:
 
 Updated `APIRequest`:
+
 ```go
 type APIRequest struct {
     GitHubRepo   string `json:"github_repo"`
@@ -1420,6 +1691,7 @@ chunkSize := firstNonZero(req.ChunkSize, apiCfg.ChunkSize, 1)
 ```
 
 **Acceptance criteria**:
+
 - [ ] `POST /api/v1/workflows` without `credentials` or `github_token` in body works correctly
 - [ ] Sending `credentials` in the body is silently ignored (field doesn't exist in struct)
 - [ ] Server returns `500` with clear message if neither credentials env var is set
@@ -1433,6 +1705,7 @@ chunkSize := firstNonZero(req.ChunkSize, apiCfg.ChunkSize, 1)
 **What**: Rename `/api/v1/workflow` to `/api/v1/workflows`. Consolidate route registration.
 
 **Files touched**:
+
 - Route registration (likely `cmd/app/main.go`) — **modify**
 
 **Implementation**:
@@ -1458,6 +1731,7 @@ mux.Handle("/api/v1/", auth.JWTMiddleware(protected))
 ```
 
 **Acceptance criteria**:
+
 - [ ] `POST /api/v1/workflows` (plural) works
 - [ ] `POST /api/v1/workflow` (singular, old) returns `405` or `404`
 - [ ] All handler tests updated to use new path
@@ -1476,6 +1750,7 @@ build-api:
 ```
 
 **Acceptance criteria**:
+
 - [ ] `task build-api` produces `./bauer-api`
 
 ---
@@ -1485,6 +1760,7 @@ build-api:
 **What**: New endpoint. Runs the orchestrator in dry-run mode to get the extraction result without running Copilot. Formats the result as a GitHub issue body. Creates the issue. Returns the URL.
 
 **Files touched**:
+
 - `cmd/app/handlers/issues.go` (or similar) — **create**
 - `internal/github/issues.go` — **create** (reused from T2.2)
 - Route registration — **modify** (already set up in T3.3)
@@ -1492,6 +1768,7 @@ build-api:
 **Implementation**:
 
 Request body:
+
 ```go
 type IssueRequest struct {
     DocID       string `json:"doc_id"`
@@ -1503,6 +1780,7 @@ type IssueRequest struct {
 ```
 
 Handler:
+
 ```go
 func IssuesHandler(apiCfg *apiconfig.Config) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
@@ -1553,6 +1831,7 @@ func IssuesHandler(apiCfg *apiconfig.Config) http.HandlerFunc {
 ```
 
 **Acceptance criteria**:
+
 - [ ] `POST /api/v1/issues` with valid body returns `{ status, issue_url, issue_number }`
 - [ ] Copilot SDK is never invoked
 - [ ] `doc_id` or `github_repo` missing → `400`
@@ -1568,6 +1847,7 @@ func IssuesHandler(apiCfg *apiconfig.Config) http.HandlerFunc {
 > **Note**: This endpoint must be registered on the **public mux** (not behind JWT middleware). K8s readiness probes cannot present bearer tokens. See T3.3 and T5.2 for route registration details.
 
 **Files touched**:
+
 - Health handler file — **modify** (add `ReadinessHandler`)
 - Route registration — **modify**
 
@@ -1613,6 +1893,7 @@ func ReadinessHandler(w http.ResponseWriter, r *http.Request) {
 ```
 
 **Acceptance criteria**:
+
 - [ ] Returns `200 { "status": "ready" }` when all checks pass
 - [ ] Returns `503 { "status": "not ready", "missing": {...} }` when anything is missing
 - [ ] `GET /api/v1/health` still always returns `200` (unaffected)
@@ -1625,6 +1906,7 @@ func ReadinessHandler(w http.ResponseWriter, r *http.Request) {
 **What**: Jira webhook endpoint. Validates shared secret, parses payload, extracts Google Doc ID from a configurable custom field, triggers the workflow in a goroutine (respond fast).
 
 **Files touched**:
+
 - `cmd/app/handlers/jira.go` — **create**
 - `internal/jira/payload.go` — **create** (Jira payload struct)
 - Route registration — **modify**
@@ -1658,6 +1940,7 @@ func ExtractDocID(payload *WebhookPayload, fieldKey string) string {
 ```
 
 Handler:
+
 ```go
 func JiraWebhookHandler(apiCfg *apiconfig.Config) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
@@ -1710,6 +1993,7 @@ func JiraWebhookHandler(apiCfg *apiconfig.Config) http.HandlerFunc {
 `runWorkflowFromJira` calls a **shared internal `WorkflowService` function**, the same one called by the `/api/v1/workflows` handler. Before implementing T4.3, extract the core workflow execution logic from the `/api/v1/workflows` handler into a standalone function (e.g. `service.RunWorkflow(ctx, req WorkflowRequest) (*WorkflowResult, error)` in `internal/workflow/service.go`). Both the HTTP handler and the Jira webhook handler call this function directly — no HTTP loopback.
 
 Example extracted service:
+
 ```go
 // internal/workflow/service.go
 type WorkflowRequest struct {
@@ -1739,6 +2023,7 @@ The `/api/v1/workflows` handler becomes a thin HTTP wrapper around `service.RunW
 The Jira webhook goroutine calls `service.RunWorkflow(...)` directly.
 
 Setting up the Jira webhook (ops runbook to include in docs):
+
 1. Jira → Settings → System → Webhooks → Create webhook
 2. URL: `https://your-api.example.com/api/v1/webhooks/jira?secret=your-secret`
 3. Events: check **Issue → created**
@@ -1746,12 +2031,15 @@ Setting up the Jira webhook (ops runbook to include in docs):
 5. Save
 
 To find your custom field ID:
+
 ```
 GET https://your-domain.atlassian.net/rest/api/3/field
 ```
+
 Look for the field named "Google Doc ID" and note its `id` (e.g. `customfield_10100`). Set `BAUER_JIRA_DOC_FIELD` to that value.
 
 **Acceptance criteria**:
+
 - [ ] Wrong or missing secret → `401`
 - [ ] Non-`issue_created` event → `200`, no action
 - [ ] Valid payload with doc ID → `200 { "status": "accepted" }`, workflow runs in background
@@ -1768,12 +2056,14 @@ Look for the field named "Google Doc ID" and note its `id` (e.g. `customfield_10
 **Why**: PATs tied to user accounts aren't suitable for org automation. GitHub Apps provide short-lived tokens, better audit trails, and no dependency on a specific user.
 
 **Files touched**:
+
 - `internal/github/auth.go` — **modify**
 - `go.mod` + `go.sum` — **modify** (`go-github/v66`, `golang-jwt/jwt/v5`)
 
 **Implementation**:
 
 New env vars:
+
 - `GITHUB_APP_ID` — integer App ID
 - `GITHUB_APP_PRIVATE_KEY` — full PEM content (directly in env var)
 - `GITHUB_APP_PRIVATE_KEY_PATH` — path to PEM file (alternative)
@@ -1823,6 +2113,7 @@ func generateAppInstallationToken() (string, error) {
 Use `golang-jwt/jwt/v5` for JWT signing and `go-github/v66` for the API call.
 
 **Acceptance criteria**:
+
 - [ ] `GITHUB_APP_ID` + `GITHUB_APP_PRIVATE_KEY` + `GITHUB_APP_INSTALLATION_ID` → uses App auth
 - [ ] PAT path unchanged when App env vars are not set
 - [ ] Invalid or missing private key → clear error message
@@ -1835,6 +2126,7 @@ Use `golang-jwt/jwt/v5` for JWT signing and `go-github/v66` for the API call.
 **What**: Optional JWT validation middleware. Applied to all protected API routes. Bypassed if `BAUER_OIDC_ISSUER` is not configured.
 
 **Files touched**:
+
 - `internal/auth/middleware.go` — **create**
 - `cmd/app/main.go` — **modify** (wrap protected routes)
 - `go.mod` + `go.sum` — **modify** (`lestrrat-go/jwx/v2` or similar)
@@ -1888,6 +2180,7 @@ mux.Handle("/api/v1/", auth.JWTMiddleware(protected))
 ```
 
 **Acceptance criteria**:
+
 - [ ] `BAUER_OIDC_ISSUER` unset → all requests pass through without auth check
 - [ ] `BAUER_OIDC_ISSUER` set + no Bearer token → `401`
 - [ ] Valid JWT from configured IdP → request passes through
@@ -1902,6 +2195,7 @@ mux.Handle("/api/v1/", auth.JWTMiddleware(protected))
 **What**: Add `MaskSecret()` and `MaskPath()` helpers. Audit all `slog` calls. Make sure tokens and credential paths never appear in logs as plaintext.
 
 **Files touched**:
+
 - `internal/logging/masking.go` — **create**
 - `internal/logging/masking_test.go` — **create**
 - All files containing `slog.Info/Warn/Error` that log config or request fields — **audit and modify**
@@ -1947,6 +2241,7 @@ slog.Info("starting workflow",
 ```
 
 **Acceptance criteria**:
+
 - [ ] `MaskSecret("")` → `"<unset>"`
 - [ ] `MaskSecret("ghp_abc123xyz")` → `"ghp_..."`
 - [ ] `MaskPath("/home/user/secrets/creds.json")` → `".../creds.json"`
