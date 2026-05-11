@@ -1,6 +1,11 @@
 version: "3"
 
 tasks:
+  build-api:
+    desc: Build the Bauer API binary
+    cmds:
+      - go build -o bauer-api cmd/app/main.go
+
   build:
     desc: Build the Bauer and Bauer API binaries
     cmds:
@@ -22,11 +27,67 @@ tasks:
     cmds:
       - ./bauer-api --config config.json
 
+  workshop-up:
+    desc: Launch the Bauer workshop if needed, or reuse the existing one
+    cmds:
+      - |
+        set -eu
+        if workshop info >/dev/null 2>&1; then
+          status="$(workshop info | awk '/^status:/ {print $2}')"
+          case "$status" in
+            ready|Ready)
+              echo 'Workshop "dev" is already ready'
+              ;;
+            stopped|Stopped)
+              workshop start
+              ;;
+            *)
+              echo "Workshop exists with status: $status"
+              echo 'Use "task workshop-refresh" if workshop.yaml changed, or "workshop remove && workshop launch" for a full rebuild.'
+              exit 1
+              ;;
+          esac
+        else
+          workshop launch
+        fi
+
+  workshop-refresh:
+    desc: Apply workshop.yaml changes to the existing workshop
+    cmds:
+      - workshop refresh
+
+  workshop-build:
+    desc: Build Bauer inside the workshop
+    deps: [workshop-up]
+    cmds:
+      - workshop exec dev -- bash -lc 'cd /project && go build -o bauer ./cmd/bauer && go build -o bauer-api ./cmd/app'
+
+  workshop-test:
+    desc: Run tests inside the workshop
+    deps: [workshop-up]
+    cmds:
+      - workshop exec dev -- bash -lc 'cd /project && go test --cover ./...'
+
+  workshop-run-server:
+    desc: Run the Bauer API inside the workshop
+    deps: [workshop-up]
+    vars:
+      CREDENTIALS: '{{default "credentials.json" .CREDENTIALS}}'
+    cmds:
+      - workshop run dev -- run-api /project/{{.CREDENTIALS}}
+
+  workshop-shell:
+    desc: Open an interactive shell inside the workshop
+    deps: [workshop-up]
+    cmds:
+      - workshop shell
+
   clean:
     desc: Clean up generated files
     cmds:
       - rm -rf bauer-output
       - rm -f bauer
+      - rm -f bauer-api
       - rm -f bauer.log
       - rm -rf /tmp/gh* /tmp/tmp* /tmp/test-bauer-repo* || true
 

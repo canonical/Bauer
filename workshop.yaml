@@ -1,0 +1,17 @@
+name: dev
+base: ubuntu@24.04
+
+sdks:
+  - name: go
+    channel: "1.26"
+  - name: vscode-remote
+    channel: latest/stable
+  - name: opencode
+    channel: latest/stable
+
+actions:
+  build: go build -o bauer ./cmd/bauer && go build -o bauer-api ./cmd/app
+  test: go test ./...
+  run-api: 'test -n "$1" || { echo "usage: workshop run dev -- run-api <credentials.json>"; exit 1; }; go run ./cmd/app/main.go --credentials "$1" --target-repo /project'
+  run-cli-help: go run ./cmd/bauer/main.go --help
+  opencode: opencode "$@"
