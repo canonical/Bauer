@@ -424,48 +424,48 @@ No `.env` files for the CLI — that would be unexpected UX for a command-line t
 
 **Phase 0 — Foundation**
 
-- T0.1: Define `Agent` interface in the orchestrator (at the consumer, per Go convention)
-- T0.2: Refactor `copilotcli` to implement `orchestrator.Agent`
-- T0.2a: Create `internal/source` interfaces + normalized source bundle
-- T0.2b: Refactor orchestrator and prompt contract to consume normalized source bundles
-- T0.2c: Add append-only artifact history foundation
-- T0.3: Create `internal/config/manager.go`
-- T0.4: Env var support for Google + GitHub credentials
-- T0.5: Remove JSON config entirely + create `.env.example`
+- T0.1: Define `Agent` interface in the orchestrator (at the consumer, per Go convention) ✅ DONE
+- T0.2: Refactor `copilotcli` to implement `orchestrator.Agent` ✅ DONE
+- T0.2a: Create `internal/source` interfaces + normalized source bundle ✅ DONE
+- T0.2b: Refactor orchestrator and prompt contract to consume normalized source bundles ✅ DONE
+- T0.2c: Add append-only artifact history foundation ✅ DONE
+- T0.3: Create `internal/config/manager.go` (BLOCKER for T0.4–T0.5 and all of Phase 1–2)
+- T0.4: Env var support for Google + GitHub credentials ([PARALLEL with T0.5] after T0.3)
+- T0.5: Remove JSON config entirely + create `.env.example` ([PARALLEL with T0.4] after T0.3)
 
 **Phase 1 — CLI Restoration**
 
-- T1.1: Restore `cmd/bauer/main.go` (all flags, modes, config manager)
-- T1.2: Fix dry-run semantics
-- T1.3: Update Taskfile (`build`, `run`)
+- T1.1: Restore `cmd/bauer/main.go` (all flags, modes, config manager) (BLOCKER for Phase 2; depends on T0.3–T0.5)
+- T1.2: Fix dry-run semantics ([PARALLEL with T1.3, T2.1, T2.2, T2.3] after T1.1)
+- T1.3: Update Taskfile (`build`, `build-api`, `run`, `run-api`) ([PARALLEL with T1.2, T2.1, T2.2, T2.3] after T1.1)
 
 **Phase 2 — CLI Feature Completeness**
 
-- T2.1: Implement `--open-pr`
-- T2.2: Implement `--open-issue`
-- T2.3: Enforce mutual exclusion of `--open-pr` and `--open-issue`
+- T2.1: Implement `--open-pr` ([PARALLEL with T1.2, T1.3, T2.2, T2.3] after T1.1)
+- T2.2: Implement `--open-issue` ([PARALLEL with T1.2, T1.3, T2.1, T2.3] after T1.1)
+- T2.3: Enforce mutual exclusion of `--open-pr` and `--open-issue` ([PARALLEL with T1.2, T1.3, T2.1, T2.2] after T1.1)
 
 **Phase 3 — API Foundation**
 
 > `.env.example` is already created in T0.5. What's new here is the `godotenv` loading code in the API binary, plus the Docker image. Both are needed before building new API features.
 
-- T3.0: Dockerize the API (Dockerfile, `.dockerignore`, `docker-build` Taskfile task)
-- T3.1: Add `.env` + `.env.local` loading with `godotenv` in API startup
-- T3.2: Remove secrets from request body + merge with server config
-- T3.3: Rename routes + clean up route registration
-- T3.4: Add `task build-api` to Taskfile
+- T3.0: Dockerize the API (Dockerfile, `.dockerignore`, `docker-build` Taskfile task) ([PARALLEL with T3.1] after Phase 2)
+- T3.1: Add `.env` + `.env.local` loading with `godotenv` in API startup ([PARALLEL with T3.0] after Phase 2)
+- T3.2: Remove secrets from request body + merge with server config (sequential after T3.1)
+- T3.3: Rename routes + clean up route registration ([PARALLEL with T3.2, T3.4])
+- T3.4: Add `task build-api` to Taskfile ([PARALLEL with T3.2, T3.3])
 
 **Phase 4 — New API Endpoints**
 
-- T4.1: Implement `POST /api/v1/issues`
-- T4.2: Implement `GET /api/v1/health/ready`
-- T4.3: Implement `POST /api/v1/webhooks/jira`
+- T4.1: Implement `POST /api/v1/issues` ([PARALLEL with T4.2] after Phase 3)
+- T4.2: Implement `GET /api/v1/health/ready` ([PARALLEL with T4.1] after Phase 3)
+- T4.3: Implement `POST /api/v1/webhooks/jira` (sequential after T4.1/T4.2, requires shared workflow service)
 
 **Phase 5 — Auth & Security**
 
-- T5.1: GitHub App integration in `internal/github/auth.go`
-- T5.2: OIDC M2M JWT middleware for API
-- T5.3: Secret masking in structured logs
+- T5.1: GitHub App integration in `internal/github/auth.go` ([PARALLEL with T5.2] after Phase 4)
+- T5.2: OIDC M2M JWT middleware for API ([PARALLEL with T5.1] after Phase 4)
+- T5.3: Secret masking in structured logs (sequential, audits all prior work)
 
 ---
 

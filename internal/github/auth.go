@@ -7,20 +7,20 @@ import (
 	"strings"
 )
 
-// GetGitHubToken retrieves a GitHub token from environment variables or gh CLI
+// GetGitHubToken retrieves a GitHub token from environment variables or gh CLI.
+// Resolution order: BAUER_GITHUB_TOKEN → GITHUB_TOKEN → GH_TOKEN → gh auth token
 func GetGitHubToken() (string, error) {
-	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
-		return token, nil
-	}
-	if token := os.Getenv("GH_TOKEN"); token != "" {
-		return token, nil
+	for _, env := range []string{"BAUER_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"} {
+		if token := os.Getenv(env); token != "" {
+			return token, nil
+		}
 	}
 
-	// Get token from gh CLI config
+	// Fall back to gh CLI
 	cmd := exec.Command("gh", "auth", "token")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("failed to get GitHub token from gh CLI: %w", err)
+		return "", fmt.Errorf("no GitHub token found: set BAUER_GITHUB_TOKEN or run 'gh auth login'")
 	}
 
 	token := strings.TrimSpace(string(output))

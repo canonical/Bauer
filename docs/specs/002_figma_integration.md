@@ -1661,31 +1661,31 @@ These must be complete before this spec's work begins. They are tracked in 001.
 
 ### Phase B — Figma CLI ingestion
 
-- T2F.0: Local development setup and environment verification
-- T2F.1: Figma URL parsing and validation
-- T2F.2: Figma config and auth (`BAUER_FIGMA_TOKEN`)
-- T2F.3: `internal/figma` REST client (meta, nodes, comments, images)
-- T2F.4: Figma output normalization into Bauer types
+- T2F.0: Local development setup and environment verification ([PARALLEL with T2F.1])
+- T2F.1: Figma URL parsing and validation ([PARALLEL with T2F.0])
+- T2F.2: Figma config and auth (`BAUER_FIGMA_TOKEN`) (sequential after T2F.1, depends on 001 config system)
+- T2F.3: `internal/figma` REST client (meta, nodes, comments, images) (sequential after T2F.2)
+- T2F.4: Figma output normalization into Bauer types (sequential after T2F.3)
 
 ### Phase C — Preprocessing and prompt integration
 
-- T2F.5: `internal/source/mapping` resolver — join gdocs groups with figma anchors
-- T2F.6: Update `internal/prompt` for figma-aware chunked prompts
-- T2F.7: Persist figma artifacts under run directories
+- T2F.5: `internal/source/mapping` resolver — join gdocs groups with figma anchors (BLOCKER for Phase C; sequential after T2F.4)
+- T2F.6: Update `internal/prompt` for figma-aware chunked prompts ([PARALLEL with T2F.7] after T2F.5)
+- T2F.7: Persist figma artifacts under run directories ([PARALLEL with T2F.6] after T2F.5)
 
 ### Phase D — CLI experience and optional MCP guidance
 
-- T2F.8: Extend CLI issue mode and default execution with figma context
-- T2F.9: Add optional MCP-aware runtime guidance in prompt templates
+- T2F.8: Extend CLI issue mode and default execution with figma context (sequential after Phase C)
+- T2F.9: Add optional MCP-aware runtime guidance in prompt templates ([PARALLEL with T2F.8] after Phase C)
 
 ### Phase E — Polish and drift detection
 
-- T2F.10: Drift detection, cache reuse, low-confidence surfacing
+- T2F.10: Drift detection, cache reuse, low-confidence surfacing (sequential after Phase D)
 
 ### Phase F — API rollout
 
-- T4F.1: API endpoint schema updates for Figma URL input
-- T4F.2: Server-side screenshot hosting and issue/PR inline visuals
+- T4F.1: API endpoint schema updates for Figma URL input ([PARALLEL with T4F.2] after 001 Phase 4)
+- T4F.2: Server-side screenshot hosting and issue/PR inline visuals ([PARALLEL with T4F.1] after 001 Phase 4)
 
 ---
 
