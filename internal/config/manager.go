@@ -122,7 +122,11 @@ func (e *EnvVarSource) Load() (*Config, error) {
 	}
 	cfg.TargetRepo = os.Getenv("BAUER_TARGET_REPO")
 	if v := os.Getenv("BAUER_CHUNK_SIZE"); v != "" {
-		cfg.ChunkSize, _ = strconv.Atoi(v)
+		cs, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for BAUER_CHUNK_SIZE=%q: %w", v, err)
+		}
+		cfg.ChunkSize = cs
 	}
 	if v := os.Getenv("BAUER_PAGE_REFRESH"); v != "" {
 		b, err := strconv.ParseBool(v)

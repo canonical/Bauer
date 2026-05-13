@@ -70,6 +70,22 @@ func main() {
 	}
 	cfg.ArtifactsDir = absArtifactsDir
 
+	// If a target repo is configured, chdir there now so all git/gh/agent
+	// operations operate in the correct directory. We restore the original
+	// directory on exit.
+	if cfg.TargetRepo != "" {
+		origDir, err := os.Getwd()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: get current directory: %v\n", err)
+			os.Exit(1)
+		}
+		if err := os.Chdir(cfg.TargetRepo); err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: chdir to target repo %q: %v\n", cfg.TargetRepo, err)
+			os.Exit(1)
+		}
+		defer os.Chdir(origDir)
+	}
+
 	// 5. Setup orchestrator
 	artMgr := artifacts.NewManager(absArtifactsDir)
 	gdocsAdapter := source.NewGDocsAdapter()
