@@ -11,6 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -120,6 +121,20 @@ func main() {
 		ghToken = ""
 	}
 
+	// Resolve paths to absolute before creating the workflow or managers.
+	// The workflow chdirs into the cloned repo, so relative paths would
+	// redirect artifacts and outputs into the target repo (and get committed).
+	absOutputDir, err := filepath.Abs(resolvedOutputDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: resolve output dir: %v\n", err)
+		os.Exit(1)
+	}
+	absArtifactsDir, err := filepath.Abs(resolvedArtifactsDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: resolve artifacts dir: %v\n", err)
+		os.Exit(1)
+	}
+
 	workflowInput := workflow.WorkflowInput{
 		GitHubRepo:    resolvedGithubRepo,
 		GitHubToken:   ghToken,
@@ -128,12 +143,13 @@ func main() {
 		Credentials:   resolvedCredentials,
 		LocalRepoPath: *localRepoPath,
 		DryRun:        resolvedDryRun,
-		OutputDir:     resolvedOutputDir,
+		OutputDir:     absOutputDir,
+		ArtifactsDir:  absArtifactsDir,
 		ChunkSize:     resolvedChunkSize,
 		Model:         resolvedModel,
 	}
 
-	artMgr := artifacts.NewManager(resolvedArtifactsDir)
+	artMgr := artifacts.NewManager(absArtifactsDir)
 	gdocsAdapter := source.NewGDocsAdapter()
 	sources := source.NewManager(gdocsAdapter)
 

@@ -20,13 +20,14 @@ type WorkflowInput struct {
 	BranchPrefix string
 
 	// Bauer configuration
-	DocID       string
-	Credentials string
-	ChunkSize   int
-	PageRefresh bool
-	OutputDir   string
-	Model       string
-	DryRun      bool
+	DocID        string
+	Credentials  string
+	ChunkSize    int
+	PageRefresh  bool
+	OutputDir    string
+	ArtifactsDir string
+	Model        string
+	DryRun       bool
 
 	// Local repository path
 	LocalRepoPath string
@@ -120,8 +121,7 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 
 	logger.Info("workflow success: GitHub setup successful")
 
-	// Convert credentials path to absolute
-	// Do this before changing directory so relative paths work
+	// Convert credentials path to absolute before chdir so relative paths work
 	var credentialsPath string
 	if input.Credentials != "" {
 		absPath, err := filepath.Abs(input.Credentials)
@@ -134,6 +134,23 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 		}
 		credentialsPath = absPath
 		logger.Info("workflow: resolved credentials path", "path", credentialsPath)
+	}
+
+	// Resolve output dir to absolute path BEFORE chdir.
+	// The orchestrator uses OutputDir to write prompt files. If left relative,
+	// chdir redirects them into the cloned target repo, causing prompt files
+	// to be staged and committed into the generated PR.
+	//
+	// Callers should already pass absolute paths, but we resolve here as a
+	// safety net. The artifacts manager must also be created with an absolute
+	// base dir (enforced by the caller).
+	absOutputDir := input.OutputDir
+	if !filepath.IsAbs(absOutputDir) {
+		abs, err := filepath.Abs(absOutputDir)
+		if err != nil {
+			return nil, fmt.Errorf("resolve output dir: %w", err)
+		}
+		absOutputDir = abs
 	}
 
 	// Change to target repository directory
@@ -174,16 +191,16 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 
 	bauerStartTime := time.Now()
 
-	// Create Bauer config with target repo (now current directory)
+	// Create Bauer config — use absolute paths so files land outside the cloned repo
 	bauerCfg := &config.Config{
 		DocID:           input.DocID,
-		CredentialsPath: credentialsPath, // Use absolute path
+		CredentialsPath: credentialsPath,
 		DryRun:          input.DryRun,
 		ChunkSize:       input.ChunkSize,
 		PageRefresh:     input.PageRefresh,
-		OutputDir:       input.OutputDir,
+		OutputDir:       absOutputDir,
 		Model:           input.Model,
-		TargetRepo:      ".", // Current directory is the cloned repo
+		TargetRepo:      ".",
 	}
 
 	logger.Info("workflow: Bauer target repository set at", "path", bauerCfg.TargetRepo)

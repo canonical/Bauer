@@ -102,6 +102,7 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 			ChunkSize:     req.ChunkSize,
 			PageRefresh:   req.PageRefresh,
 			OutputDir:     req.OutputDir,
+			ArtifactsDir:  "bauer-artifacts",
 			Model:         req.Model,
 			DryRun:        req.DryRun,
 			LocalRepoPath: fmt.Sprintf("%s/%s-%d", req.LocalRepoPath, "bauer-workflow", time.Now().Unix()),

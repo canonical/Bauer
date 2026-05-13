@@ -168,10 +168,12 @@ func CommitChanges(localPath, message string) error {
 		return fmt.Errorf("failed to stage changes: %w, output: %s", err, output)
 	}
 
-	// Exclude specific files from commit
+	// Exclude Bauer-generated files from commit so they don't
+	// end up in the PR.  (Paths are relative to the repo root.)
 	excludeFiles := []string{
 		"bauer-doc-suggestions.json",
 		"bauer-output/",
+		"bauer-artifacts/",
 	}
 	for _, file := range excludeFiles {
 		cmd := exec.Command("git", "reset", "HEAD", file)
