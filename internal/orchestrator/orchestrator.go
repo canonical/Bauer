@@ -119,7 +119,7 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 			status = "failed"
 		}
 		mode := "execute"
-		if cfg.DryRun {
+		if config.BoolVal(cfg.DryRun, false) {
 			mode = "dry-run"
 		}
 		o.finalizeRun(runID, result, cfg, mode, status)
@@ -177,7 +177,7 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 
 	// 3. Initialize Prompt Engine
 	planStart := time.Now()
-	engine, err := prompt.NewEngine(cfg.PageRefresh)
+	engine, err := prompt.NewEngine(config.BoolVal(cfg.PageRefresh, false))
 	if err != nil {
 		slog.Error("Failed to initialize prompt engine", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("failed to initialize prompt engine: %w", err)
@@ -222,7 +222,7 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 	}
 
 	// If dry run, return early
-	if cfg.DryRun {
+	if config.BoolVal(cfg.DryRun, false) {
 		result.CopilotOutputs = []ChunkOutput{}
 		result.DryRun = true
 		result.TotalDuration = time.Since(startTime)

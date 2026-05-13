@@ -189,7 +189,7 @@ func TestOrchestrator_FinalizeRunOnFailure(t *testing.T) {
 
 	// Execute with a config that will fail (no doc ID, no source adapter configured)
 	cfg := &config.Config{
-		DryRun: true,
+		DryRun: config.BoolPtr(true),
 	}
 	_, err := orch.Execute(context.Background(), cfg)
 

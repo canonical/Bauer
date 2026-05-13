@@ -195,9 +195,9 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	bauerCfg := &config.Config{
 		DocID:           input.DocID,
 		CredentialsPath: credentialsPath,
-		DryRun:          input.DryRun,
+		DryRun:          config.BoolPtr(input.DryRun),
 		ChunkSize:       input.ChunkSize,
-		PageRefresh:     input.PageRefresh,
+		PageRefresh:     config.BoolPtr(input.PageRefresh),
 		OutputDir:       absOutputDir,
 		Model:           input.Model,
 		TargetRepo:      ".",

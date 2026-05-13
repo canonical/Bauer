@@ -424,48 +424,48 @@ No `.env` files for the CLI — that would be unexpected UX for a command-line t
 
 **Phase 0 — Foundation**
 
-- T0.1: Define `Agent` interface in the orchestrator (at the consumer, per Go convention)
-- T0.2: Refactor `copilotcli` to implement `orchestrator.Agent`
-- T0.2a: Create `internal/source` interfaces + normalized source bundle
-- T0.2b: Refactor orchestrator and prompt contract to consume normalized source bundles
-- T0.2c: Add append-only artifact history foundation
-- T0.3: Create `internal/config/manager.go`
-- T0.4: Env var support for Google + GitHub credentials
-- T0.5: Remove JSON config entirely + create `.env.example`
+- T0.1: Define `Agent` interface in the orchestrator (at the consumer, per Go convention) ✅ DONE
+- T0.2: Refactor `copilotcli` to implement `orchestrator.Agent` ✅ DONE
+- T0.2a: Create `internal/source` interfaces + normalized source bundle ✅ DONE
+- T0.2b: Refactor orchestrator and prompt contract to consume normalized source bundles ✅ DONE
+- T0.2c: Add append-only artifact history foundation ✅ DONE
+- T0.3: Create `internal/config/manager.go` (BLOCKER for T0.4–T0.5 and all of Phase 1–2)
+- T0.4: Env var support for Google + GitHub credentials ([PARALLEL with T0.5] after T0.3)
+- T0.5: Remove JSON config entirely + create `.env.example` ([PARALLEL with T0.4] after T0.3)
 
 **Phase 1 — CLI Restoration**
 
-- T1.1: Restore `cmd/bauer/main.go` (all flags, modes, config manager)
-- T1.2: Fix dry-run semantics
-- T1.3: Update Taskfile (`build`, `run`)
+- T1.1: Restore `cmd/bauer/main.go` (all flags, modes, config manager) (BLOCKER for Phase 2; depends on T0.3–T0.5)
+- T1.2: Fix dry-run semantics ([PARALLEL with T1.3, T2.1, T2.2, T2.3] after T1.1)
+- T1.3: Update Taskfile (`build`, `build-api`, `run`, `run-api`) ([PARALLEL with T1.2, T2.1, T2.2, T2.3] after T1.1)
 
 **Phase 2 — CLI Feature Completeness**
 
-- T2.1: Implement `--open-pr`
-- T2.2: Implement `--open-issue`
-- T2.3: Enforce mutual exclusion of `--open-pr` and `--open-issue`
+- T2.1: Implement `--open-pr` ([PARALLEL with T1.2, T1.3, T2.2, T2.3] after T1.1)
+- T2.2: Implement `--open-issue` ([PARALLEL with T1.2, T1.3, T2.1, T2.3] after T1.1)
+- T2.3: Enforce mutual exclusion of `--open-pr` and `--open-issue` ([PARALLEL with T1.2, T1.3, T2.1, T2.2] after T1.1)
 
 **Phase 3 — API Foundation**
 
 > `.env.example` is already created in T0.5. What's new here is the `godotenv` loading code in the API binary, plus the Docker image. Both are needed before building new API features.
 
-- T3.0: Dockerize the API (Dockerfile, `.dockerignore`, `docker-build` Taskfile task)
-- T3.1: Add `.env` + `.env.local` loading with `godotenv` in API startup
-- T3.2: Remove secrets from request body + merge with server config
-- T3.3: Rename routes + clean up route registration
-- T3.4: Add `task build-api` to Taskfile
+- T3.0: Dockerize the API (Dockerfile, `.dockerignore`, `docker-build` Taskfile task) ([PARALLEL with T3.1] after Phase 2)
+- T3.1: Add `.env` + `.env.local` loading with `godotenv` in API startup ([PARALLEL with T3.0] after Phase 2)
+- T3.2: Remove secrets from request body + merge with server config (sequential after T3.1)
+- T3.3: Rename routes + clean up route registration ([PARALLEL with T3.2, T3.4])
+- T3.4: Add `task build-api` to Taskfile ([PARALLEL with T3.2, T3.3])
 
 **Phase 4 — New API Endpoints**
 
-- T4.1: Implement `POST /api/v1/issues`
-- T4.2: Implement `GET /api/v1/health/ready`
-- T4.3: Implement `POST /api/v1/webhooks/jira`
+- T4.1: Implement `POST /api/v1/issues` ([PARALLEL with T4.2] after Phase 3)
+- T4.2: Implement `GET /api/v1/health/ready` ([PARALLEL with T4.1] after Phase 3)
+- T4.3: Implement `POST /api/v1/webhooks/jira` (sequential after T4.1/T4.2, requires shared workflow service)
 
 **Phase 5 — Auth & Security**
 
-- T5.1: GitHub App integration in `internal/github/auth.go`
-- T5.2: OIDC M2M JWT middleware for API
-- T5.3: Secret masking in structured logs
+- T5.1: GitHub App integration in `internal/github/auth.go` ([PARALLEL with T5.2] after Phase 4)
+- T5.2: OIDC M2M JWT middleware for API ([PARALLEL with T5.1] after Phase 4)
+- T5.3: Secret masking in structured logs (sequential, audits all prior work)
 
 ---
 
@@ -905,14 +905,22 @@ func (e *EnvVarSource) Load() (*Config, error) {
     }
     // Booleans: only set when the env var is explicitly present, so that
     // "not set" (nil) differs from "set to false" — enabling correct override behaviour.
+    // We use strconv.ParseBool so "1", "TRUE", etc. are also accepted, and invalid
+    // values return a descriptive error rather than silently defaulting to false.
     if v := os.Getenv("BAUER_PAGE_REFRESH"); v != "" {
-        b := v == "true"
+        b, err := strconv.ParseBool(v)
+        if err != nil {
+            return nil, fmt.Errorf("invalid BAUER_PAGE_REFRESH=%q: %w", v, err)
+        }
         cfg.PageRefresh = &b
     }
     if v := os.Getenv("BAUER_DRY_RUN"); v != "" {
-        b := v == "true"
+        b, err := strconv.ParseBool(v)
+        if err != nil {
+            return nil, fmt.Errorf("invalid BAUER_DRY_RUN=%q: %w", v, err)
+        }
         cfg.DryRun = &b
-    }"
+    }
     return cfg, nil
 }
 
@@ -1339,8 +1347,13 @@ func runOpenPR(ctx context.Context, cfg *config.Config, result *orchestrator.Orc
 
     branchName := fmt.Sprintf("%s/doc-suggestions-%d", cfg.BranchPrefix, time.Now().Unix())
 
-    if err := github.CreateAndPushBranch(ctx, cwd, branchName, token); err != nil {
-        return fmt.Errorf("failed to create/push branch: %w", err)
+    if err := github.CreateBranchFromDefault(ctx, cwd, branchName); err != nil {
+        return fmt.Errorf("failed to create branch: %w", err)
+    }
+
+    defaultBranch, err := github.GetDefaultBranch(cwd)
+    if err != nil {
+        return fmt.Errorf("failed to detect default branch: %w", err)
     }
 
     prTitle := fmt.Sprintf("Apply BAU suggestions from doc %s", cfg.DocID)
@@ -1649,9 +1662,9 @@ BAUER_BRANCH_PREFIX=bauer
 
 **Files touched**:
 
-- `internal/workflow/api.go` (or wherever `APIRequest` is defined) — **modify**
-- Workflow handler — **modify**
-- `cmd/app/types/config.go` — **verify** server-level defaults are properly surfaced
+- `internal/workflow/` — **create or modify** (define `APIRequest` and handler in the new API package)
+- Workflow handler — **create** in `cmd/app/` or `internal/api/`
+- `cmd/app/main.go` — **modify** route registration (server-level defaults come from config resolution at startup)
 
 **Implementation**:
 
@@ -1996,9 +2009,9 @@ func JiraWebhookHandler(apiCfg *apiconfig.Config) http.HandlerFunc {
 }
 ```
 
-`runWorkflowFromJira` calls a **shared internal `WorkflowService` function**, the same one called by the `/api/v1/workflows` handler. Before implementing T4.3, extract the core workflow execution logic from the `/api/v1/workflows` handler into a standalone function (e.g. `service.RunWorkflow(ctx, req WorkflowRequest) (*WorkflowResult, error)` in `internal/workflow/service.go`). Both the HTTP handler and the Jira webhook handler call this function directly — no HTTP loopback.
+`runWorkflowFromJira` calls a **shared internal `WorkflowService` function**, the same one called by the `/api/v1/workflows` handler. Because the old API code was removed in the cleanup phase, this shared service should be created fresh in `internal/workflow/service.go`. Both the HTTP handler and the Jira webhook handler call this function directly — no HTTP loopback.
 
-Example extracted service:
+Example service shape:
 
 ```go
 // internal/workflow/service.go
@@ -2021,11 +2034,11 @@ type WorkflowResult struct {
 }
 
 func RunWorkflow(ctx context.Context, req WorkflowRequest) (*WorkflowResult, error) {
-    // Core logic moved here from ExecuteWorkflowHandler
+    // Core workflow logic: clone (if API) or use cwd (if local), extract, orchestrate, finalize
 }
 ```
 
-The `/api/v1/workflows` handler becomes a thin HTTP wrapper around `service.RunWorkflow(...)`.
+The `/api/v1/workflows` handler is a thin HTTP wrapper around `service.RunWorkflow(...)`.
 The Jira webhook goroutine calls `service.RunWorkflow(...)` directly.
 
 Setting up the Jira webhook (ops runbook to include in docs):
