@@ -154,10 +154,15 @@ func runOpenPR(ctx context.Context, cfg *config.Config, sources *source.Manager,
 		return nil
 	}
 
-	// Create branch from main, commit, push
+	// Create branch from the repo's default branch, commit, push
 	branchName := fmt.Sprintf("%s/doc-suggestions-%d", cfg.BranchPrefix, time.Now().Unix())
-	if err := github.CreateAndPushBranch(ctx, cwd, branchName); err != nil {
-		return fmt.Errorf("failed to create/push branch: %w", err)
+	if err := github.CreateBranchFromDefault(ctx, cwd, branchName); err != nil {
+		return fmt.Errorf("failed to create branch: %w", err)
+	}
+
+	defaultBranch, err := github.GetDefaultBranch(cwd)
+	if err != nil {
+		return fmt.Errorf("failed to detect default branch: %w", err)
 	}
 
 	// Commit changes
@@ -180,7 +185,7 @@ func runOpenPR(ctx context.Context, cfg *config.Config, sources *source.Manager,
 	prURL, err := github.CreatePR(owner, repo, github.CreatePROptions{
 		Title:      prTitle,
 		HeadBranch: branchName,
-		BaseBranch: "main",
+		BaseBranch: defaultBranch,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create PR: %w", err)

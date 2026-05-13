@@ -10,7 +10,8 @@ import (
 // It does NOT validate — validation happens after the config resolver merges
 // all sources (flags, env vars, defaults).
 func ParseCLIFlags(args []string) (CLIFlags, error) {
-	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
 
 	var f CLIFlags
 

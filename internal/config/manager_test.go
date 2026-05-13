@@ -164,6 +164,34 @@ func TestEnvVarSource_Load(t *testing.T) {
 			t.Errorf("CredentialsPath = %q, want %q", cfg.CredentialsPath, "/primary/creds.json")
 		}
 	})
+
+	t.Run("ParseBool accepts TRUE and 1", func(t *testing.T) {
+		for _, val := range []string{"TRUE", "1", "True", "true"} {
+			t.Run(val, func(t *testing.T) {
+				t.Setenv("BAUER_DRY_RUN", val)
+				src := NewEnvVarSource()
+				cfg, err := src.Load()
+				if err != nil {
+					t.Fatalf("Load() error = %v", err)
+				}
+				if cfg.DryRun == nil || *cfg.DryRun != true {
+					t.Errorf("DryRun = %v, want true for %q", cfg.DryRun, val)
+				}
+			})
+		}
+	})
+
+	t.Run("ParseBool rejects invalid values", func(t *testing.T) {
+		t.Setenv("BAUER_DRY_RUN", "yes")
+		src := NewEnvVarSource()
+		_, err := src.Load()
+		if err == nil {
+			t.Fatal("expected error for invalid bool value")
+		}
+		if !contains(err.Error(), "BAUER_DRY_RUN") {
+			t.Errorf("error should mention env var name: %v", err)
+		}
+	})
 }
 
 func TestFlagsSource_Load(t *testing.T) {

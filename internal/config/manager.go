@@ -125,19 +125,31 @@ func (e *EnvVarSource) Load() (*Config, error) {
 		cfg.ChunkSize, _ = strconv.Atoi(v)
 	}
 	if v := os.Getenv("BAUER_PAGE_REFRESH"); v != "" {
-		b := v == "true"
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for BAUER_PAGE_REFRESH=%q: %w", v, err)
+		}
 		cfg.PageRefresh = &b
 	}
 	if v := os.Getenv("BAUER_DRY_RUN"); v != "" {
-		b := v == "true"
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for BAUER_DRY_RUN=%q: %w", v, err)
+		}
 		cfg.DryRun = &b
 	}
 	if v := os.Getenv("BAUER_OPEN_PR"); v != "" {
-		b := v == "true"
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for BAUER_OPEN_PR=%q: %w", v, err)
+		}
 		cfg.OpenPR = &b
 	}
 	if v := os.Getenv("BAUER_OPEN_ISSUE"); v != "" {
-		b := v == "true"
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for BAUER_OPEN_ISSUE=%q: %w", v, err)
+		}
 		cfg.OpenIssue = &b
 	}
 	return cfg, nil

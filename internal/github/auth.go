@@ -20,7 +20,7 @@ func GetGitHubToken() (string, error) {
 	cmd := exec.Command("gh", "auth", "token")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("no GitHub token found: set BAUER_GITHUB_TOKEN or run 'gh auth login'")
+		return "", fmt.Errorf("no GitHub token found (tried BAUER_GITHUB_TOKEN, GITHUB_TOKEN, GH_TOKEN, and gh CLI): %w (run 'gh auth login' or set one of the env vars)", err)
 	}
 
 	token := strings.TrimSpace(string(output))

@@ -41,44 +41,82 @@ func parseRepoFromURL(rawURL string) (owner, repo string, err error) {
 	return "", "", fmt.Errorf("could not parse owner/repo from remote URL: %s", rawURL)
 }
 
-// CreateAndPushBranch creates a new branch from the default branch, commits
-// any working-directory changes, and pushes the branch to origin.
-func CreateAndPushBranch(ctx context.Context, dir, branchName string) error {
-	// Stash any current changes so we can checkout the default branch cleanly.
+// CreateBranchFromDefault stashes any current changes, checks out the repo's
+// default branch, pulls latest, creates a new branch, and pops the stash.
+// Note: this helper intentionally does NOT commit or push — those are separate
+// operations (see CommitChanges and PushBranch) so that callers can inspect
+// the working tree after the branch is created but before committing.
+func CreateBranchFromDefault(ctx context.Context, dir, branchName string) error {
+	// Capture stash state before and after so we only pop when we actually
+	// created a stash entry. "git stash push" exits 0 even when there are
+	// no local changes ("No local changes to save"), so stashErr == nil is
+	// not sufficient to know a stash entry was created.
+	before, err := countStashEntries(ctx, dir)
+	if err != nil {
+		return fmt.Errorf("count stash entries before: %w", err)
+	}
+
 	stashCmd := exec.CommandContext(ctx, "git", "-C", dir, "stash", "push", "-m", "bauer-auto-stash")
-	_, stashErr := stashCmd.Output()
-	stashed := stashErr == nil
+	stashOutput, _ := stashCmd.CombinedOutput()
+	_ = stashOutput // we don't need the output; we rely on stash-list diff
+
+	after, err := countStashEntries(ctx, dir)
+	if err != nil {
+		return fmt.Errorf("count stash entries after: %w", err)
+	}
+	stashed := after > before
 
 	// Checkout default branch
 	defaultBranch := getDefaultBranch(dir)
 	cmd := exec.CommandContext(ctx, "git", "-C", dir, "checkout", defaultBranch)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		if stashed {
-			exec.CommandContext(ctx, "git", "-C", dir, "stash", "pop").Run()
+			_ = popStash(ctx, dir)
 		}
 		return fmt.Errorf("could not checkout %s: %w, output: %s", defaultBranch, err, output)
 	}
 
 	// Pull latest (non-fatal)
-	exec.CommandContext(ctx, "git", "-C", dir, "pull", "origin", defaultBranch).CombinedOutput()
+	_, _ = exec.CommandContext(ctx, "git", "-C", dir, "pull", "origin", defaultBranch).CombinedOutput()
 
 	// Create new branch
 	cmd = exec.CommandContext(ctx, "git", "-C", dir, "checkout", "-b", branchName)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		if stashed {
-			exec.CommandContext(ctx, "git", "-C", dir, "stash", "pop").Run()
+			_ = popStash(ctx, dir)
 		}
 		return fmt.Errorf("could not create branch %s: %w, output: %s", branchName, err, output)
 	}
 
 	// Pop stash to restore changes onto the new branch
 	if stashed {
-		cmd = exec.CommandContext(ctx, "git", "-C", dir, "stash", "pop")
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("could not restore stashed changes: %w, output: %s", err, output)
+		if err := popStash(ctx, dir); err != nil {
+			return fmt.Errorf("could not restore stashed changes: %w", err)
 		}
 	}
 
+	return nil
+}
+
+func countStashEntries(ctx context.Context, dir string) (int, error) {
+	cmd := exec.CommandContext(ctx, "git", "-C", dir, "stash", "list")
+	out, err := cmd.Output()
+	if err != nil {
+		return 0, err
+	}
+	entries := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(entries) == 1 && entries[0] == "" {
+		return 0, nil
+	}
+	return len(entries), nil
+}
+
+func popStash(ctx context.Context, dir string) error {
+	cmd := exec.CommandContext(ctx, "git", "-C", dir, "stash", "pop")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%w, output: %s", err, out)
+	}
 	return nil
 }
 
