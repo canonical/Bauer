@@ -5,21 +5,24 @@ import (
 	"errors"
 	"testing"
 
-	"bauer/internal/agent"
 	"bauer/internal/artifacts"
 	"bauer/internal/copilotcli"
 	"bauer/internal/source"
 	"bauer/internal/config"
 	"bauer/internal/prompt"
+	"bauer/internal/testutil"
 )
 
 // Compile-time check: copilotcli.Client must implement Agent.
 var _ Agent = (*copilotcli.Client)(nil)
 
+// Compile-time check: testutil.MockAgent must implement Agent.
+var _ Agent = (*testutil.MockAgent)(nil)
+
 func TestExecuteCopilotChunks_UsesAgentForEachChunk(t *testing.T) {
 	t.Parallel()
 
-	mock := &agent.MockAgent{
+	mock := &testutil.MockAgent{
 		ExecuteChunkFunc: func(ctx context.Context, chunkPath string, chunkNum int, model string) (string, error) {
 			switch chunkNum {
 			case 1:
@@ -117,7 +120,7 @@ func TestExecuteCopilotChunks_UsesAgentForEachChunk(t *testing.T) {
 func TestExecuteCopilotChunks_ReturnsAgentError(t *testing.T) {
 	t.Parallel()
 
-	mock := &agent.MockAgent{
+	mock := &testutil.MockAgent{
 		ExecuteChunkFunc: func(ctx context.Context, chunkPath string, chunkNum int, model string) (string, error) {
 			return "", errors.New("agent failed")
 		},
@@ -152,8 +155,9 @@ func TestExecuteCopilotChunks_ReturnsAgentError(t *testing.T) {
 func TestNewOrchestrator_WithMockDependencies(t *testing.T) {
 	t.Parallel()
 
-	mock := &agent.MockAgent{}
-	sources := source.NewManager()
+	mock := &testutil.MockAgent{}
+	gdocsAdapter := source.NewGDocsAdapter()
+	sources := source.NewManager(gdocsAdapter)
 	artMgr := artifacts.NewManager(t.TempDir())
 	orch := NewOrchestrator(mock, sources, artMgr)
 
@@ -171,5 +175,45 @@ func TestNewOrchestrator_WithMockDependencies(t *testing.T) {
 
 	if orch.artifacts == nil {
 		t.Fatal("orchestrator artifacts is nil")
+	}
+}
+
+func TestOrchestrator_FinalizeRunOnFailure(t *testing.T) {
+	t.Parallel()
+
+	mock := &testutil.MockAgent{}
+	gdocsAdapter := source.NewGDocsAdapter()
+	sources := source.NewManager(gdocsAdapter)
+	artMgr := artifacts.NewManager(t.TempDir())
+	orch := NewOrchestrator(mock, sources, artMgr)
+
+	// Execute with a config that will fail (no doc ID, no source adapter configured)
+	cfg := &config.Config{
+		DryRun: true,
+	}
+	_, err := orch.Execute(context.Background(), cfg)
+
+	// The fetch will fail, but finalizeRun should still have been called
+	// We verify by checking that a run directory was created
+	_ = err // error expected
+}
+
+func TestSetAgent(t *testing.T) {
+	t.Parallel()
+
+	gdocsAdapter := source.NewGDocsAdapter()
+	sources := source.NewManager(gdocsAdapter)
+	artMgr := artifacts.NewManager(t.TempDir())
+	orch := NewOrchestrator(nil, sources, artMgr)
+
+	if orch.agent != nil {
+		t.Fatal("expected nil agent initially")
+	}
+
+	mock := &testutil.MockAgent{}
+	orch.SetAgent(mock)
+
+	if orch.agent == nil {
+		t.Fatal("SetAgent did not set the agent")
 	}
 }

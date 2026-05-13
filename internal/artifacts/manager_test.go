@@ -26,7 +26,7 @@ func TestNewRun_CreatesDirectoryStructure(t *testing.T) {
 	}
 
 	runDir := filepath.Join(dir, runID)
-	subdirs := []string{"extraction", "prompts", "outputs", "logs"}
+	subdirs := []string{"extraction", "prompts", "outputs", "logs", "screenshots"}
 	for _, sub := range subdirs {
 		info, err := os.Stat(filepath.Join(runDir, sub))
 		if err != nil {

@@ -1,11 +1,7 @@
-// Package agent provides test doubles for the orchestrator.Agent interface.
-// The Agent interface itself is defined in the orchestrator package (at the
-// consumer), following Go convention. This package exists so that tests in
-// any package can construct a mock without copying test helpers.
-//
+// Package testutil provides shared test doubles for Bauer's internal packages.
 // MockAgent satisfies orchestrator.Agent via structural typing — it does not
 // import the orchestrator package, avoiding import cycles.
-package agent
+package testutil
 
 import "context"
 

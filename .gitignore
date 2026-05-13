@@ -17,3 +17,6 @@ dist/
 
 # Artifacts
 bauer-artifacts/
+
+.workshop.lock
+config.json

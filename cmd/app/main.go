@@ -4,11 +4,8 @@ import (
 	"bauer/cmd/app/core/middleware"
 	"bauer/cmd/app/types"
 	v1 "bauer/cmd/app/v1"
-	"bauer/internal/artifacts"
 	"bauer/internal/copilotcli"
 	"bauer/internal/orchestrator"
-	"bauer/internal/source"
-	"bauer/internal/workflow"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -23,29 +20,13 @@ func run() error {
 	slog.Info("startup", "status", "initializing API")
 	defer slog.Info("shutdown complete")
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		slog.Error("failed to get working directory", "error", err.Error())
-		return err
+	// Agent factory: creates a fresh Copilot client for each request's target repo.
+	// This avoids the bug where a single shared client was bound to the server's
+	// startup directory while requests target different cloned repos.
+	newAgent := func(cwd string) (orchestrator.Agent, error) {
+		return copilotcli.NewClient(cwd)
 	}
 
-	copilotClient, err := copilotcli.NewClient(cwd)
-	if err != nil {
-		slog.Error("failed to create Copilot client", "error", err.Error())
-		return err
-	}
-
-	gdocsAdapter := source.NewGDocsAdapter()
-	sources := source.NewManager(gdocsAdapter)
-
-	// API server resolves artifacts dir from env only (no CLI flag for the API)
-	resolvedArtifactsDir := os.Getenv("BAUER_ARTIFACTS_DIR")
-	if resolvedArtifactsDir == "" {
-		resolvedArtifactsDir = "bauer-artifacts"
-	}
-	artMgr := artifacts.NewManager(resolvedArtifactsDir)
-
-	orchestrator := orchestrator.NewOrchestrator(copilotClient, sources, artMgr)
 	cfg, err := types.LoadConfig()
 	if err != nil {
 		slog.Error("failed to load config", "error", err.Error())
@@ -53,14 +34,15 @@ func run() error {
 	}
 
 	rc := types.RouteConfig{
-		APIConfig:    *cfg,
-		Orchestrator: orchestrator,
+		APIConfig: *cfg,
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/job", v1.JobPost(rc))
+	mux.HandleFunc("/api/v1/job", v1.JobPost(rc, newAgent))
 	mux.HandleFunc("/api/v1/health", v1.GetHealth)
-	mux.HandleFunc("/api/v1/workflow", workflow.ExecuteWorkflowHandler(orchestrator))
+	// TODO: refactor workflow handler to use same per-request pattern
+	// mux.HandleFunc("/api/v1/workflow", workflow.ExecuteWorkflowHandler(orchestrator))
+
 	slog.Info("starting server", "address", ":8090")
 	err = http.ListenAndServe(":8090", middleware.RequestTrace(mux))
 

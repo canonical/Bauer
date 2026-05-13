@@ -3,7 +3,10 @@ package v1
 import (
 	"bauer/cmd/app/models/v1"
 	"bauer/cmd/app/types"
+	"bauer/internal/artifacts"
 	"bauer/internal/config"
+	"bauer/internal/orchestrator"
+	"bauer/internal/source"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,7 +14,11 @@ import (
 	"net/http"
 )
 
-func JobPost(rc types.RouteConfig) func(w http.ResponseWriter, r *http.Request) {
+// NewAgentFunc creates an orchestrator.Agent. The API server calls this per-request
+// so each job gets its own Copilot client pointing at the correct workspace.
+type NewAgentFunc func(cwd string) (orchestrator.Agent, error)
+
+func JobPost(rc types.RouteConfig, newAgent NewAgentFunc) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		requestID, ok := r.Context().Value("requestID").(string)
 		if !ok || requestID == "" {
@@ -32,6 +39,7 @@ func JobPost(rc types.RouteConfig) func(w http.ResponseWriter, r *http.Request) 
 		if err != nil {
 			return
 		}
+
 		cfg := config.Config{
 			DocID:           payload.DocID,
 			ChunkSize:       payload.ChunkSize,
@@ -42,7 +50,7 @@ func JobPost(rc types.RouteConfig) func(w http.ResponseWriter, r *http.Request) 
 			SummaryModel:    rc.APIConfig.SummaryModel,
 		}
 
-		go executeJob(requestID, cfg, rc)
+		go executeJob(requestID, cfg, rc, newAgent)
 
 		err = types.Accepted().Render(w, r)
 		if err != nil {
@@ -65,11 +73,27 @@ func getJobFromRequest(w http.ResponseWriter, r *http.Request, requestID string)
 	return &payload, nil
 }
 
-func executeJob(requestID string, cfg config.Config, rc types.RouteConfig) {
+// executeJob creates a fresh per-request orchestrator (with its own Copilot client)
+// so concurrent HTTP handlers never share mutable agent state.
+func executeJob(requestID string, cfg config.Config, rc types.RouteConfig, newAgent NewAgentFunc) {
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "requestID", requestID)
 
-	_, err := rc.Orchestrator.Execute(ctx, &cfg)
+	// Create a per-request Copilot client so each job targets the right workspace
+	agent, err := newAgent(rc.APIConfig.TargetRepo)
+	if err != nil {
+		slog.Error("failed to create agent", "error", err.Error(), "requestID", requestID)
+		return
+	}
+
+	// Build a per-request orchestrator to avoid shared mutable state across goroutines
+	gdocsAdapter := source.NewGDocsAdapter()
+	sources := source.NewManager(gdocsAdapter)
+	artMgr := artifacts.NewManager(rc.APIConfig.ArtifactsDir)
+
+	orch := orchestrator.NewOrchestrator(agent, sources, artMgr)
+
+	_, err = orch.Execute(ctx, &cfg)
 	if err != nil {
 		slog.Error("job execution failed",
 			"error", err.Error(),
@@ -82,7 +106,6 @@ func executeJob(requestID string, cfg config.Config, rc types.RouteConfig) {
 		"requestID", requestID,
 	)
 }
-
 
 func GetHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")

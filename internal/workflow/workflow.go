@@ -1,16 +1,15 @@
 package workflow
 
 import (
+	"bauer/internal/config"
+	"bauer/internal/github"
+	"bauer/internal/orchestrator"
 	"context"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
-
-	"bauer/internal/config"
-	"bauer/internal/github"
-	"bauer/internal/orchestrator"
 )
 
 // WorkflowInput represents the input for a complete workflow execution
@@ -74,11 +73,16 @@ type WorkflowOutput struct {
 	Warnings      []string      `json:"warnings"`
 }
 
+// NewAgentFunc creates an orchestrator.Agent in the correct working directory.
+// The workflow calls this AFTER chdir to the cloned repo, so the agent
+// operates in the target workspace — not the Bauer process startup directory.
+type NewAgentFunc func() (orchestrator.Agent, error)
+
 // ExecuteWorkflow orchestrates the complete flow:
 // 1. GitHub Setup (clone, create branch)
 // 2. Bauer Processing (extract, chunk, apply changes)
 // 3. GitHub Finalization (commit, push, create PR)
-func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator.Orchestrator) (*WorkflowOutput, error) {
+func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator.Orchestrator, newAgent NewAgentFunc) (*WorkflowOutput, error) {
 	output := &WorkflowOutput{
 		Status:    "pending",
 		StartTime: time.Now(),
@@ -152,6 +156,18 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	}
 	logger.Info("workflow: changed to cloned repository", "path", input.LocalRepoPath)
 	defer os.Chdir(originalDir)
+
+	// NOW create the Copilot client — after chdir, cwd is the target repo
+	if newAgent != nil {
+		agent, err := newAgent()
+		if err != nil {
+			return nil, fmt.Errorf("create agent: %w", err)
+		}
+		// Wire the agent into the orchestrator
+		if def, ok := orch.(*orchestrator.DefaultOrchestrator); ok {
+			def.SetAgent(agent)
+		}
+	}
 
 	// Bauer processing
 	logger.Info("workflow: starting phase 2 - Bauer processing")

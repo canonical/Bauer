@@ -5,6 +5,7 @@ package artifacts
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -44,7 +45,8 @@ func (m *Manager) BaseDir() string {
 }
 
 // NewRun creates a new timestamped run directory and returns the run ID.
-// It also creates the standard subdirectories (extraction, prompts, outputs, logs).
+// It creates all standard subdirectories including extraction, prompts,
+// outputs, logs, and screenshots.
 func (m *Manager) NewRun(ctx context.Context) (string, error) {
 	_ = ctx
 
@@ -53,14 +55,25 @@ func (m *Manager) NewRun(ctx context.Context) (string, error) {
 	}
 
 	now := time.Now().UTC()
-	runID := fmt.Sprintf("%s-%04x", now.Format("2006-01-02T15-04-05Z"), now.Nanosecond()/65536)
+	// 8 random hex chars for collision resistance
+	b := make([]byte, 4)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("generate run id: %w", err)
+	}
+	runID := fmt.Sprintf("%s-%04x-%08x", now.Format("2006-01-02T15-04-05Z"), now.Nanosecond()/65536, b)
 	runDir := filepath.Join(m.base, runID)
+
+	// Check for collision (extremely unlikely with 32-bit rand + nanosecond)
+	if _, err := os.Stat(runDir); err == nil {
+		return "", fmt.Errorf("run directory already exists: %s (collision)", runID)
+	}
 
 	dirs := []string{
 		filepath.Join(runDir, "extraction"),
 		filepath.Join(runDir, "prompts"),
 		filepath.Join(runDir, "outputs"),
 		filepath.Join(runDir, "logs"),
+		filepath.Join(runDir, "screenshots"),
 	}
 	for _, d := range dirs {
 		if err := os.MkdirAll(d, 0o755); err != nil {
@@ -71,7 +84,7 @@ func (m *Manager) NewRun(ctx context.Context) (string, error) {
 	return runID, nil
 }
 
-// RunDir returns the absolute path for a given run ID.
+// RunDir returns the path for a given run ID under the base directory.
 func (m *Manager) RunDir(runID string) string {
 	return filepath.Join(m.base, runID)
 }
@@ -116,12 +129,13 @@ func (m *Manager) WriteExtraction(runID string, name string, data any) error {
 }
 
 // WritePrompt writes a prompt file to the run's prompts directory.
+// name should be a simple filename (e.g. "chunk-1-of-3.md"), not a full path.
 func (m *Manager) WritePrompt(runID string, name string, content string) error {
 	runDir := filepath.Join(m.base, runID, "prompts")
 	if err := os.MkdirAll(runDir, 0o755); err != nil {
 		return fmt.Errorf("create prompts dir: %w", err)
 	}
-	path := filepath.Join(runDir, name)
+	path := filepath.Join(runDir, filepath.Base(name))
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("write prompt %s: %w", name, err)
 	}

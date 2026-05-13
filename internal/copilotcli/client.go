@@ -274,30 +274,33 @@ func (c *Client) GenerateSummary(ctx context.Context, outputs []string, model st
 
 	// Set up event handler
 	done := make(chan error, 1)
+	var fullSummary string
 
 	session.On(func(event copilot.SessionEvent) {
 		switch event.Type {
 		case "assistant.message_delta":
 			if event.Data.DeltaContent != nil {
 				fmt.Print(formatSummaryOutput(*event.Data.DeltaContent))
+				fullSummary += *event.Data.DeltaContent
 			}
 
 		case "assistant.reasoning_delta":
 			if event.Data.DeltaContent != nil {
 				fmt.Print(formatCopilotDim(*event.Data.DeltaContent))
+				fullSummary += *event.Data.DeltaContent
 			}
 
 		case "assistant.message":
-			// Print final message in yellow for summary
 			if event.Data.Content != nil {
 				fmt.Println(formatSummaryOutput(*event.Data.Content))
+				fullSummary += *event.Data.Content
 				slog.Debug("Summary response", slog.String("content", *event.Data.Content))
 			}
 
 		case "assistant.reasoning":
-			// Print reasoning in dimmed style
 			if event.Data.Content != nil {
 				fmt.Println(formatCopilotDim(*event.Data.Content))
+				fullSummary += *event.Data.Content
 				slog.Debug("Summary reasoning", slog.String("content", *event.Data.Content))
 			}
 
@@ -334,7 +337,7 @@ func (c *Client) GenerateSummary(ctx context.Context, outputs []string, model st
 			return "", err
 		}
 		fmt.Println() // Add newline after streaming output
-		return "", nil
+		return fullSummary, nil
 
 	case <-time.After(10 * time.Minute):
 		return "", fmt.Errorf("summary session timed out after 10 minutes")

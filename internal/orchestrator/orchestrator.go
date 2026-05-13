@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -79,15 +80,18 @@ type DefaultOrchestrator struct {
 
 // NewOrchestrator creates a new DefaultOrchestrator. Pass any Agent implementation,
 // a source.Manager, and an artifacts.Manager.
-// In production, pass copilotcli.NewClient(cwd), source.NewManager(gdocsAdapter),
-// and artifacts.NewManager(cfg.ArtifactsDir).
-// In tests, pass a mock agent and appropriate managers.
 func NewOrchestrator(a Agent, s *source.Manager, art *artifacts.Manager) *DefaultOrchestrator {
 	return &DefaultOrchestrator{agent: a, sources: s, artifacts: art}
 }
 
+// SetAgent replaces the agent. Useful when the agent must be created after
+// the orchestrator (e.g. after chdir to a cloned repo).
+func (o *DefaultOrchestrator) SetAgent(a Agent) {
+	o.agent = a
+}
+
 // Execute runs the full pipeline: source fetch, prompt generation, and optional agent execution.
-func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (*OrchestrationResult, error) {
+func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (result *OrchestrationResult, retErr error) {
 	startTime := time.Now()
 
 	// Create artifact run directory
@@ -100,6 +104,26 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 		}
 		slog.Info("Created artifact run directory", "run_id", runID)
 	}
+
+	// Ensure finalizeRun is called even on error, so failed runs appear in history
+	defer func() {
+		if o.artifacts == nil || runID == "" {
+			return
+		}
+		// Build result for finalize if we haven't set one yet
+		if result == nil {
+			result = &OrchestrationResult{RunID: runID}
+		}
+		status := "success"
+		if retErr != nil {
+			status = "failed"
+		}
+		mode := "execute"
+		if cfg.DryRun {
+			mode = "dry-run"
+		}
+		o.finalizeRun(runID, result, cfg, mode, status)
+	}()
 
 	// 1. Fetch from all configured sources via the source layer
 	extractionStart := time.Now()
@@ -119,19 +143,24 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 		return nil, fmt.Errorf("source fetch returned no document data")
 	}
 
-	result := bundle.Document
+	result = &OrchestrationResult{
+		Bundle: bundle,
+		RunID:  runID,
+	}
+
+	doc := bundle.Document
 	extractionDuration := time.Since(extractionStart)
+	result.ExtractionDuration = extractionDuration
 
 	// 2. Write extraction result to artifact directory
 	if o.artifacts != nil && runID != "" {
-		if err := o.artifacts.WriteExtraction(runID, "gdocs.json", result); err != nil {
+		if err := o.artifacts.WriteExtraction(runID, "gdocs.json", doc); err != nil {
 			slog.Error("Failed to write extraction artifact", slog.String("error", err.Error()))
-			// Non-fatal: continue processing
 		}
 	}
 
 	// Also write to legacy output file for backward compatibility
-	outputJSON, err := json.MarshalIndent(result, "", "  ")
+	outputJSON, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
 		slog.Error("Failed to marshal output", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("failed to generate output JSON: %w", err)
@@ -155,13 +184,13 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 	}
 
 	// 4. Generate Prompts from Chunks
-	totalLocations := len(result.GroupedSuggestions)
+	totalLocations := len(doc.GroupedSuggestions)
 	slog.Info("Generating prompts",
 		slog.Int("total_locations", totalLocations),
 		slog.Int("chunk_size", cfg.ChunkSize),
 	)
 	chunks, err := engine.GenerateAllChunks(
-		result,
+		doc,
 		cfg.ChunkSize,
 		cfg.OutputDir,
 	)
@@ -171,11 +200,14 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 	}
 
 	planDuration := time.Since(planStart)
+	result.PlanDuration = planDuration
+	result.Chunks = chunks
 
-	// Write prompt artifacts
+	// Write prompt artifacts (use base filename only)
 	if o.artifacts != nil && runID != "" {
 		for _, chunk := range chunks {
-			if err := o.artifacts.WritePrompt(runID, chunk.Filename, chunk.Content); err != nil {
+			artifactName := filepath.Base(chunk.Filename)
+			if err := o.artifacts.WritePrompt(runID, artifactName, chunk.Content); err != nil {
 				slog.Error("Failed to write prompt artifact", slog.String("error", err.Error()))
 			}
 		}
@@ -189,33 +221,12 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 		)
 	}
 
-	// Determine mode for artifact metadata
-	mode := "execute"
-	if cfg.DryRun {
-		mode = "dry-run"
-	}
-
 	// If dry run, return early
 	if cfg.DryRun {
-		totalDuration := time.Since(startTime)
-
-		res := &OrchestrationResult{
-			Bundle:             bundle,
-			RunID:              runID,
-			ExtractionDuration: extractionDuration,
-			Chunks:             chunks,
-			PlanDuration:       planDuration,
-			CopilotOutputs:     []ChunkOutput{},
-			CopilotDuration:    0,
-			SummaryDuration:    0,
-			TotalDuration:      totalDuration,
-			DryRun:             true,
-		}
-
-		// Finalize artifact run
-		o.finalizeRun(runID, res, cfg, mode)
-
-		return res, nil
+		result.CopilotOutputs = []ChunkOutput{}
+		result.DryRun = true
+		result.TotalDuration = time.Since(startTime)
+		return result, nil
 	}
 
 	// 5. Execute via configured agent
@@ -253,6 +264,9 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 		}
 	}
 
+	result.CopilotOutputs = chunkOutputs
+	result.CopilotDuration = copilotDuration
+
 	slog.Info("Copilot chunks executed",
 		slog.Int("chunk_count", len(chunks)),
 		slog.Duration("total_duration", copilotDuration),
@@ -271,13 +285,11 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 		summary, err := o.agent.GenerateSummary(ctx, summaryInputs, cfg.SummaryModel)
 		if err != nil {
 			slog.Error("Summary generation failed", slog.String("error", err.Error()))
-			// Summary failure is not fatal; continue with results
 		} else {
 			summaryDuration = time.Since(summaryStart)
 			slog.Info("Summary generated successfully",
 				slog.Duration("duration", summaryDuration),
 			)
-			// Write summary artifact
 			if o.artifacts != nil && runID != "" && summary != "" {
 				if err := o.artifacts.WriteOutput(runID, "summary.md", summary); err != nil {
 					slog.Error("Failed to write summary artifact", slog.String("error", err.Error()))
@@ -285,38 +297,19 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 			}
 		}
 	}
+	result.SummaryDuration = summaryDuration
+	result.TotalDuration = time.Since(startTime)
 
-	totalDuration := time.Since(startTime)
-
-	res := &OrchestrationResult{
-		Bundle:             bundle,
-		RunID:              runID,
-		ExtractionDuration: extractionDuration,
-		Chunks:             chunks,
-		PlanDuration:       planDuration,
-		CopilotOutputs:     chunkOutputs,
-		CopilotDuration:    copilotDuration,
-		SummaryDuration:    summaryDuration,
-		TotalDuration:      totalDuration,
-		DryRun:             false,
-	}
-
-	// Finalize artifact run
-	o.finalizeRun(runID, res, cfg, mode)
-
-	return res, nil
+	return result, nil
 }
 
 // finalizeRun writes metadata and appends to runs.jsonl.
-func (o *DefaultOrchestrator) finalizeRun(runID string, res *OrchestrationResult, cfg *config.Config, mode string) {
+func (o *DefaultOrchestrator) finalizeRun(runID string, res *OrchestrationResult, cfg *config.Config, mode, status string) {
 	if o.artifacts == nil || runID == "" {
 		return
 	}
 
-	status := "success"
-	if res.DryRun {
-		status = "success"
-	}
+	artifactDir := filepath.Join(o.artifacts.BaseDir(), runID)
 
 	meta := artifacts.RunMeta{
 		RunID:       runID,
@@ -326,7 +319,7 @@ func (o *DefaultOrchestrator) finalizeRun(runID string, res *OrchestrationResult
 		DocID:       cfg.DocID,
 		Mode:        mode,
 		ChunkCount:  len(res.Chunks),
-		ArtifactDir: runID,
+		ArtifactDir: artifactDir,
 	}
 
 	if err := o.artifacts.WriteMetadata(runID, meta); err != nil {
