@@ -19,7 +19,8 @@ type Resolver struct {
 }
 
 // NewResolver creates a Resolver. List sources highest-priority first.
-// Typical order: NewEnvVarSource(), NewFlagsSource(flags), NewDefaultsSource()
+// Typical CLI order: NewFlagsSource(flags), NewEnvVarSource(), NewDefaultsSource()
+// Typical API order: NewRequestSource(req), NewEnvVarSource(), NewDefaultsSource()
 func NewResolver(sources ...Source) *Resolver {
 	return &Resolver{sources: sources}
 }
@@ -223,4 +224,3 @@ func (f *FlagsSource) Load() (*Config, error) {
 	}
 	return cfg, nil
 }
-

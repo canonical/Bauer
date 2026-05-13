@@ -221,14 +221,13 @@ graph TD
 
     subgraph Shared Core
         Config["internal/config"]
-        Orchestrator["internal/orchestrator"]
+      Orchestrator["internal/orchestrator\n(defines Agent interface)"]
         Intake["internal/source\nsource intake"]
         GDocs["internal/gdocs"]
         Figma["internal/figma"]
         Mapping["internal/source/mapping"]
         Artifacts["internal/artifacts"]
         Prompt["internal/prompt"]
-        Agent["internal/agent"]
         GitHub["internal/github"]
     end
 
@@ -244,7 +243,6 @@ graph TD
     Orchestrator --> Mapping
     Orchestrator --> Artifacts
     Orchestrator --> Prompt
-    Orchestrator --> Agent
     CLI --> GitHub
     API --> GitHub
 ```
@@ -619,6 +617,7 @@ BAUER_FIGMA_TOKEN → FIGMA_TOKEN
 | `--artifacts-dir` | `./bauer-artifacts` | Directory for run artifacts (extraction, prompts, outputs, screenshots, `runs.jsonl`).                |
 
 Rules:
+
 - `--figma-url` accepts both whole-file and node-specific Figma links (e.g. `https://www.figma.com/file/KEY/Name?node-id=1%3A42`)
 - when `--figma-url` is omitted, Bauer runs in gdocs-only mode; all Figma ingestion steps are skipped
 - `BAUER_FIGMA_TOKEN` → `FIGMA_TOKEN` — token resolution order; never a CLI flag

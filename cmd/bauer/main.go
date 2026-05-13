@@ -39,11 +39,7 @@ func main() {
 	}
 
 	// 3. Resolve config
-	cfg, err := config.NewResolver(
-		config.NewEnvVarSource(),
-		config.NewFlagsSource(flags),
-		config.NewDefaultsSource(),
-	).Resolve()
+	cfg, err := resolveCLIConfig(flags)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -164,7 +160,7 @@ func runOpenPR(ctx context.Context, cfg *config.Config, sources *source.Manager,
 	}
 
 	orch := orchestrator.NewOrchestrator(agent, sources, artMgr)
-	_, err = orch.Execute(ctx, cfg)
+	_, err = orch.Execute(ctx, openPRExecutionConfig(cfg))
 	if err != nil {
 		return fmt.Errorf("orchestration failed: %w", err)
 	}
@@ -286,4 +282,22 @@ func resultStatus(result *orchestrator.OrchestrationResult) string {
 		return "dry-run"
 	}
 	return "success"
+}
+
+func resolveCLIConfig(flags config.CLIFlags) (*config.Config, error) {
+	return config.NewResolver(
+		config.NewFlagsSource(flags),
+		config.NewEnvVarSource(),
+		config.NewDefaultsSource(),
+	).Resolve()
+}
+
+func openPRExecutionConfig(cfg *config.Config) *config.Config {
+	if cfg == nil {
+		return nil
+	}
+
+	executionCfg := *cfg
+	executionCfg.DryRun = config.BoolPtr(false)
+	return &executionCfg
 }

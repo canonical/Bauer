@@ -2,23 +2,39 @@ package config
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
 func TestResolver_Precedence(t *testing.T) {
-	t.Run("env var overrides flag", func(t *testing.T) {
+	t.Run("flag overrides env var", func(t *testing.T) {
 		t.Setenv("BAUER_DOC_ID", "env-doc")
 		resolver := NewResolver(
-			NewEnvVarSource(),
 			NewFlagsSource(CLIFlags{DocID: "flag-doc"}),
+			NewEnvVarSource(),
 			NewDefaultsSource(),
 		)
 		cfg, err := resolver.Resolve()
 		if err != nil {
 			t.Fatalf("Resolve() error = %v", err)
 		}
-		if cfg.DocID != "env-doc" {
-			t.Errorf("DocID = %q, want %q", cfg.DocID, "env-doc")
+		if cfg.DocID != "flag-doc" {
+			t.Errorf("DocID = %q, want %q", cfg.DocID, "flag-doc")
+		}
+	})
+
+	t.Run("env var overrides default", func(t *testing.T) {
+		t.Setenv("BAUER_MODEL", "env-model")
+		resolver := NewResolver(
+			NewEnvVarSource(),
+			NewDefaultsSource(),
+		)
+		cfg, err := resolver.Resolve()
+		if err != nil {
+			t.Fatalf("Resolve() error = %v", err)
+		}
+		if cfg.Model != "env-model" {
+			t.Errorf("Model = %q, want %q", cfg.Model, "env-model")
 		}
 	})
 
@@ -188,7 +204,7 @@ func TestEnvVarSource_Load(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for invalid bool value")
 		}
-		if !contains(err.Error(), "BAUER_DRY_RUN") {
+		if !strings.Contains(err.Error(), "BAUER_DRY_RUN") {
 			t.Errorf("error should mention env var name: %v", err)
 		}
 	})
@@ -226,7 +242,7 @@ func TestConfig_Validate_MissingFields(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for missing doc-id")
 		}
-		if !contains(err.Error(), "doc_id") {
+		if !strings.Contains(err.Error(), "doc_id") {
 			t.Errorf("error message should mention doc_id: %v", err)
 		}
 	})
@@ -237,21 +253,8 @@ func TestConfig_Validate_MissingFields(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for missing credentials")
 		}
-		if !contains(err.Error(), "credentials") {
+		if !strings.Contains(err.Error(), "credentials") {
 			t.Errorf("error message should mention credentials: %v", err)
 		}
 	})
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

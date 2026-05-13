@@ -834,7 +834,7 @@ The chunk number and total chunk count remain present in the prompt data because
 
 - agents need to know they are receiving a partial view
 - summary sessions (when chunk count > 1) still need to reconcile the partial outputs
-- the `GenerateSummary` path in `agent.Agent` depends on this structure
+- the `GenerateSummary` path in `orchestrator.Agent` depends on this structure
 
 ### Decision 2: the prompt package is directly coupled to gdocs and figma types
 
@@ -936,7 +936,7 @@ figma.NormalizedDesign                               ⎬─ mapping.Resolver
                           ↓
               []PromptData { SuggestionsJSON, FigmaContextJSON }
                           ↓
-              agent.Agent.ExecuteChunk(...) × N
+              orchestrator.Agent.ExecuteChunk(...) × N
 ```
 
 ### Why is the mapping step separate from both the source and the prompt?
@@ -1253,14 +1253,14 @@ The resolver lives in `internal/source/mapping` — a sub-package of source. Thi
 
 **Matching strategies: options considered**
 
-| Strategy | Input required | Works without prev run | Handles name drift | Latency | Accuracy |
-| --- | --- | --- | --- | --- | --- |
-| User-supplied node ID (from URL) | `?node-id=X:Y` in Figma link | Yes | Yes (explicit) | None | 1.0 |
-| Manifest cache (from previous run) | Previous `mappings.json` | No | Only if re-verified | Minimal | Inherited |
-| Text layer content matching | TEXT node `characters` in frame subtree | Yes | Partially | Low | 0.65–0.95 |
-| Frame name matching | Frame `name` field | Yes | Poorly | Low | 0.50–0.85 |
-| Semantic embedding matching | Embedding API or local model | Yes | Well | High | 0.80–0.98 |
-| Whole-frame fallback | Nothing | Yes | Yes (broad) | None | 0.50 |
+| Strategy                           | Input required                          | Works without prev run | Handles name drift  | Latency | Accuracy  |
+| ---------------------------------- | --------------------------------------- | ---------------------- | ------------------- | ------- | --------- |
+| User-supplied node ID (from URL)   | `?node-id=X:Y` in Figma link            | Yes                    | Yes (explicit)      | None    | 1.0       |
+| Manifest cache (from previous run) | Previous `mappings.json`                | No                     | Only if re-verified | Minimal | Inherited |
+| Text layer content matching        | TEXT node `characters` in frame subtree | Yes                    | Partially           | Low     | 0.65–0.95 |
+| Frame name matching                | Frame `name` field                      | Yes                    | Poorly              | Low     | 0.50–0.85 |
+| Semantic embedding matching        | Embedding API or local model            | Yes                    | Well                | High    | 0.80–0.98 |
+| Whole-frame fallback               | Nothing                                 | Yes                    | Yes (broad)         | None    | 0.50      |
 
 **Not chosen for the first slice:**
 
@@ -1447,20 +1447,21 @@ func (r *Resolver) resolveAnchor(group gdocs.LocationGroupedSuggestions) (*figma
 
 **Confidence thresholds summary:**
 
-| Strategy | Method value | Min confidence | Status on match |
-| --- | --- | --- | --- |
-| User-supplied node ID | `"url"` | 1.0 | `"healthy"` |
-| Manifest cache (version unchanged) | `"cache"` | Inherited | `"healthy"` |
-| Manifest cache (version changed) | `"cache"` | Inherited, re-verified | `"stale"` initially |
-| Text layer (jacc >= 0.30) | `"text"` | 0.635 | `"healthy"` |
-| Frame name (overlap >= 0.50) | `"name"` | 0.675 | `"healthy"` |
-| Whole-frame fallback | `"fallback"` | 0.50 | `"unresolved"` |
+| Strategy                           | Method value | Min confidence         | Status on match     |
+| ---------------------------------- | ------------ | ---------------------- | ------------------- |
+| User-supplied node ID              | `"url"`      | 1.0                    | `"healthy"`         |
+| Manifest cache (version unchanged) | `"cache"`    | Inherited              | `"healthy"`         |
+| Manifest cache (version changed)   | `"cache"`    | Inherited, re-verified | `"stale"` initially |
+| Text layer (jacc >= 0.30)          | `"text"`     | 0.635                  | `"healthy"`         |
+| Frame name (overlap >= 0.50)       | `"name"`     | 0.675                  | `"healthy"`         |
+| Whole-frame fallback               | `"fallback"` | 0.50                   | `"unresolved"`      |
 
 **How a developer corrects a bad mapping:**
 
 After any run, `bauer-artifacts/<run-id>/extraction/mappings.json` contains every resolved mapping with its confidence and status. Any entry with `status: "unresolved"` or `confidence < 0.65` should be reviewed.
 
 To manually correct a mapping:
+
 1. Open `mappings.json` in the run directory
 2. Find the entry with the wrong or unresolved node ID
 3. Replace `node_id` with the correct Figma node ID (right-click a frame in Figma → Copy link → extract the `node-id` param)
@@ -1612,17 +1613,17 @@ Each line in `runs.jsonl` is a complete JSON object appended at the end of a run
 
 Field definitions:
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `run_id` | string | `{ISO8601_ts}-{8-hex}` — timestamp prefix makes it sortable |
-| `started_at` | string | ISO 8601 UTC timestamp when the run began |
-| `completed_at` | string | ISO 8601 UTC timestamp when the run finished; `null` if crashed |
-| `status` | string | `"success"` \| `"failed"` \| `"in_progress"` |
-| `doc_id` | string | Google Doc ID for this run |
-| `figma_url` | string | Figma URL if one was supplied; `""` otherwise |
-| `mode` | string | `"execute"` \| `"dry-run"` \| `"issue"` |
-| `chunk_count` | int | Number of chunks processed; `0` if the run failed before chunking |
-| `artifact_dir` | string | Relative path to this run's artifact directory |
+| Field          | Type   | Description                                                       |
+| -------------- | ------ | ----------------------------------------------------------------- |
+| `run_id`       | string | `{ISO8601_ts}-{8-hex}` — timestamp prefix makes it sortable       |
+| `started_at`   | string | ISO 8601 UTC timestamp when the run began                         |
+| `completed_at` | string | ISO 8601 UTC timestamp when the run finished; `null` if crashed   |
+| `status`       | string | `"success"` \| `"failed"` \| `"in_progress"`                      |
+| `doc_id`       | string | Google Doc ID for this run                                        |
+| `figma_url`    | string | Figma URL if one was supplied; `""` otherwise                     |
+| `mode`         | string | `"execute"` \| `"dry-run"` \| `"issue"`                           |
+| `chunk_count`  | int    | Number of chunks processed; `0` if the run failed before chunking |
+| `artifact_dir` | string | Relative path to this run's artifact directory                    |
 
 Note on the run ID format: colons are avoided in the timestamp portion (`T14-30-45Z` not `T14:30:45Z`) because run IDs are used as directory names, and colons are not valid in directory names on Windows and some other systems.
 
@@ -1691,21 +1692,21 @@ These must be complete before this spec's work begins. They are tracked in 001.
 
 ## Task Overview
 
-| Task   | Short description                                                                                  |
-| ------ | -------------------------------------------------------------------------------------------------- |
-| T2F.0  | Local development setup: Figma token, URL verification, optional MCP config                        |
-| T2F.1  | Parse and validate Figma file and node URLs                                                        |
-| T2F.2  | Add `BAUER_FIGMA_TOKEN` and Figma-specific config                                                  |
-| T2F.3  | Create `internal/figma` REST client: meta, nodes, comments, images                                 |
-| T2F.4  | Normalize raw Figma API payloads into `NormalizedDesign`                                           |
+| Task   | Short description                                                                                         |
+| ------ | --------------------------------------------------------------------------------------------------------- |
+| T2F.0  | Local development setup: Figma token, URL verification, optional MCP config                               |
+| T2F.1  | Parse and validate Figma file and node URLs                                                               |
+| T2F.2  | Add `BAUER_FIGMA_TOKEN` and Figma-specific config                                                         |
+| T2F.3  | Create `internal/figma` REST client: meta, nodes, comments, images                                        |
+| T2F.4  | Normalize raw Figma API payloads into `NormalizedDesign`                                                  |
 | T2F.5  | Build `internal/source/mapping` resolver: join gdocs groups with figma anchors, comments, and screenshots |
-| T2F.6  | Update `internal/prompt` to be figma-aware: chunked prompts with conditional `FigmaContextJSON`    |
-| T2F.7  | Persist figma extraction, mappings, comments, and screenshots in run artifacts                     |
-| T2F.8  | Extend CLI issue mode and execution mode with figma-enriched prompts                               |
-| T2F.9  | Add optional MCP runtime guidance to prompt templates                                              |
-| T2F.10 | Add drift detection, mapping cache reuse, and low-confidence reporting                             |
-| T4F.1  | API: add `figma_url` to request schema; update issue and workflow endpoints                        |
-| T4F.2  | API: server-side screenshot hosting and inline image references in issues/PRs                      |
+| T2F.6  | Update `internal/prompt` to be figma-aware: chunked prompts with conditional `FigmaContextJSON`           |
+| T2F.7  | Persist figma extraction, mappings, comments, and screenshots in run artifacts                            |
+| T2F.8  | Extend CLI issue mode and execution mode with figma-enriched prompts                                      |
+| T2F.9  | Add optional MCP runtime guidance to prompt templates                                                     |
+| T2F.10 | Add drift detection, mapping cache reuse, and low-confidence reporting                                    |
+| T4F.1  | API: add `figma_url` to request schema; update issue and workflow endpoints                               |
+| T4F.2  | API: server-side screenshot hosting and inline image references in issues/PRs                             |
 
 ---
 
@@ -2616,11 +2617,11 @@ type IssueRequest struct {
 
 **Options considered:**
 
-| Option | What it is | Pros | Cons |
-| --- | --- | --- | --- |
-| Self-hosted static file server | API server serves `/static/` from artifact directory | Zero extra infra; simple implementation | Only works if server has a public URL; files must outlive the process |
-| S3 / GCS bucket | Upload to object storage; embed public URL | Scalable, durable, globally accessible | Requires cloud credentials and bucket setup; adds infra dependency |
-| GitHub issue image upload | Use GitHub's CDN by attaching images via the `github.com` upload flow | No external storage needed | Not a stable public API for third parties; permissions are fragile |
+| Option                         | What it is                                                            | Pros                                    | Cons                                                                  |
+| ------------------------------ | --------------------------------------------------------------------- | --------------------------------------- | --------------------------------------------------------------------- |
+| Self-hosted static file server | API server serves `/static/` from artifact directory                  | Zero extra infra; simple implementation | Only works if server has a public URL; files must outlive the process |
+| S3 / GCS bucket                | Upload to object storage; embed public URL                            | Scalable, durable, globally accessible  | Requires cloud credentials and bucket setup; adds infra dependency    |
+| GitHub issue image upload      | Use GitHub's CDN by attaching images via the `github.com` upload flow | No external storage needed              | Not a stable public API for third parties; permissions are fragile    |
 
 **Chosen approach: self-hosted file server first, S3 upgrade path built-in.**
 
@@ -2664,11 +2665,11 @@ type S3Host struct {
 
 Configuration:
 
-| Env var | Purpose |
-| --- | --- |
+| Env var                 | Purpose                                                                   |
+| ----------------------- | ------------------------------------------------------------------------- |
 | `BAUER_STATIC_BASE_URL` | Base URL for the self-hosted file server (required for `LocalFileServer`) |
-| `BAUER_S3_BUCKET` | S3 bucket name (required for `S3Host`) |
-| `BAUER_S3_REGION` | S3 region (required for `S3Host`) |
+| `BAUER_S3_BUCKET`       | S3 bucket name (required for `S3Host`)                                    |
+| `BAUER_S3_REGION`       | S3 region (required for `S3Host`)                                         |
 
 If neither is set, the API falls back to the Stage 1 behavior (artifact paths in the issue body, with a warning in logs).
 
@@ -2785,20 +2786,20 @@ This is not a replacement for the standalone task breakdowns in each spec. It is
 
 ### Phase map
 
-| Phase | Source | Tasks                                               | What lands                                                                                             |
-| ----- | ------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| P0    | 001    | T0.1, T0.2, T0.2a, T0.2b, T0.2c, T0.3, T0.4, T0.5 | `agent.Agent` interface; `internal/source`; `internal/artifacts`; orchestrator decoupled; config cleanup |
-| P1    | 001    | T1.1, T1.2, T1.3                                    | CLI flags restored; dry-run fixed; Taskfile works                                                      |
-| P2    | 001    | T2.1, T2.2, T2.3                                    | `--open-pr`, `--open-issue`, mutual exclusion                                                          |
-| P3    | 002    | T2F.0, T2F.1, T2F.2, T2F.3, T2F.4                  | Dev setup verified; Figma URL parsing; auth; REST client; normalization                                |
-| P4    | 002    | T2F.5, T2F.6, T2F.7                                 | Mapping resolver; figma-aware chunked prompts; artifact writes                                         |
-| P5    | 002    | T2F.8, T2F.9                                        | CLI enrichment; issue mode with design context; MCP guidance                                           |
-| P6    | 001    | T3.0, T3.1, T3.2, T3.3, T3.4                        | Docker; env loading; routes; API cleanup                                                               |
-| P7    | 001    | T4.1, T4.2, T4.3                                    | `POST /api/v1/issues`; `GET /health/ready`; Jira webhook                                               |
-| P8    | 002    | T4F.1                                               | API accepts `figma_url`; full Figma pipeline server-side                                               |
-| P9    | 001    | T5.1, T5.2, T5.3                                    | GitHub App auth; OIDC middleware; secret masking                                                       |
-| P10   | 002    | T2F.10                                              | Drift detection; mapping cache reuse                                                                   |
-| P11   | 002    | T4F.2                                               | Server-side screenshot hosting; inline images in issues/PRs                                            |
+| Phase | Source | Tasks                                             | What lands                                                                                                      |
+| ----- | ------ | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| P0    | 001    | T0.1, T0.2, T0.2a, T0.2b, T0.2c, T0.3, T0.4, T0.5 | `orchestrator.Agent` interface; `internal/source`; `internal/artifacts`; orchestrator decoupled; config cleanup |
+| P1    | 001    | T1.1, T1.2, T1.3                                  | CLI flags restored; dry-run fixed; Taskfile works                                                               |
+| P2    | 001    | T2.1, T2.2, T2.3                                  | `--open-pr`, `--open-issue`, mutual exclusion                                                                   |
+| P3    | 002    | T2F.0, T2F.1, T2F.2, T2F.3, T2F.4                 | Dev setup verified; Figma URL parsing; auth; REST client; normalization                                         |
+| P4    | 002    | T2F.5, T2F.6, T2F.7                               | Mapping resolver; figma-aware chunked prompts; artifact writes                                                  |
+| P5    | 002    | T2F.8, T2F.9                                      | CLI enrichment; issue mode with design context; MCP guidance                                                    |
+| P6    | 001    | T3.0, T3.1, T3.2, T3.3, T3.4                      | Docker; env loading; routes; API cleanup                                                                        |
+| P7    | 001    | T4.1, T4.2, T4.3                                  | `POST /api/v1/issues`; `GET /health/ready`; Jira webhook                                                        |
+| P8    | 002    | T4F.1                                             | API accepts `figma_url`; full Figma pipeline server-side                                                        |
+| P9    | 001    | T5.1, T5.2, T5.3                                  | GitHub App auth; OIDC middleware; secret masking                                                                |
+| P10   | 002    | T2F.10                                            | Drift detection; mapping cache reuse                                                                            |
+| P11   | 002    | T4F.2                                             | Server-side screenshot hosting; inline images in issues/PRs                                                     |
 
 ### Prerequisites before starting P3
 
@@ -2818,9 +2819,6 @@ After the foundation tasks (T0.1 – T0.5) are complete, the codebase shape is:
 
 ```text
 internal/
-  agent/
-    agent.go          ← Agent interface
-    mock.go           ← MockAgent for tests
   gdocs/              ← unchanged
   source/
     source.go         ← Adapter interface and Request type
@@ -2832,9 +2830,9 @@ internal/
     engine.go         ← PromptData with SuggestionsJSON (FigmaContextJSON not yet wired)
     types.go
     templates/
-  copilotcli/         ← unchanged; now implements agent.Agent
+  copilotcli/         ← unchanged; now implements orchestrator.Agent
   orchestrator/
-    orchestrator.go   ← calls source layer; no longer imports gdocs directly
+    orchestrator.go   ← defines Agent, calls source layer; no longer imports gdocs directly
   config/
     config.go
     cli.go
@@ -2843,6 +2841,8 @@ internal/
     auth.go
     pr.go
     repo.go
+  testutil/
+    mock.go           ← MockAgent for tests
 ```
 
 No figma or mapping packages yet. The orchestrator talks to `internal/source`, which still only has a gdocs adapter.
@@ -2854,7 +2854,7 @@ After CLI is fully restored and `--open-pr` / `--open-issue` are working (T2.1 �
 ```text
 cmd/bauer/
   main.go   ← all flags restored; --open-pr and --open-issue implemented
-  
+
 (All other packages unchanged from after P0.)
 ```
 
@@ -2864,9 +2864,6 @@ This is the correct state to begin P3 (Figma work).
 
 ```text
 internal/
-  agent/
-    agent.go          ← Agent interface
-    mock.go           ← MockAgent for tests
   gdocs/              ← unchanged
   figma/
     client.go

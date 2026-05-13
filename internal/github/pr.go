@@ -2,8 +2,6 @@ package github
 
 import (
 	"fmt"
-	"log/slog"
-	"os"
 	"os/exec"
 	"strings"
 )
@@ -65,19 +63,7 @@ func CreatePR(owner, repo string, opts CreatePROptions) (string, error) {
 	}
 
 	cmd := exec.Command("gh", args...)
-	
-	// Log token availability for debugging
-	logger := slog.Default()
-	ghToken := os.Getenv("GH_TOKEN")
-	if ghToken == "" {
-		ghToken = os.Getenv("GITHUB_TOKEN")
-	}
-	if ghToken == "" {
-		logger.Warn("No GH_TOKEN or GITHUB_TOKEN environment variable set for PR creation")
-	} else {
-		logger.Debug("GH_TOKEN is set for PR creation", "token_prefix", ghToken[:10])
-	}
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("failed to create PR: %w, output: %s", err, output)

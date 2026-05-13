@@ -1,15 +1,15 @@
 package orchestrator
 
 import (
+	"bauer/internal/config"
 	"context"
 	"errors"
 	"testing"
 
 	"bauer/internal/artifacts"
 	"bauer/internal/copilotcli"
-	"bauer/internal/source"
-	"bauer/internal/config"
 	"bauer/internal/prompt"
+	"bauer/internal/source"
 	"bauer/internal/testutil"
 )
 

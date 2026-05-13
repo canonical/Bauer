@@ -27,7 +27,7 @@ func ParseCLIFlags(args []string) (CLIFlags, error) {
 
 	// Bool flags: we need to know if they were explicitly set.
 	// We use custom bool vars that track whether the flag was seen.
-	dryRunPtr := fs.Bool("dry-run", false, "Run extraction and planning only; skip Copilot and PR creation")
+	dryRunPtr := fs.Bool("dry-run", false, "In standalone mode: write chunk files only. In --open-pr mode: apply changes locally and skip PR creation")
 	pageRefreshPtr := fs.Bool("page-refresh", false, "Use page refresh mode with page-refresh-instructions template (default chunk size: 5)")
 	openPRPtr := fs.Bool("open-pr", false, "After applying changes, create a branch and open a PR. Mutually exclusive with --open-issue.")
 	openIssuePtr := fs.Bool("open-issue", false, "Skip Copilot, generate plan, open a GitHub issue instead. Mutually exclusive with --open-pr.")
@@ -47,7 +47,7 @@ func ParseCLIFlags(args []string) (CLIFlags, error) {
 		}{
 			{"--doc-id", "<string>", "Google Doc ID to extract feedback from (required)"},
 			{"--credentials", "<string>", "Path to service account JSON (required)"},
-			{"--dry-run", "", "Run extraction and planning only; skip Copilot and PR creation"},
+			{"--dry-run", "", "In standalone mode: write chunk files only. In --open-pr mode: apply changes locally and skip PR creation"},
 			{"--page-refresh", "", "Use page refresh mode with page-refresh-instructions template"},
 			{"--chunk-size", "<int>", "Total number of chunks to create (default: 1, or 5 if --page-refresh is set)"},
 			{"--output-dir", "<string>", "Directory for generated prompt files (default: bauer-output)"},
@@ -107,8 +107,8 @@ func Load() (*Config, error) {
 	}
 
 	cfg, err := NewResolver(
-		NewEnvVarSource(),
 		NewFlagsSource(flags),
+		NewEnvVarSource(),
 		NewDefaultsSource(),
 	).Resolve()
 	if err != nil {

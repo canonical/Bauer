@@ -1,6 +1,6 @@
 // Package testutil provides shared test doubles for Bauer's internal packages.
 // MockAgent satisfies orchestrator.Agent via structural typing — it does not
-// import the orchestrator package, avoiding import cycles.
+// define or own the interface itself.
 package testutil
 
 import "context"

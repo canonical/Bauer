@@ -71,7 +71,7 @@ These are deliberate trade-offs, not bugs. Good to be aware of:
 - `internal/copilotcli` implements it implicitly.
 - The orchestrator depends on the `Agent` interface (defined in the orchestrator package), not the concrete `*copilotcli.Client`.
 - Allows future agents (REST-based model, different SDK, test mock) to be plugged in without touching the orchestrator.
-- A shared `MockAgent` test double lives in `internal/agent/mock.go` for use by any test package.
+- A shared `MockAgent` test double lives in `internal/testutil/mock.go` for use by any test package. The `Agent` interface itself remains in `internal/orchestrator`.
 
 ### Shared / General
 
@@ -471,33 +471,33 @@ No `.env` files for the CLI — that would be unexpected UX for a command-line t
 
 ## Task Overview
 
-| Task  | Description                                                                                                                                             |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| T0.1  | Define `Agent` interface in orchestrator package (Go convention): `Start`, `ExecuteChunk`, `GenerateSummary`, `Stop`                                             |
-| T0.2  | Make `copilotcli.Client` implement `orchestrator.Agent`; update orchestrator to depend on the interface                                                        |
-| T0.2a | Create `internal/source` with source adapters and a normalized `SourceBundle` output that can combine multiple upstream sources                         |
-| T0.2b | Refactor orchestrator to call the source layer (via `source.Manager.Fetch`); do NOT change `PromptData` field structure — prompt keeps explicit named fields |
+| Task  | Description                                                                                                                                                                     |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T0.1  | Define `Agent` interface in orchestrator package (Go convention): `Start`, `ExecuteChunk`, `GenerateSummary`, `Stop`                                                            |
+| T0.2  | Make `copilotcli.Client` implement `orchestrator.Agent`; update orchestrator to depend on the interface                                                                         |
+| T0.2a | Create `internal/source` with source adapters and a normalized `SourceBundle` output that can combine multiple upstream sources                                                 |
+| T0.2b | Refactor orchestrator to call the source layer (via `source.Manager.Fetch`); do NOT change `PromptData` field structure — prompt keeps explicit named fields                    |
 | T0.2c | Add `--artifacts-dir` flag + `BAUER_ARTIFACTS_DIR` env var; write timestamped run directories with `runs.jsonl` index (default `./bauer-artifacts/`); remove old `--output-dir` |
-| T0.3  | Build `internal/config/manager.go` with `Resolve()` that merges env vars → flags/request → defaults (three sources; no file/JSON config)                |
-| T0.4  | Add `BAUER_CREDENTIALS_PATH` + `GOOGLE_APPLICATION_CREDENTIALS` fallback for credentials; add `BAUER_GITHUB_TOKEN` to token resolution                  |
-| T0.5  | Delete `config.json` + `internal/config/json.go`, remove `--config` flag, add to `.gitignore`, create `.env.example` as the canonical env var reference |
-| T1.1  | Rewrite `cmd/bauer/main.go` to use `internal/config/cli.go` for all flag parsing; restore all original flags; wire to config manager                    |
-| T1.2  | Fix `--dry-run`: skip Copilot in standalone mode; skip PR creation (not Copilot) in `--open-pr` mode                                                    |
-| T1.3  | Update `Taskfile.yml`: fix `task run` flags, ensure `task build` works, add `task run-api`                                                              |
-| T2.1  | After Copilot applies changes, read remote from git config, create branch from `main`, commit, push, open PR                                            |
-| T2.2  | Skip Copilot; run extraction only; format suggestions as markdown; open GitHub issue; print issue URL                                                   |
-| T2.3  | Early validation in `main.go`: if both `--open-pr` and `--open-issue` are set, exit 1 with clear error before any API calls                             |
-| T3.0  | Create `Dockerfile` and `.dockerignore` for the API server; add `docker-build` and `docker-run` Taskfile tasks                                          |
-| T3.1  | `go get github.com/joho/godotenv`; load `.env` then `.env.local` at API startup (`.env.example` already exists from T0.5)                               |
-| T3.2  | Remove `credentials` + `github_token` from `APIRequest`; handler reads from env vars; per-request fields override server config                         |
-| T3.3  | Rename `/api/v1/workflow` → `/api/v1/workflows`; use Go 1.22 method+path routing; consolidate route registration                                        |
-| T3.4  | Add `build-api` task to `Taskfile.yml`                                                                                                                  |
-| T4.1  | New handler: runs orchestrator in dry-run, formats result as issue body, creates GitHub issue, returns `{ issue_url, issue_number }`                    |
-| T4.2  | New handler: checks credentials file readable + GH token set + `gh` in PATH; returns `503` with failure map if any check fails                          |
-| T4.3  | New handler: validates shared secret, parses Jira payload, extracts doc ID from configured custom field, fires workflow in goroutine                    |
-| T5.1  | Add GitHub App token generation to `internal/github/auth.go`: JWT → installation token; `GITHUB_APP_ID` + `GITHUB_APP_PRIVATE_KEY` env vars             |
-| T5.2  | New `internal/auth/middleware.go`: optional JWT validation using IdP JWKS; `BAUER_OIDC_ISSUER` + `BAUER_OIDC_AUDIENCE` env vars; bypassed if unset      |
-| T5.3  | `MaskSecret()` + `MaskPath()` helpers in `internal/logging/masking.go`; audit all `slog` calls; mask tokens and paths                                   |
+| T0.3  | Build `internal/config/manager.go` with `Resolve()` that merges env vars → flags/request → defaults (three sources; no file/JSON config)                                        |
+| T0.4  | Add `BAUER_CREDENTIALS_PATH` + `GOOGLE_APPLICATION_CREDENTIALS` fallback for credentials; add `BAUER_GITHUB_TOKEN` to token resolution                                          |
+| T0.5  | Delete `config.json` + `internal/config/json.go`, remove `--config` flag, add to `.gitignore`, create `.env.example` as the canonical env var reference                         |
+| T1.1  | Rewrite `cmd/bauer/main.go` to use `internal/config/cli.go` for all flag parsing; restore all original flags; wire to config manager                                            |
+| T1.2  | Fix `--dry-run`: skip Copilot in standalone mode; skip PR creation (not Copilot) in `--open-pr` mode                                                                            |
+| T1.3  | Update `Taskfile.yml`: fix `task run` flags, ensure `task build` works, add `task run-api`                                                                                      |
+| T2.1  | After Copilot applies changes, read remote from git config, create branch from `main`, commit, push, open PR                                                                    |
+| T2.2  | Skip Copilot; run extraction only; format suggestions as markdown; open GitHub issue; print issue URL                                                                           |
+| T2.3  | Early validation in `main.go`: if both `--open-pr` and `--open-issue` are set, exit 1 with clear error before any API calls                                                     |
+| T3.0  | Create `Dockerfile` and `.dockerignore` for the API server; add `docker-build` and `docker-run` Taskfile tasks                                                                  |
+| T3.1  | `go get github.com/joho/godotenv`; load `.env` then `.env.local` at API startup (`.env.example` already exists from T0.5)                                                       |
+| T3.2  | Remove `credentials` + `github_token` from `APIRequest`; handler reads from env vars; per-request fields override server config                                                 |
+| T3.3  | Rename `/api/v1/workflow` → `/api/v1/workflows`; use Go 1.22 method+path routing; consolidate route registration                                                                |
+| T3.4  | Add `build-api` task to `Taskfile.yml`                                                                                                                                          |
+| T4.1  | New handler: runs orchestrator in dry-run, formats result as issue body, creates GitHub issue, returns `{ issue_url, issue_number }`                                            |
+| T4.2  | New handler: checks credentials file readable + GH token set + `gh` in PATH; returns `503` with failure map if any check fails                                                  |
+| T4.3  | New handler: validates shared secret, parses Jira payload, extracts doc ID from configured custom field, fires workflow in goroutine                                            |
+| T5.1  | Add GitHub App token generation to `internal/github/auth.go`: JWT → installation token; `GITHUB_APP_ID` + `GITHUB_APP_PRIVATE_KEY` env vars                                     |
+| T5.2  | New `internal/auth/middleware.go`: optional JWT validation using IdP JWKS; `BAUER_OIDC_ISSUER` + `BAUER_OIDC_AUDIENCE` env vars; bypassed if unset                              |
+| T5.3  | `MaskSecret()` + `MaskPath()` helpers in `internal/logging/masking.go`; audit all `slog` calls; mask tokens and paths                                                           |
 
 ---
 
@@ -512,8 +512,8 @@ No `.env` files for the CLI — that would be unexpected UX for a command-line t
 **Files touched**:
 
 - `internal/orchestrator/orchestrator.go` — **modify** (add `Agent` interface)
-- `internal/agent/mock.go` — **create** (shared test double)
-- `internal/agent/mock_test.go` — **create** (verify mock satisfies interface)
+- `internal/testutil/mock.go` — **create** (shared test double)
+- `internal/testutil/mock_test.go` — **create** (verify mock satisfies interface)
 
 **Implementation**:
 
@@ -541,17 +541,18 @@ type Agent interface {
 }
 ```
 
-The `internal/agent` package provides `MockAgent` — a shared test double that
-satisfies `orchestrator.Agent` via structural typing (no import of orchestrator
-in production code, avoiding cycles). Compile-time conformance is verified in
-`internal/agent/mock_test.go`.
+The `internal/testutil` package provides `MockAgent` — a shared test double that
+satisfies `orchestrator.Agent` via structural typing. The interface is still
+defined only in `internal/orchestrator`, following Go consumer-side interface
+convention. Compile-time conformance is verified in
+`internal/testutil/mock_test.go`.
 
 **Acceptance criteria**:
 
 - [x] `Agent` interface exists in `internal/orchestrator/orchestrator.go` with exactly four methods
 - [x] Interface is defined at the consumer (orchestrator), following Go convention
 - [x] `internal/orchestrator` does not import `internal/copilotcli` anywhere
-- [x] A `MockAgent` is available in `internal/agent/mock.go` for use in any test package
+- [x] A `MockAgent` is available in `internal/testutil/mock.go` for use in any test package
 - [x] Compile-time check `var _ orchestrator.Agent = (*MockAgent)(nil)` in mock_test.go passes
 
 **End result**: A clean interface at the consumer. `copilotcli.Client` satisfies it implicitly; the orchestrator is backend-agnostic.
@@ -607,7 +608,7 @@ The call sites in `cmd/bauer/main.go` and `cmd/app/main.go` still create a `copi
 - [x] `internal/orchestrator` does not import `internal/copilotcli` in production code
 - [x] All existing orchestrator tests still pass with `go test ./internal/orchestrator/...`
 - [x] `go vet ./...` passes
-- [x] At least one orchestrator test uses `agent.MockAgent` to show testability
+- [x] At least one orchestrator test uses `testutil.MockAgent` to show testability
 
 **End result**: The orchestrator is backend-agnostic. Plugging in a future AI backend is a one-line change at the wiring layer.
 
