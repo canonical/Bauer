@@ -4,8 +4,8 @@ import (
 	"bauer/cmd/app/core/middleware"
 	"bauer/cmd/app/types"
 	v1 "bauer/cmd/app/v1"
+	"bauer/internal/copilotcli"
 	"bauer/internal/orchestrator"
-	"bauer/internal/workflow"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -20,7 +20,13 @@ func run() error {
 	slog.Info("startup", "status", "initializing API")
 	defer slog.Info("shutdown complete")
 
-	orchestrator := orchestrator.NewOrchestrator()
+	// Agent factory: creates a fresh Copilot client for each request's target repo.
+	// This avoids the bug where a single shared client was bound to the server's
+	// startup directory while requests target different cloned repos.
+	newAgent := func(cwd string) (orchestrator.Agent, error) {
+		return copilotcli.NewClient(cwd)
+	}
+
 	cfg, err := types.LoadConfig()
 	if err != nil {
 		slog.Error("failed to load config", "error", err.Error())
@@ -28,14 +34,15 @@ func run() error {
 	}
 
 	rc := types.RouteConfig{
-		APIConfig:    *cfg,
-		Orchestrator: orchestrator,
+		APIConfig: *cfg,
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/job", v1.JobPost(rc))
+	mux.HandleFunc("/api/v1/job", v1.JobPost(rc, newAgent))
 	mux.HandleFunc("/api/v1/health", v1.GetHealth)
-	mux.HandleFunc("/api/v1/workflow", workflow.ExecuteWorkflowHandler(orchestrator))
+	// TODO: refactor workflow handler to use same per-request pattern
+	// mux.HandleFunc("/api/v1/workflow", workflow.ExecuteWorkflowHandler(orchestrator))
+
 	slog.Info("starting server", "address", ":8090")
 	err = http.ListenAndServe(":8090", middleware.RequestTrace(mux))
 

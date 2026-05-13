@@ -1,16 +1,15 @@
 package workflow
 
 import (
+	"bauer/internal/config"
+	"bauer/internal/github"
+	"bauer/internal/orchestrator"
 	"context"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
-
-	"bauer/internal/config"
-	"bauer/internal/github"
-	"bauer/internal/orchestrator"
 )
 
 // WorkflowInput represents the input for a complete workflow execution
@@ -21,13 +20,14 @@ type WorkflowInput struct {
 	BranchPrefix string
 
 	// Bauer configuration
-	DocID       string
-	Credentials string
-	ChunkSize   int
-	PageRefresh bool
-	OutputDir   string
-	Model       string
-	DryRun      bool
+	DocID        string
+	Credentials  string
+	ChunkSize    int
+	PageRefresh  bool
+	OutputDir    string
+	ArtifactsDir string
+	Model        string
+	DryRun       bool
 
 	// Local repository path
 	LocalRepoPath string
@@ -74,11 +74,16 @@ type WorkflowOutput struct {
 	Warnings      []string      `json:"warnings"`
 }
 
+// NewAgentFunc creates an orchestrator.Agent in the correct working directory.
+// The workflow calls this AFTER chdir to the cloned repo, so the agent
+// operates in the target workspace — not the Bauer process startup directory.
+type NewAgentFunc func() (orchestrator.Agent, error)
+
 // ExecuteWorkflow orchestrates the complete flow:
 // 1. GitHub Setup (clone, create branch)
 // 2. Bauer Processing (extract, chunk, apply changes)
 // 3. GitHub Finalization (commit, push, create PR)
-func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator.Orchestrator) (*WorkflowOutput, error) {
+func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator.Orchestrator, newAgent NewAgentFunc) (*WorkflowOutput, error) {
 	output := &WorkflowOutput{
 		Status:    "pending",
 		StartTime: time.Now(),
@@ -116,8 +121,7 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 
 	logger.Info("workflow success: GitHub setup successful")
 
-	// Convert credentials path to absolute
-	// Do this before changing directory so relative paths work
+	// Convert credentials path to absolute before chdir so relative paths work
 	var credentialsPath string
 	if input.Credentials != "" {
 		absPath, err := filepath.Abs(input.Credentials)
@@ -130,6 +134,23 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 		}
 		credentialsPath = absPath
 		logger.Info("workflow: resolved credentials path", "path", credentialsPath)
+	}
+
+	// Resolve output dir to absolute path BEFORE chdir.
+	// The orchestrator uses OutputDir to write prompt files. If left relative,
+	// chdir redirects them into the cloned target repo, causing prompt files
+	// to be staged and committed into the generated PR.
+	//
+	// Callers should already pass absolute paths, but we resolve here as a
+	// safety net. The artifacts manager must also be created with an absolute
+	// base dir (enforced by the caller).
+	absOutputDir := input.OutputDir
+	if !filepath.IsAbs(absOutputDir) {
+		abs, err := filepath.Abs(absOutputDir)
+		if err != nil {
+			return nil, fmt.Errorf("resolve output dir: %w", err)
+		}
+		absOutputDir = abs
 	}
 
 	// Change to target repository directory
@@ -153,21 +174,33 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	logger.Info("workflow: changed to cloned repository", "path", input.LocalRepoPath)
 	defer os.Chdir(originalDir)
 
+	// NOW create the Copilot client — after chdir, cwd is the target repo
+	if newAgent != nil {
+		agent, err := newAgent()
+		if err != nil {
+			return nil, fmt.Errorf("create agent: %w", err)
+		}
+		// Wire the agent into the orchestrator
+		if def, ok := orch.(*orchestrator.DefaultOrchestrator); ok {
+			def.SetAgent(agent)
+		}
+	}
+
 	// Bauer processing
 	logger.Info("workflow: starting phase 2 - Bauer processing")
 
 	bauerStartTime := time.Now()
 
-	// Create Bauer config with target repo (now current directory)
+	// Create Bauer config — use absolute paths so files land outside the cloned repo
 	bauerCfg := &config.Config{
 		DocID:           input.DocID,
-		CredentialsPath: credentialsPath, // Use absolute path
+		CredentialsPath: credentialsPath,
 		DryRun:          input.DryRun,
 		ChunkSize:       input.ChunkSize,
 		PageRefresh:     input.PageRefresh,
-		OutputDir:       input.OutputDir,
+		OutputDir:       absOutputDir,
 		Model:           input.Model,
-		TargetRepo:      ".", // Current directory is the cloned repo
+		TargetRepo:      ".",
 	}
 
 	logger.Info("workflow: Bauer target repository set at", "path", bauerCfg.TargetRepo)
@@ -189,9 +222,9 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 		if len(bauerResult.Chunks) > 0 {
 			output.BauerResult.ChunkCount = len(bauerResult.Chunks)
 		}
-		if bauerResult.ExtractionResult != nil {
+		if bauerResult.Bundle != nil && bauerResult.Bundle.Document != nil {
 			// Count total suggestions from extraction result
-			output.BauerResult.TotalSuggestions = 0 // TODO: adjust based on actual field
+			output.BauerResult.TotalSuggestions = len(bauerResult.Bundle.Document.GroupedSuggestions)
 		}
 	}
 

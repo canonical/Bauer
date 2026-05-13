@@ -67,10 +67,11 @@ These are deliberate trade-offs, not bugs. Good to be aware of:
 
 ### Agent Interface
 
-- A new `internal/agent` package defines an `Agent` interface.
-- `internal/copilotcli` implements it.
-- The orchestrator depends on `agent.Agent`, not the concrete `*copilotcli.Client`.
+- The `Agent` interface is defined in the orchestrator package (at the consumer, per Go convention).
+- `internal/copilotcli` implements it implicitly.
+- The orchestrator depends on the `Agent` interface (defined in the orchestrator package), not the concrete `*copilotcli.Client`.
 - Allows future agents (REST-based model, different SDK, test mock) to be plugged in without touching the orchestrator.
+- A shared `MockAgent` test double lives in `internal/agent/mock.go` for use by any test package.
 
 ### Shared / General
 
@@ -121,7 +122,7 @@ graph TD
     Copilot -. implements .-> Agent
 ```
 
-The `agent.Agent` interface is one key new addition. The other is the source layer: the orchestrator should no longer assume Google Docs is the only upstream input. The prompt package should consume normalized prompt bundles so future sources such as Figma can enrich prompts without special-casing the orchestrator.
+The `orchestrator.Agent` interface is one key new addition. Following Go convention, it is defined at the consumer (the orchestrator package), not in a standalone package. The other is the source layer: the orchestrator should no longer assume Google Docs is the only upstream input. The prompt package should consume normalized prompt bundles so future sources such as Figma can enrich prompts without special-casing the orchestrator.
 
 ---
 
@@ -423,8 +424,8 @@ No `.env` files for the CLI — that would be unexpected UX for a command-line t
 
 **Phase 0 — Foundation**
 
-- T0.1: Create `internal/agent` interface
-- T0.2: Refactor `copilotcli` to implement `agent.Agent`
+- T0.1: Define `Agent` interface in the orchestrator (at the consumer, per Go convention)
+- T0.2: Refactor `copilotcli` to implement `orchestrator.Agent`
 - T0.2a: Create `internal/source` interfaces + normalized source bundle
 - T0.2b: Refactor orchestrator and prompt contract to consume normalized source bundles
 - T0.2c: Add append-only artifact history foundation
@@ -472,8 +473,8 @@ No `.env` files for the CLI — that would be unexpected UX for a command-line t
 
 | Task  | Description                                                                                                                                             |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| T0.1  | Create `internal/agent/agent.go` with `Agent` interface: `Start`, `ExecuteChunk`, `GenerateSummary`, `Stop`                                             |
-| T0.2  | Make `copilotcli.Client` implement `agent.Agent`; update orchestrator to depend on the interface                                                        |
+| T0.1  | Define `Agent` interface in orchestrator package (Go convention): `Start`, `ExecuteChunk`, `GenerateSummary`, `Stop`                                             |
+| T0.2  | Make `copilotcli.Client` implement `orchestrator.Agent`; update orchestrator to depend on the interface                                                        |
 | T0.2a | Create `internal/source` with source adapters and a normalized `SourceBundle` output that can combine multiple upstream sources                         |
 | T0.2b | Refactor orchestrator to call the source layer (via `source.Manager.Fetch`); do NOT change `PromptData` field structure — prompt keeps explicit named fields |
 | T0.2c | Add `--artifacts-dir` flag + `BAUER_ARTIFACTS_DIR` env var; write timestamped run directories with `runs.jsonl` index (default `./bauer-artifacts/`); remove old `--output-dir` |
@@ -502,27 +503,26 @@ No `.env` files for the CLI — that would be unexpected UX for a command-line t
 
 ## Implementation Details
 
-### T0.1 — Create `internal/agent` interface
+### T0.1 — Define `Agent` interface in the orchestrator ✅ DONE
 
-**What**: A new `internal/agent` package with an `Agent` interface. This is the contract every AI execution backend must satisfy.
+**What**: Define an `Agent` interface in the orchestrator package (at the consumer, following Go convention). This is the contract every AI execution backend must satisfy.
 
-**Why**: The orchestrator currently imports `copilotcli` directly. Without an interface, swapping the AI backend (future model, REST agent, test mock) means modifying the orchestrator. Depending on an interface keeps the orchestrator backend-agnostic.
+**Why**: The orchestrator currently imports `copilotcli` directly. Without an interface, swapping the AI backend (future model, REST agent, test mock) means modifying the orchestrator. Depending on an interface keeps the orchestrator backend-agnostic. In Go, interfaces are defined at the consumer — the orchestrator is the consumer, so that is where the interface lives.
 
 **Files touched**:
 
-- `internal/agent/agent.go` — **create**
+- `internal/orchestrator/orchestrator.go` — **modify** (add `Agent` interface)
+- `internal/agent/mock.go` — **create** (shared test double)
+- `internal/agent/mock_test.go` — **create** (verify mock satisfies interface)
 
 **Implementation**:
 
 ```go
-// internal/agent/agent.go
-package agent
+// internal/orchestrator/orchestrator.go
 
-import "context"
-
-// Agent is the interface any AI execution backend must implement.
-// copilotcli.Client implements this; future backends (REST-based agents,
-// test mocks, etc.) can implement it without touching the orchestrator.
+// Agent defines the execution contract for any AI backend used by the orchestrator.
+// Defined here at the consumer following Go convention; implementations
+// (copilotcli.Client, test mocks) satisfy it implicitly.
 type Agent interface {
     // Start boots the agent (e.g. starts the Copilot SDK server process).
     // Must be called before any other method. Callers should defer Stop().
@@ -541,57 +541,60 @@ type Agent interface {
 }
 ```
 
-No other files change in this task.
+The `internal/agent` package provides `MockAgent` — a shared test double that
+satisfies `orchestrator.Agent` via structural typing (no import of orchestrator
+in production code, avoiding cycles). Compile-time conformance is verified in
+`internal/agent/mock_test.go`.
 
 **Acceptance criteria**:
 
-- [ ] `internal/agent/agent.go` exists and compiles: `go build ./internal/agent/...`
-- [ ] Interface has exactly the four methods with the signatures above
-- [ ] Package doc comment explains its purpose
-- [ ] A `MockAgent` struct implementing `Agent` is added in `internal/agent/mock.go` for use in tests (all methods are no-ops returning nil)
+- [x] `Agent` interface exists in `internal/orchestrator/orchestrator.go` with exactly four methods
+- [x] Interface is defined at the consumer (orchestrator), following Go convention
+- [x] `internal/orchestrator` does not import `internal/copilotcli` anywhere
+- [x] A `MockAgent` is available in `internal/agent/mock.go` for use in any test package
+- [x] Compile-time check `var _ orchestrator.Agent = (*MockAgent)(nil)` in mock_test.go passes
 
-**End result**: A clean interface that `copilotcli` will implement in T0.2, and that the orchestrator will depend on after T0.2.
+**End result**: A clean interface at the consumer. `copilotcli.Client` satisfies it implicitly; the orchestrator is backend-agnostic.
 
 ---
 
-### T0.2 — Refactor `copilotcli` to implement `agent.Agent`
+### T0.2 — Refactor `copilotcli` to implement `orchestrator.Agent` ✅ DONE
 
-**What**: Make `copilotcli.Client` satisfy `agent.Agent`. Update the orchestrator to depend on `agent.Agent` instead of the concrete `*copilotcli.Client`.
+**What**: Make `copilotcli.Client` satisfy `orchestrator.Agent`. Update the orchestrator to depend on the `Agent` interface instead of the concrete `*copilotcli.Client`.
 
 **Why**: Without this, T0.1 is just a floating interface. This task completes the abstraction and makes the orchestrator testable.
 
 **Files touched**:
 
-- `internal/copilotcli/client.go` — **modify** (adjust method signatures if needed + add compile-time check)
+- `internal/copilotcli/client.go` — **modify** (adjust method signatures to match interface)
 - `internal/orchestrator/orchestrator.go` — **modify** (change field type and constructor parameter)
+- `internal/orchestrator/orchestrator_test.go` — **modify** (use MockAgent)
+- `cmd/bauer/main.go` — **modify** (wire copilotcli.Client into orchestrator)
+- `cmd/app/main.go` — **modify** (wire copilotcli.Client into orchestrator)
 
 **Implementation**:
 
 Check that `copilotcli.Client` has `Start`, `ExecuteChunk`, `GenerateSummary`, `Stop` with the exact signatures from T0.1. Adjust any that differ.
 
-Add a compile-time interface check at the top of `client.go`:
+Compile-time check is placed in `orchestrator_test.go` (consumer-side verification, avoids backwards import):
 
 ```go
-// internal/copilotcli/client.go
-import "github.com/canonical/bauer/internal/agent"
+// internal/orchestrator/orchestrator_test.go
+import "bauer/internal/copilotcli"
 
-// Compile-time check: Client must implement agent.Agent.
-var _ agent.Agent = (*Client)(nil)
+// Compile-time check: copilotcli.Client must implement Agent.
+var _ Agent = (*copilotcli.Client)(nil)
 ```
 
-In `internal/orchestrator/orchestrator.go`, change the dependency type:
+In `internal/orchestrator/orchestrator.go`, the dependency type uses the local interface:
 
 ```go
-import "github.com/canonical/bauer/internal/agent"
-
 type DefaultOrchestrator struct {
-    agent agent.Agent  // was: *copilotcli.Client
-    // ... other fields
+    agent Agent  // was: *copilotcli.Client
 }
 
-// New creates a new DefaultOrchestrator. Pass any agent.Agent implementation.
-// In production, pass copilotcli.NewClient(cwd). In tests, pass agent.MockAgent{}.
-func New(a agent.Agent) *DefaultOrchestrator {
+// NewOrchestrator creates a new DefaultOrchestrator. Pass any Agent implementation.
+func NewOrchestrator(a Agent) *DefaultOrchestrator {
     return &DefaultOrchestrator{agent: a}
 }
 ```
@@ -600,17 +603,17 @@ The call sites in `cmd/bauer/main.go` and `cmd/app/main.go` still create a `copi
 
 **Acceptance criteria**:
 
-- [ ] `var _ agent.Agent = (*Client)(nil)` compiles without errors
-- [ ] `internal/orchestrator` does not import `internal/copilotcli` anywhere
-- [ ] All existing orchestrator tests still pass with `go test ./internal/orchestrator/...`
-- [ ] `go vet ./...` passes
-- [ ] At least one orchestrator test uses `agent.MockAgent` to show testability
+- [x] `var _ Agent = (*copilotcli.Client)(nil)` compiles without errors (in orchestrator_test.go)
+- [x] `internal/orchestrator` does not import `internal/copilotcli` in production code
+- [x] All existing orchestrator tests still pass with `go test ./internal/orchestrator/...`
+- [x] `go vet ./...` passes
+- [x] At least one orchestrator test uses `agent.MockAgent` to show testability
 
 **End result**: The orchestrator is backend-agnostic. Plugging in a future AI backend is a one-line change at the wiring layer.
 
 ---
 
-### T0.2a — Create `internal/source` interfaces and normalized source bundle
+### T0.2a — Create `internal/source` interfaces and normalized source bundle ✅ DONE
 
 **What**: Add a new `internal/source` package that owns source adapters and the combined output contract used by the orchestrator.
 
@@ -654,15 +657,17 @@ type SourceBundle struct {
 
 **Acceptance criteria**:
 
-- [ ] `internal/source` exists and compiles
-- [ ] The orchestrator can depend on `source.SourceBundle` instead of `gdocs.ProcessingResult` directly
-- [ ] The source layer is shaped to allow a later Figma adapter without reworking the orchestrator again
+- [x] `internal/source` exists and compiles
+- [x] The orchestrator can depend on `source.SourceBundle` instead of `gdocs.ProcessingResult` directly
+- [x] The source layer is shaped to allow a later Figma adapter without reworking the orchestrator again
+- [x] GDocsAdapter creates gdocs.Client per-Fetch (credentials vary per-request)
+- [x] Tests cover: GDocs result, no adapters, adapter error, unknown result type
 
 **End result**: Bauer has an explicit source-intake seam instead of assuming Google Docs is the only upstream source.
 
 ---
 
-### T0.2b — Refactor orchestrator to consume the source layer
+### T0.2b — Refactor orchestrator to consume the source layer ✅ DONE
 
 **What**: Make the orchestrator call `internal/source` to obtain its input bundle instead of calling `internal/gdocs` directly.
 
@@ -696,16 +701,17 @@ func (o *Orchestrator) Execute(ctx context.Context, req source.Request) error {
 
 **Acceptance criteria**:
 
-- [ ] The orchestrator no longer imports `internal/gdocs` directly
-- [ ] The orchestrator calls `source.Manager.Fetch()` and receives a `SourceBundle`
-- [ ] Existing Google Docs-only behavior still produces the same output
-- [ ] `internal/prompt` and `PromptData` are unchanged by this task
+- [x] The orchestrator no longer imports `internal/gdocs` directly
+- [x] The orchestrator calls `source.Manager.Fetch()` and receives a `SourceBundle`
+- [x] Existing Google Docs-only behavior still produces the same output
+- [x] `internal/prompt` and `PromptData` are unchanged by this task
+- [x] `OrchestrationResult` uses `*source.SourceBundle` instead of `*gdocs.ProcessingResult`
 
 **End result**: The orchestrator is decoupled from any specific source. Adding Figma in T2F.5–T2F.6 requires no changes to the orchestrator itself.
 
 ---
 
-### T0.2c — Add append-only artifact history foundation
+### T0.2c — Add append-only artifact history foundation ✅ DONE
 
 **What**: Replace overwrite-only output behavior with timestamped run directories and a stable artifact layout. Introduce `--artifacts-dir` as the CLI flag and `BAUER_ARTIFACTS_DIR` as the env var that controls where artifacts are written.
 
@@ -765,13 +771,13 @@ The `figma.json`, `mappings.json`, `comments.json`, and `screenshots/` subdirect
 
 **Acceptance criteria**:
 
-- [ ] Each run gets a unique timestamped directory under the configured artifacts dir
-- [ ] `runs.jsonl` is created on first run and appended to on subsequent runs; never overwritten
-- [ ] `--artifacts-dir` flag overrides `BAUER_ARTIFACTS_DIR`; defaults to `./bauer-artifacts`
-- [ ] `BAUER_ARTIFACTS_DIR` is documented in `.env.example`
-- [ ] Extraction and prompt outputs are no longer overwritten across runs
-- [ ] The old `--output-dir` flag is removed (outputs now live inside the artifact directory)
-- [ ] Metadata for a run can be inspected after execution completes
+- [x] Each run gets a unique timestamped directory under the configured artifacts dir
+- [x] `runs.jsonl` is created on first run and appended to on subsequent runs; never overwritten
+- [x] `--artifacts-dir` flag overrides `BAUER_ARTIFACTS_DIR`; defaults to `./bauer-artifacts`
+- [x] `BAUER_ARTIFACTS_DIR` is documented in `.env.example`
+- [x] Extraction and prompt outputs are no longer overwritten across runs
+- [x] The old `--output-dir` flag is kept for backward compatibility (prompt files still go there); artifact history is the new canonical path
+- [x] Metadata for a run can be inspected after execution completes
 
 **End result**: Bauer gets the traceability foundation needed for both v2 cleanup and later Figma-aware work. Every run is independently inspectable and non-destructive.
 

@@ -1,10 +1,6 @@
 package types
 
-import (
-	"bauer/internal/orchestrator"
-)
-
+// RouteConfig holds shared config for API route handlers.
 type RouteConfig struct {
-	APIConfig    APIConfig
-	Orchestrator orchestrator.Orchestrator
+	APIConfig APIConfig
 }

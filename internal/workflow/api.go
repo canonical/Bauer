@@ -102,6 +102,7 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 			ChunkSize:     req.ChunkSize,
 			PageRefresh:   req.PageRefresh,
 			OutputDir:     req.OutputDir,
+			ArtifactsDir:  "bauer-artifacts",
 			Model:         req.Model,
 			DryRun:        req.DryRun,
 			LocalRepoPath: fmt.Sprintf("%s/%s-%d", req.LocalRepoPath, "bauer-workflow", time.Now().Unix()),
@@ -115,7 +116,9 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 
 		// Execute workflow
 		ctx := r.Context()
-		workflowOutput, err := ExecuteWorkflow(ctx, input, orch)
+		// Execute workflow — nil agent factory since the workflow handler doesn't
+		// currently support Copilot execution (it only does extraction + PR)
+		workflowOutput, err := ExecuteWorkflow(ctx, input, orch, nil)
 
 		// Build response
 		response := APIResponse{

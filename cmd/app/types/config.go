@@ -10,7 +10,7 @@ type APIConfig struct {
 	// CredentialsPath is the path to the Google Cloud service account JSON key file.
 	CredentialsPath string
 
-	// OutputDir is the directory where generated prompt files will be saved.
+	// BaseOutputDir is the directory where generated prompt files will be saved.
 	// Default is "bauer-output" if not specified.
 	BaseOutputDir string
 
@@ -24,7 +24,11 @@ type APIConfig struct {
 
 	// TargetRepo is the path (relative or absolute) to the target repository
 	// where tasks should be executed. If not specified, uses the current directory.
-	TargetRepo string `json:"target_repo"`}
+	TargetRepo string `json:"target_repo"`
+
+	// ArtifactsDir is the directory for append-only run artifacts.
+	ArtifactsDir string
+}
 
 func LoadConfig() (*APIConfig, error) {
 	credentialsPath := flag.String("credentials", "", "Path to service account JSON (required)")
@@ -33,6 +37,7 @@ func LoadConfig() (*APIConfig, error) {
 	summaryModel := flag.String("summary-model", "gpt-5-mini-high", "Copilot model to use for summary session (default: gpt-5-mini-high)")
 	configFile := flag.String("config", "", "Path to JSON config file")
 	targetRepo := flag.String("target-repo", "", "Path to target repository where tasks should be executed (default: current directory)")
+	artifactsDir := flag.String("artifacts-dir", "", "Directory for append-only run artifacts (default: ./bauer-artifacts)")
 
 	flag.Parse()
 
@@ -47,6 +52,7 @@ func LoadConfig() (*APIConfig, error) {
 			Model:           cfg.Model,
 			SummaryModel:    cfg.SummaryModel,
 			TargetRepo:      cfg.TargetRepo,
+			ArtifactsDir:    cfg.ArtifactsDir,
 		}, nil
 	}
 
@@ -55,12 +61,22 @@ func LoadConfig() (*APIConfig, error) {
 		os.Exit(1)
 	}
 
+	// Resolve artifacts dir: flag → BAUER_ARTIFACTS_DIR env → default
+	resolvedArtifactsDir := *artifactsDir
+	if resolvedArtifactsDir == "" {
+		resolvedArtifactsDir = os.Getenv("BAUER_ARTIFACTS_DIR")
+	}
+	if resolvedArtifactsDir == "" {
+		resolvedArtifactsDir = "bauer-artifacts"
+	}
+
 	cfg := &APIConfig{
 		CredentialsPath: *credentialsPath,
 		BaseOutputDir:   *baseOutputDir,
 		Model:           *model,
 		SummaryModel:    *summaryModel,
-		TargetRepo: 	 *targetRepo,
+		TargetRepo:      *targetRepo,
+		ArtifactsDir:    resolvedArtifactsDir,
 	}
 
 	if err := cfg.Validate(); err != nil {

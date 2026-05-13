@@ -41,6 +41,10 @@ type Config struct {
 	// TargetRepo is the path (relative or absolute) to the target repository
 	// where tasks should be executed. If not specified, uses the current directory.
 	TargetRepo string `json:"target_repo"`
+
+	// ArtifactsDir is the directory for append-only run artifacts.
+	// Defaults to "./bauer-artifacts" if not specified.
+	ArtifactsDir string `json:"artifacts_dir"`
 }
 
 // Apply default config values
@@ -60,6 +64,9 @@ func (c *Config) ApplyDefaults() {
 	}
 	if c.SummaryModel == "" {
 		c.SummaryModel = "gpt-5-mini-high"
+	}
+	if c.ArtifactsDir == "" {
+		c.ArtifactsDir = "bauer-artifacts"
 	}
 }
 
