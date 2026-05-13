@@ -8,6 +8,7 @@ import (
 	"bauer/internal/orchestrator"
 	"bauer/internal/source"
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,6 +22,10 @@ func main() {
 	// 1. Parse flags
 	flags, err := config.ParseCLIFlags(os.Args[1:])
 	if err != nil {
+		if err == flag.ErrHelp {
+			// Usage was already printed by the FlagSet. Exit cleanly.
+			os.Exit(0)
+		}
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

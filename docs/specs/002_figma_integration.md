@@ -2418,7 +2418,6 @@ func (m *Manager) EnsureScreenshotsDir(runID string) (string, error) {
 
 - `cmd/bauer/main.go` — **modify** (add figma intake: parse URL, fetch, normalize, resolve chunks)
 - `internal/workflow/workflow.go` — **modify** (accept figma URL as optional parameter)
-- `internal/workflow/api.go` — **modify** (same)
 
 **Implementation outline**:
 
@@ -2580,13 +2579,13 @@ Drift markers in `mappings.json` for low-confidence mappings:
 
 **Files touched**:
 
-- `cmd/app/models/v1/job.go` — **modify** (add `FigmaURL` field)
-- `cmd/app/v1/api.go` — **modify** (thread figma URL through the workflow call)
+- New API request types (e.g. `internal/api/types.go`) — **create** (add `FigmaURL` field)
+- New API handlers (e.g. `cmd/app/handlers.go`) — **create** (thread figma URL through the workflow call)
 
 **Implementation**:
 
 ```go
-// cmd/app/models/v1/job.go
+// internal/api/types.go (or wherever API request types live)
 type IssueRequest struct {
     DocID     string `json:"doc_id"`
     GitHubRepo string `json:"github_repo"`

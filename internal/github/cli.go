@@ -56,9 +56,12 @@ func CreateBranchFromDefault(ctx context.Context, dir, branchName string) error 
 		return fmt.Errorf("count stash entries before: %w", err)
 	}
 
-	stashCmd := exec.CommandContext(ctx, "git", "-C", dir, "stash", "push", "-m", "bauer-auto-stash")
-	stashOutput, _ := stashCmd.CombinedOutput()
-	_ = stashOutput // we don't need the output; we rely on stash-list diff
+	stashCmd := exec.CommandContext(ctx, "git", "-C", dir, "stash", "push", "--include-untracked", "-m", "bauer-auto-stash")
+	if out, err := stashCmd.CombinedOutput(); err != nil {
+		// If stash itself fails, we can't safely proceed because checkout
+		// may overwrite untracked files. Bail out early.
+		return fmt.Errorf("git stash failed: %w, output: %s", err, out)
+	}
 
 	after, err := countStashEntries(ctx, dir)
 	if err != nil {

@@ -14,7 +14,7 @@ tasks:
   run:
     desc: Run Bauer CLI in standalone mode
     summary: |
-      Requires BAUER_DOC_ID and BAUER_CREDENTIALS_PATH (or --credentials flag).
+      Requires BAUER_DOC_ID and BAUER_CREDENTIALS_PATH (or GOOGLE_APPLICATION_CREDENTIALS, or --credentials flag).
       Example: task run -- --doc-id 1abc --credentials ./creds.json
     cmds:
       - go run ./cmd/bauer/ {{.CLI_ARGS}}

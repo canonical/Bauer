@@ -1662,9 +1662,9 @@ BAUER_BRANCH_PREFIX=bauer
 
 **Files touched**:
 
-- `internal/workflow/api.go` (or wherever `APIRequest` is defined) — **modify**
-- Workflow handler — **modify**
-- `cmd/app/types/config.go` — **verify** server-level defaults are properly surfaced
+- `internal/workflow/` — **create or modify** (define `APIRequest` and handler in the new API package)
+- Workflow handler — **create** in `cmd/app/` or `internal/api/`
+- `cmd/app/main.go` — **modify** route registration (server-level defaults come from config resolution at startup)
 
 **Implementation**:
 
@@ -2009,9 +2009,9 @@ func JiraWebhookHandler(apiCfg *apiconfig.Config) http.HandlerFunc {
 }
 ```
 
-`runWorkflowFromJira` calls a **shared internal `WorkflowService` function**, the same one called by the `/api/v1/workflows` handler. Before implementing T4.3, extract the core workflow execution logic from the `/api/v1/workflows` handler into a standalone function (e.g. `service.RunWorkflow(ctx, req WorkflowRequest) (*WorkflowResult, error)` in `internal/workflow/service.go`). Both the HTTP handler and the Jira webhook handler call this function directly — no HTTP loopback.
+`runWorkflowFromJira` calls a **shared internal `WorkflowService` function**, the same one called by the `/api/v1/workflows` handler. Because the old API code was removed in the cleanup phase, this shared service should be created fresh in `internal/workflow/service.go`. Both the HTTP handler and the Jira webhook handler call this function directly — no HTTP loopback.
 
-Example extracted service:
+Example service shape:
 
 ```go
 // internal/workflow/service.go
@@ -2034,11 +2034,11 @@ type WorkflowResult struct {
 }
 
 func RunWorkflow(ctx context.Context, req WorkflowRequest) (*WorkflowResult, error) {
-    // Core logic moved here from ExecuteWorkflowHandler
+    // Core workflow logic: clone (if API) or use cwd (if local), extract, orchestrate, finalize
 }
 ```
 
-The `/api/v1/workflows` handler becomes a thin HTTP wrapper around `service.RunWorkflow(...)`.
+The `/api/v1/workflows` handler is a thin HTTP wrapper around `service.RunWorkflow(...)`.
 The Jira webhook goroutine calls `service.RunWorkflow(...)` directly.
 
 Setting up the Jira webhook (ops runbook to include in docs):
