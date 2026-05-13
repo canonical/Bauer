@@ -117,7 +117,7 @@ From Repository root:
 
 ```bash
 task build-api
-./bauer-api --config config.json
+./bauer-api
 ```
 
 ### Endpoints

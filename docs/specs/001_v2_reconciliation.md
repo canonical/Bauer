@@ -905,14 +905,22 @@ func (e *EnvVarSource) Load() (*Config, error) {
     }
     // Booleans: only set when the env var is explicitly present, so that
     // "not set" (nil) differs from "set to false" — enabling correct override behaviour.
+    // We use strconv.ParseBool so "1", "TRUE", etc. are also accepted, and invalid
+    // values return a descriptive error rather than silently defaulting to false.
     if v := os.Getenv("BAUER_PAGE_REFRESH"); v != "" {
-        b := v == "true"
+        b, err := strconv.ParseBool(v)
+        if err != nil {
+            return nil, fmt.Errorf("invalid BAUER_PAGE_REFRESH=%q: %w", v, err)
+        }
         cfg.PageRefresh = &b
     }
     if v := os.Getenv("BAUER_DRY_RUN"); v != "" {
-        b := v == "true"
+        b, err := strconv.ParseBool(v)
+        if err != nil {
+            return nil, fmt.Errorf("invalid BAUER_DRY_RUN=%q: %w", v, err)
+        }
         cfg.DryRun = &b
-    }"
+    }
     return cfg, nil
 }
 
@@ -1339,8 +1347,13 @@ func runOpenPR(ctx context.Context, cfg *config.Config, result *orchestrator.Orc
 
     branchName := fmt.Sprintf("%s/doc-suggestions-%d", cfg.BranchPrefix, time.Now().Unix())
 
-    if err := github.CreateAndPushBranch(ctx, cwd, branchName, token); err != nil {
-        return fmt.Errorf("failed to create/push branch: %w", err)
+    if err := github.CreateBranchFromDefault(ctx, cwd, branchName); err != nil {
+        return fmt.Errorf("failed to create branch: %w", err)
+    }
+
+    defaultBranch, err := github.GetDefaultBranch(cwd)
+    if err != nil {
+        return fmt.Errorf("failed to detect default branch: %w", err)
     }
 
     prTitle := fmt.Sprintf("Apply BAU suggestions from doc %s", cfg.DocID)
