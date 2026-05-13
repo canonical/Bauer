@@ -14,3 +14,15 @@ bauer-output/
 bauer
 # Added by goreleaser init:
 dist/
+
+# Artifacts
+bauer-artifacts/
+
+.workshop.lock
+config.json
+credentials.json
+
+# Binaries
+bauer
+bauer-api
+app

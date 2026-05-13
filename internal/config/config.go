@@ -16,7 +16,8 @@ type Config struct {
 	CredentialsPath string `json:"credentials"`
 
 	// DryRun indicates if the tool should skip side-effect operations (Copilot CLI, PR creation).
-	DryRun bool `json:"dry_run"`
+	// Uses *bool so that explicit false overrides a default of true.
+	DryRun *bool `json:"dry_run"`
 
 	// ChunkSize is the total number of chunks to create from all locations.
 	// Default is 1 if not specified, or 5 if PageRefresh is true.
@@ -24,7 +25,8 @@ type Config struct {
 
 	// PageRefresh indicates if the page refresh mode should be used.
 	// When true, uses page-refresh-instructions.md template and defaults ChunkSize to 5.
-	PageRefresh bool `json:"page_refresh"`
+	// Uses *bool so that explicit false overrides a default of true.
+	PageRefresh *bool `json:"page_refresh"`
 
 	// OutputDir is the directory where generated prompt files will be saved.
 	// Default is "bauer-output" if not specified.
@@ -41,12 +43,34 @@ type Config struct {
 	// TargetRepo is the path (relative or absolute) to the target repository
 	// where tasks should be executed. If not specified, uses the current directory.
 	TargetRepo string `json:"target_repo"`
+
+	// ArtifactsDir is the directory for append-only run artifacts.
+	// Defaults to "./bauer-artifacts" if not specified.
+	ArtifactsDir string `json:"artifacts_dir"`
+
+	// BranchPrefix is the prefix for generated branch names.
+	// Defaults to "bauer".
+	BranchPrefix string `json:"branch_prefix"`
+
+	// OpenPR indicates that after applying changes, a branch should be created
+	// and a PR opened. Mutually exclusive with OpenIssue.
+	OpenPR *bool `json:"open_pr"`
+
+	// OpenIssue indicates that Copilot should be skipped and a GitHub issue
+	// should be opened with the implementation plan. Mutually exclusive with OpenPR.
+	OpenIssue *bool `json:"open_issue"`
+
+	// FigmaURL is an optional Figma file URL for design context.
+	FigmaURL string `json:"figma_url"`
+
+	// FigmaToken is the Figma personal access token.
+	FigmaToken string `json:"figma_token"`
 }
 
 // Apply default config values
 func (c *Config) ApplyDefaults() {
 	if c.ChunkSize == 0 {
-		if c.PageRefresh {
+		if BoolVal(c.PageRefresh, false) {
 			c.ChunkSize = 5
 		} else {
 			c.ChunkSize = 1
@@ -60,6 +84,12 @@ func (c *Config) ApplyDefaults() {
 	}
 	if c.SummaryModel == "" {
 		c.SummaryModel = "gpt-5-mini-high"
+	}
+	if c.ArtifactsDir == "" {
+		c.ArtifactsDir = "bauer-artifacts"
+	}
+	if c.BranchPrefix == "" {
+		c.BranchPrefix = "bauer"
 	}
 }
 

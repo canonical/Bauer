@@ -10,7 +10,16 @@ func TestConfig_Validate(t *testing.T) {
 	// Create a temporary file to act as a valid credentials file
 	tmpDir := t.TempDir()
 	validCredsFile := filepath.Join(tmpDir, "creds.json")
-	if err := os.WriteFile(validCredsFile, []byte("{}"), 0644); err != nil {
+	if err := os.WriteFile(validCredsFile, []byte(`{
+  "type": "service_account",
+  "project_id": "test-project",
+  "private_key_id": "test-private-key-id",
+  "private_key": "-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n",
+  "client_email": "bauer@test-project.iam.gserviceaccount.com",
+  "client_id": "1234567890",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token"
+}`), 0644); err != nil {
 		t.Fatalf("Failed to create temp creds file: %v", err)
 	}
 
@@ -126,7 +135,16 @@ func TestChunkSizeDefaults(t *testing.T) {
 	// Create a temporary file to act as a valid credentials file
 	tmpDir := t.TempDir()
 	validCredsFile := filepath.Join(tmpDir, "creds.json")
-	if err := os.WriteFile(validCredsFile, []byte("{}"), 0644); err != nil {
+	if err := os.WriteFile(validCredsFile, []byte(`{
+  "type": "service_account",
+  "project_id": "test-project",
+  "private_key_id": "test-private-key-id",
+  "private_key": "-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n",
+  "client_email": "bauer@test-project.iam.gserviceaccount.com",
+  "client_id": "1234567890",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token"
+}`), 0644); err != nil {
 		t.Fatalf("Failed to create temp creds file: %v", err)
 	}
 
@@ -183,7 +201,7 @@ func TestChunkSizeDefaults(t *testing.T) {
 				DocID:           "test-doc-id",
 				CredentialsPath: validCredsFile,
 				ChunkSize:       effectiveChunkSize,
-				PageRefresh:     tt.pageRefreshFlag,
+				PageRefresh:     BoolPtr(tt.pageRefreshFlag),
 				OutputDir:       "bauer-output",
 				Model:           "gpt-5-mini-high",
 				SummaryModel:    "gpt-5-mini-high",

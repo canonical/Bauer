@@ -25,12 +25,11 @@ graph TD
 
     subgraph Shared Core
         Config["internal/config"]
-        Orchestrator["internal/orchestrator"]
+      Orchestrator["internal/orchestrator\n(defines Agent interface)"]
         Source["internal/source"]
         GDocs["internal/gdocs"]
         Prompt["internal/prompt"]
         Artifacts["internal/artifacts"]
-        Agent["internal/agent\n(interface)"]
         Copilot["internal/copilotcli"]
         GitHub["internal/github"]
     end
@@ -46,8 +45,7 @@ graph TD
     Source --> GDocs
     Orchestrator --> Prompt
     Orchestrator --> Artifacts
-    Orchestrator --> Agent
-    Copilot -. implements .-> Agent
+    Copilot -. implements orchestrator.Agent .-> Orchestrator
 
     CLI --> GitHub
     API --> GitHub
@@ -75,9 +73,8 @@ Sharing core logic between the CLI and API is the right call here. The internal 
 | `internal/gdocs`        | Google Docs auth, doc fetch, suggestion extraction and grouping                                                          |
 | `internal/source`       | Source adapters and normalized `SourceBundle` — the orchestrator depends on this, not directly on `internal/gdocs`       |
 | `internal/prompt`       | Chunk prompt generation from suggestions, template rendering; directly aware of gdocs and figma source types             |
-| `internal/agent`        | Defines the `Agent` interface that all AI execution backends implement                                                   |
-| `internal/copilotcli`   | Implements `agent.Agent`; manages Copilot SDK process lifecycle, sessions, streaming                                     |
-| `internal/orchestrator` | Wires source → prompt → agent into a single `Execute()` call; depends on `agent.Agent`, not concrete client              |
+| `internal/copilotcli`   | Implements `orchestrator.Agent`; manages Copilot SDK process lifecycle, sessions, streaming                              |
+| `internal/orchestrator` | Defines `Agent` at the consumer and wires source → prompt → agent into a single `Execute()` call                         |
 | `internal/artifacts`    | Append-only run artifact storage; writes extraction, prompts, outputs, and screenshots under timestamped run directories |
 | `internal/github`       | GitHub auth, branch ops, commits, issue creation, PR creation                                                            |
 | `internal/config`       | Configuration loading and resolution (shared by CLI and API)                                                             |
@@ -431,7 +428,7 @@ Secrets are injected as environment variables or mounted volumes. The `BAUER_CRE
 | `.env` + `.env.local` for API           | Yes    | Standard pattern, clear separation of defaults vs secrets                                                                                                                                                                                                                                |
 | Jira calls internal logic (not HTTP)    | Yes    | Cleaner, no loopback, same process                                                                                                                                                                                                                                                       |
 | Two API endpoints (issues vs workflows) | Yes    | Clean separation — different flows, different use cases                                                                                                                                                                                                                                  |
-| `agent.Agent` interface                 | Yes    | Orchestrator is backend-agnostic; swap AI provider without touching core logic                                                                                                                                                                                                           |
+| `orchestrator.Agent` interface          | Yes    | Orchestrator is backend-agnostic; swap AI provider without touching core logic                                                                                                                                                                                                           |
 | No JSON config files                    | Yes    | Env vars for API, flags + env vars for CLI — cleaner, no third config mechanism                                                                                                                                                                                                          |
 | `internal/source` abstraction           | Yes    | Orchestrator must not be coupled to Google Docs directly; source layer normalizes all upstream inputs so future sources (Figma, Jira, etc.) fit the same pipeline without touching the orchestrator                                                                                      |
 | Append-only run artifacts               | Yes    | Overwriting extraction outputs and prompt files blocks traceability, debugging, and later design-aware features; every run gets a timestamped directory under `bauer-artifacts/`                                                                                                         |

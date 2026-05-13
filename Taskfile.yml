@@ -2,37 +2,43 @@ version: "3"
 
 tasks:
   build:
-    desc: Build the Bauer and Bauer API binaries
+    desc: Build the Bauer CLI binary
     cmds:
-      - go build -o bauer cmd/bauer/main.go
-      - go build -o bauer-api cmd/app/main.go
+      - go build -o bauer ./cmd/bauer/
+
+  build-api:
+    desc: Build the Bauer API server binary
+    cmds:
+      - go build -o bauer-api ./cmd/app/
+
+  run:
+    desc: Run Bauer CLI in standalone mode
+    summary: |
+      Requires BAUER_DOC_ID and BAUER_CREDENTIALS_PATH (or GOOGLE_APPLICATION_CREDENTIALS, or --credentials flag).
+      Example: task run -- --doc-id 1abc --credentials ./creds.json
+    cmds:
+      - go run ./cmd/bauer/ {{.CLI_ARGS}}
+
+  run-api:
+    desc: Build and start the API server
+    cmds:
+      - task: build-api
+      - ./bauer-api
 
   test:
-    desc: Run all tests
+    desc: Run all unit tests
     cmds:
-      - go test --cover ./...
+      - go test ./...
 
   lint:
     desc: Format code using gofmt
     cmds:
       - gofmt -w .
 
-  run-server:
-    desc: Run the API server locally
-    cmds:
-      - ./bauer-api --config config.json
-
   clean:
     desc: Clean up generated files
     cmds:
       - rm -rf bauer-output
-      - rm -f bauer
+      - rm -f bauer bauer-api
       - rm -f bauer.log
       - rm -rf /tmp/gh* /tmp/tmp* /tmp/test-bauer-repo* || true
-
-  run:
-    desc: Clean up generated files, build and run Bauer server
-    cmds:
-      - task: clean
-      - task: build
-      - task: run-server

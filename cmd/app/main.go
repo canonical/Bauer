@@ -1,11 +1,6 @@
 package main
 
 import (
-	"bauer/cmd/app/core/middleware"
-	"bauer/cmd/app/types"
-	v1 "bauer/cmd/app/v1"
-	"bauer/internal/orchestrator"
-	"bauer/internal/workflow"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -20,24 +15,15 @@ func run() error {
 	slog.Info("startup", "status", "initializing API")
 	defer slog.Info("shutdown complete")
 
-	orchestrator := orchestrator.NewOrchestrator()
-	cfg, err := types.LoadConfig()
-	if err != nil {
-		slog.Error("failed to load config", "error", err.Error())
-		return err
-	}
-
-	rc := types.RouteConfig{
-		APIConfig:    *cfg,
-		Orchestrator: orchestrator,
-	}
-
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/job", v1.JobPost(rc))
-	mux.HandleFunc("/api/v1/health", v1.GetHealth)
-	mux.HandleFunc("/api/v1/workflow", workflow.ExecuteWorkflowHandler(orchestrator))
+	mux.HandleFunc("GET /api/v1/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
+	})
+
 	slog.Info("starting server", "address", ":8090")
-	err = http.ListenAndServe(":8090", middleware.RequestTrace(mux))
+	err := http.ListenAndServe(":8090", mux)
 
 	if err != nil {
 		slog.Error("server error", "error", err.Error())

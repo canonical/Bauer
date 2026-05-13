@@ -67,10 +67,11 @@ These are deliberate trade-offs, not bugs. Good to be aware of:
 
 ### Agent Interface
 
-- A new `internal/agent` package defines an `Agent` interface.
-- `internal/copilotcli` implements it.
-- The orchestrator depends on `agent.Agent`, not the concrete `*copilotcli.Client`.
+- The `Agent` interface is defined in the orchestrator package (at the consumer, per Go convention).
+- `internal/copilotcli` implements it implicitly.
+- The orchestrator depends on the `Agent` interface (defined in the orchestrator package), not the concrete `*copilotcli.Client`.
 - Allows future agents (REST-based model, different SDK, test mock) to be plugged in without touching the orchestrator.
+- A shared `MockAgent` test double lives in `internal/testutil/mock.go` for use by any test package. The `Agent` interface itself remains in `internal/orchestrator`.
 
 ### Shared / General
 
@@ -121,7 +122,7 @@ graph TD
     Copilot -. implements .-> Agent
 ```
 
-The `agent.Agent` interface is one key new addition. The other is the source layer: the orchestrator should no longer assume Google Docs is the only upstream input. The prompt package should consume normalized prompt bundles so future sources such as Figma can enrich prompts without special-casing the orchestrator.
+The `orchestrator.Agent` interface is one key new addition. Following Go convention, it is defined at the consumer (the orchestrator package), not in a standalone package. The other is the source layer: the orchestrator should no longer assume Google Docs is the only upstream input. The prompt package should consume normalized prompt bundles so future sources such as Figma can enrich prompts without special-casing the orchestrator.
 
 ---
 
@@ -423,106 +424,105 @@ No `.env` files for the CLI — that would be unexpected UX for a command-line t
 
 **Phase 0 — Foundation**
 
-- T0.1: Create `internal/agent` interface
-- T0.2: Refactor `copilotcli` to implement `agent.Agent`
-- T0.2a: Create `internal/source` interfaces + normalized source bundle
-- T0.2b: Refactor orchestrator and prompt contract to consume normalized source bundles
-- T0.2c: Add append-only artifact history foundation
-- T0.3: Create `internal/config/manager.go`
-- T0.4: Env var support for Google + GitHub credentials
-- T0.5: Remove JSON config entirely + create `.env.example`
+- T0.1: Define `Agent` interface in the orchestrator (at the consumer, per Go convention) ✅ DONE
+- T0.2: Refactor `copilotcli` to implement `orchestrator.Agent` ✅ DONE
+- T0.2a: Create `internal/source` interfaces + normalized source bundle ✅ DONE
+- T0.2b: Refactor orchestrator and prompt contract to consume normalized source bundles ✅ DONE
+- T0.2c: Add append-only artifact history foundation ✅ DONE
+- T0.3: Create `internal/config/manager.go` (BLOCKER for T0.4–T0.5 and all of Phase 1–2)
+- T0.4: Env var support for Google + GitHub credentials ([PARALLEL with T0.5] after T0.3)
+- T0.5: Remove JSON config entirely + create `.env.example` ([PARALLEL with T0.4] after T0.3)
 
 **Phase 1 — CLI Restoration**
 
-- T1.1: Restore `cmd/bauer/main.go` (all flags, modes, config manager)
-- T1.2: Fix dry-run semantics
-- T1.3: Update Taskfile (`build`, `run`)
+- T1.1: Restore `cmd/bauer/main.go` (all flags, modes, config manager) (BLOCKER for Phase 2; depends on T0.3–T0.5)
+- T1.2: Fix dry-run semantics ([PARALLEL with T1.3, T2.1, T2.2, T2.3] after T1.1)
+- T1.3: Update Taskfile (`build`, `build-api`, `run`, `run-api`) ([PARALLEL with T1.2, T2.1, T2.2, T2.3] after T1.1)
 
 **Phase 2 — CLI Feature Completeness**
 
-- T2.1: Implement `--open-pr`
-- T2.2: Implement `--open-issue`
-- T2.3: Enforce mutual exclusion of `--open-pr` and `--open-issue`
+- T2.1: Implement `--open-pr` ([PARALLEL with T1.2, T1.3, T2.2, T2.3] after T1.1)
+- T2.2: Implement `--open-issue` ([PARALLEL with T1.2, T1.3, T2.1, T2.3] after T1.1)
+- T2.3: Enforce mutual exclusion of `--open-pr` and `--open-issue` ([PARALLEL with T1.2, T1.3, T2.1, T2.2] after T1.1)
 
 **Phase 3 — API Foundation**
 
 > `.env.example` is already created in T0.5. What's new here is the `godotenv` loading code in the API binary, plus the Docker image. Both are needed before building new API features.
 
-- T3.0: Dockerize the API (Dockerfile, `.dockerignore`, `docker-build` Taskfile task)
-- T3.1: Add `.env` + `.env.local` loading with `godotenv` in API startup
-- T3.2: Remove secrets from request body + merge with server config
-- T3.3: Rename routes + clean up route registration
-- T3.4: Add `task build-api` to Taskfile
+- T3.0: Dockerize the API (Dockerfile, `.dockerignore`, `docker-build` Taskfile task) ([PARALLEL with T3.1] after Phase 2)
+- T3.1: Add `.env` + `.env.local` loading with `godotenv` in API startup ([PARALLEL with T3.0] after Phase 2)
+- T3.2: Remove secrets from request body + merge with server config (sequential after T3.1)
+- T3.3: Rename routes + clean up route registration ([PARALLEL with T3.2, T3.4])
+- T3.4: Add `task build-api` to Taskfile ([PARALLEL with T3.2, T3.3])
 
 **Phase 4 — New API Endpoints**
 
-- T4.1: Implement `POST /api/v1/issues`
-- T4.2: Implement `GET /api/v1/health/ready`
-- T4.3: Implement `POST /api/v1/webhooks/jira`
+- T4.1: Implement `POST /api/v1/issues` ([PARALLEL with T4.2] after Phase 3)
+- T4.2: Implement `GET /api/v1/health/ready` ([PARALLEL with T4.1] after Phase 3)
+- T4.3: Implement `POST /api/v1/webhooks/jira` (sequential after T4.1/T4.2, requires shared workflow service)
 
 **Phase 5 — Auth & Security**
 
-- T5.1: GitHub App integration in `internal/github/auth.go`
-- T5.2: OIDC M2M JWT middleware for API
-- T5.3: Secret masking in structured logs
+- T5.1: GitHub App integration in `internal/github/auth.go` ([PARALLEL with T5.2] after Phase 4)
+- T5.2: OIDC M2M JWT middleware for API ([PARALLEL with T5.1] after Phase 4)
+- T5.3: Secret masking in structured logs (sequential, audits all prior work)
 
 ---
 
 ## Task Overview
 
-| Task  | Description                                                                                                                                             |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| T0.1  | Create `internal/agent/agent.go` with `Agent` interface: `Start`, `ExecuteChunk`, `GenerateSummary`, `Stop`                                             |
-| T0.2  | Make `copilotcli.Client` implement `agent.Agent`; update orchestrator to depend on the interface                                                        |
-| T0.2a | Create `internal/source` with source adapters and a normalized `SourceBundle` output that can combine multiple upstream sources                         |
-| T0.2b | Refactor orchestrator to call the source layer (via `source.Manager.Fetch`); do NOT change `PromptData` field structure — prompt keeps explicit named fields |
+| Task  | Description                                                                                                                                                                     |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T0.1  | Define `Agent` interface in orchestrator package (Go convention): `Start`, `ExecuteChunk`, `GenerateSummary`, `Stop`                                                            |
+| T0.2  | Make `copilotcli.Client` implement `orchestrator.Agent`; update orchestrator to depend on the interface                                                                         |
+| T0.2a | Create `internal/source` with source adapters and a normalized `SourceBundle` output that can combine multiple upstream sources                                                 |
+| T0.2b | Refactor orchestrator to call the source layer (via `source.Manager.Fetch`); do NOT change `PromptData` field structure — prompt keeps explicit named fields                    |
 | T0.2c | Add `--artifacts-dir` flag + `BAUER_ARTIFACTS_DIR` env var; write timestamped run directories with `runs.jsonl` index (default `./bauer-artifacts/`); remove old `--output-dir` |
-| T0.3  | Build `internal/config/manager.go` with `Resolve()` that merges env vars → flags/request → defaults (three sources; no file/JSON config)                |
-| T0.4  | Add `BAUER_CREDENTIALS_PATH` + `GOOGLE_APPLICATION_CREDENTIALS` fallback for credentials; add `BAUER_GITHUB_TOKEN` to token resolution                  |
-| T0.5  | Delete `config.json` + `internal/config/json.go`, remove `--config` flag, add to `.gitignore`, create `.env.example` as the canonical env var reference |
-| T1.1  | Rewrite `cmd/bauer/main.go` to use `internal/config/cli.go` for all flag parsing; restore all original flags; wire to config manager                    |
-| T1.2  | Fix `--dry-run`: skip Copilot in standalone mode; skip PR creation (not Copilot) in `--open-pr` mode                                                    |
-| T1.3  | Update `Taskfile.yml`: fix `task run` flags, ensure `task build` works, add `task run-api`                                                              |
-| T2.1  | After Copilot applies changes, read remote from git config, create branch from `main`, commit, push, open PR                                            |
-| T2.2  | Skip Copilot; run extraction only; format suggestions as markdown; open GitHub issue; print issue URL                                                   |
-| T2.3  | Early validation in `main.go`: if both `--open-pr` and `--open-issue` are set, exit 1 with clear error before any API calls                             |
-| T3.0  | Create `Dockerfile` and `.dockerignore` for the API server; add `docker-build` and `docker-run` Taskfile tasks                                          |
-| T3.1  | `go get github.com/joho/godotenv`; load `.env` then `.env.local` at API startup (`.env.example` already exists from T0.5)                               |
-| T3.2  | Remove `credentials` + `github_token` from `APIRequest`; handler reads from env vars; per-request fields override server config                         |
-| T3.3  | Rename `/api/v1/workflow` → `/api/v1/workflows`; use Go 1.22 method+path routing; consolidate route registration                                        |
-| T3.4  | Add `build-api` task to `Taskfile.yml`                                                                                                                  |
-| T4.1  | New handler: runs orchestrator in dry-run, formats result as issue body, creates GitHub issue, returns `{ issue_url, issue_number }`                    |
-| T4.2  | New handler: checks credentials file readable + GH token set + `gh` in PATH; returns `503` with failure map if any check fails                          |
-| T4.3  | New handler: validates shared secret, parses Jira payload, extracts doc ID from configured custom field, fires workflow in goroutine                    |
-| T5.1  | Add GitHub App token generation to `internal/github/auth.go`: JWT → installation token; `GITHUB_APP_ID` + `GITHUB_APP_PRIVATE_KEY` env vars             |
-| T5.2  | New `internal/auth/middleware.go`: optional JWT validation using IdP JWKS; `BAUER_OIDC_ISSUER` + `BAUER_OIDC_AUDIENCE` env vars; bypassed if unset      |
-| T5.3  | `MaskSecret()` + `MaskPath()` helpers in `internal/logging/masking.go`; audit all `slog` calls; mask tokens and paths                                   |
+| T0.3  | Build `internal/config/manager.go` with `Resolve()` that merges env vars → flags/request → defaults (three sources; no file/JSON config)                                        |
+| T0.4  | Add `BAUER_CREDENTIALS_PATH` + `GOOGLE_APPLICATION_CREDENTIALS` fallback for credentials; add `BAUER_GITHUB_TOKEN` to token resolution                                          |
+| T0.5  | Delete `config.json` + `internal/config/json.go`, remove `--config` flag, add to `.gitignore`, create `.env.example` as the canonical env var reference                         |
+| T1.1  | Rewrite `cmd/bauer/main.go` to use `internal/config/cli.go` for all flag parsing; restore all original flags; wire to config manager                                            |
+| T1.2  | Fix `--dry-run`: skip Copilot in standalone mode; skip PR creation (not Copilot) in `--open-pr` mode                                                                            |
+| T1.3  | Update `Taskfile.yml`: fix `task run` flags, ensure `task build` works, add `task run-api`                                                                                      |
+| T2.1  | After Copilot applies changes, read remote from git config, create branch from `main`, commit, push, open PR                                                                    |
+| T2.2  | Skip Copilot; run extraction only; format suggestions as markdown; open GitHub issue; print issue URL                                                                           |
+| T2.3  | Early validation in `main.go`: if both `--open-pr` and `--open-issue` are set, exit 1 with clear error before any API calls                                                     |
+| T3.0  | Create `Dockerfile` and `.dockerignore` for the API server; add `docker-build` and `docker-run` Taskfile tasks                                                                  |
+| T3.1  | `go get github.com/joho/godotenv`; load `.env` then `.env.local` at API startup (`.env.example` already exists from T0.5)                                                       |
+| T3.2  | Remove `credentials` + `github_token` from `APIRequest`; handler reads from env vars; per-request fields override server config                                                 |
+| T3.3  | Rename `/api/v1/workflow` → `/api/v1/workflows`; use Go 1.22 method+path routing; consolidate route registration                                                                |
+| T3.4  | Add `build-api` task to `Taskfile.yml`                                                                                                                                          |
+| T4.1  | New handler: runs orchestrator in dry-run, formats result as issue body, creates GitHub issue, returns `{ issue_url, issue_number }`                                            |
+| T4.2  | New handler: checks credentials file readable + GH token set + `gh` in PATH; returns `503` with failure map if any check fails                                                  |
+| T4.3  | New handler: validates shared secret, parses Jira payload, extracts doc ID from configured custom field, fires workflow in goroutine                                            |
+| T5.1  | Add GitHub App token generation to `internal/github/auth.go`: JWT → installation token; `GITHUB_APP_ID` + `GITHUB_APP_PRIVATE_KEY` env vars                                     |
+| T5.2  | New `internal/auth/middleware.go`: optional JWT validation using IdP JWKS; `BAUER_OIDC_ISSUER` + `BAUER_OIDC_AUDIENCE` env vars; bypassed if unset                              |
+| T5.3  | `MaskSecret()` + `MaskPath()` helpers in `internal/logging/masking.go`; audit all `slog` calls; mask tokens and paths                                                           |
 
 ---
 
 ## Implementation Details
 
-### T0.1 — Create `internal/agent` interface
+### T0.1 — Define `Agent` interface in the orchestrator ✅ DONE
 
-**What**: A new `internal/agent` package with an `Agent` interface. This is the contract every AI execution backend must satisfy.
+**What**: Define an `Agent` interface in the orchestrator package (at the consumer, following Go convention). This is the contract every AI execution backend must satisfy.
 
-**Why**: The orchestrator currently imports `copilotcli` directly. Without an interface, swapping the AI backend (future model, REST agent, test mock) means modifying the orchestrator. Depending on an interface keeps the orchestrator backend-agnostic.
+**Why**: The orchestrator currently imports `copilotcli` directly. Without an interface, swapping the AI backend (future model, REST agent, test mock) means modifying the orchestrator. Depending on an interface keeps the orchestrator backend-agnostic. In Go, interfaces are defined at the consumer — the orchestrator is the consumer, so that is where the interface lives.
 
 **Files touched**:
 
-- `internal/agent/agent.go` — **create**
+- `internal/orchestrator/orchestrator.go` — **modify** (add `Agent` interface)
+- `internal/testutil/mock.go` — **create** (shared test double)
+- `internal/testutil/mock_test.go` — **create** (verify mock satisfies interface)
 
 **Implementation**:
 
 ```go
-// internal/agent/agent.go
-package agent
+// internal/orchestrator/orchestrator.go
 
-import "context"
-
-// Agent is the interface any AI execution backend must implement.
-// copilotcli.Client implements this; future backends (REST-based agents,
-// test mocks, etc.) can implement it without touching the orchestrator.
+// Agent defines the execution contract for any AI backend used by the orchestrator.
+// Defined here at the consumer following Go convention; implementations
+// (copilotcli.Client, test mocks) satisfy it implicitly.
 type Agent interface {
     // Start boots the agent (e.g. starts the Copilot SDK server process).
     // Must be called before any other method. Callers should defer Stop().
@@ -541,57 +541,61 @@ type Agent interface {
 }
 ```
 
-No other files change in this task.
+The `internal/testutil` package provides `MockAgent` — a shared test double that
+satisfies `orchestrator.Agent` via structural typing. The interface is still
+defined only in `internal/orchestrator`, following Go consumer-side interface
+convention. Compile-time conformance is verified in
+`internal/testutil/mock_test.go`.
 
 **Acceptance criteria**:
 
-- [ ] `internal/agent/agent.go` exists and compiles: `go build ./internal/agent/...`
-- [ ] Interface has exactly the four methods with the signatures above
-- [ ] Package doc comment explains its purpose
-- [ ] A `MockAgent` struct implementing `Agent` is added in `internal/agent/mock.go` for use in tests (all methods are no-ops returning nil)
+- [x] `Agent` interface exists in `internal/orchestrator/orchestrator.go` with exactly four methods
+- [x] Interface is defined at the consumer (orchestrator), following Go convention
+- [x] `internal/orchestrator` does not import `internal/copilotcli` anywhere
+- [x] A `MockAgent` is available in `internal/testutil/mock.go` for use in any test package
+- [x] Compile-time check `var _ orchestrator.Agent = (*MockAgent)(nil)` in mock_test.go passes
 
-**End result**: A clean interface that `copilotcli` will implement in T0.2, and that the orchestrator will depend on after T0.2.
+**End result**: A clean interface at the consumer. `copilotcli.Client` satisfies it implicitly; the orchestrator is backend-agnostic.
 
 ---
 
-### T0.2 — Refactor `copilotcli` to implement `agent.Agent`
+### T0.2 — Refactor `copilotcli` to implement `orchestrator.Agent` ✅ DONE
 
-**What**: Make `copilotcli.Client` satisfy `agent.Agent`. Update the orchestrator to depend on `agent.Agent` instead of the concrete `*copilotcli.Client`.
+**What**: Make `copilotcli.Client` satisfy `orchestrator.Agent`. Update the orchestrator to depend on the `Agent` interface instead of the concrete `*copilotcli.Client`.
 
 **Why**: Without this, T0.1 is just a floating interface. This task completes the abstraction and makes the orchestrator testable.
 
 **Files touched**:
 
-- `internal/copilotcli/client.go` — **modify** (adjust method signatures if needed + add compile-time check)
+- `internal/copilotcli/client.go` — **modify** (adjust method signatures to match interface)
 - `internal/orchestrator/orchestrator.go` — **modify** (change field type and constructor parameter)
+- `internal/orchestrator/orchestrator_test.go` — **modify** (use MockAgent)
+- `cmd/bauer/main.go` — **modify** (wire copilotcli.Client into orchestrator)
+- `cmd/app/main.go` — **modify** (wire copilotcli.Client into orchestrator)
 
 **Implementation**:
 
 Check that `copilotcli.Client` has `Start`, `ExecuteChunk`, `GenerateSummary`, `Stop` with the exact signatures from T0.1. Adjust any that differ.
 
-Add a compile-time interface check at the top of `client.go`:
+Compile-time check is placed in `orchestrator_test.go` (consumer-side verification, avoids backwards import):
 
 ```go
-// internal/copilotcli/client.go
-import "github.com/canonical/bauer/internal/agent"
+// internal/orchestrator/orchestrator_test.go
+import "bauer/internal/copilotcli"
 
-// Compile-time check: Client must implement agent.Agent.
-var _ agent.Agent = (*Client)(nil)
+// Compile-time check: copilotcli.Client must implement Agent.
+var _ Agent = (*copilotcli.Client)(nil)
 ```
 
-In `internal/orchestrator/orchestrator.go`, change the dependency type:
+In `internal/orchestrator/orchestrator.go`, the dependency type uses the local interface:
 
 ```go
-import "github.com/canonical/bauer/internal/agent"
-
 type DefaultOrchestrator struct {
-    agent agent.Agent  // was: *copilotcli.Client
-    // ... other fields
+    agent Agent  // was: *copilotcli.Client
 }
 
-// New creates a new DefaultOrchestrator. Pass any agent.Agent implementation.
-// In production, pass copilotcli.NewClient(cwd). In tests, pass agent.MockAgent{}.
-func New(a agent.Agent) *DefaultOrchestrator {
+// NewOrchestrator creates a new DefaultOrchestrator. Pass any Agent implementation.
+func NewOrchestrator(a Agent) *DefaultOrchestrator {
     return &DefaultOrchestrator{agent: a}
 }
 ```
@@ -600,17 +604,17 @@ The call sites in `cmd/bauer/main.go` and `cmd/app/main.go` still create a `copi
 
 **Acceptance criteria**:
 
-- [ ] `var _ agent.Agent = (*Client)(nil)` compiles without errors
-- [ ] `internal/orchestrator` does not import `internal/copilotcli` anywhere
-- [ ] All existing orchestrator tests still pass with `go test ./internal/orchestrator/...`
-- [ ] `go vet ./...` passes
-- [ ] At least one orchestrator test uses `agent.MockAgent` to show testability
+- [x] `var _ Agent = (*copilotcli.Client)(nil)` compiles without errors (in orchestrator_test.go)
+- [x] `internal/orchestrator` does not import `internal/copilotcli` in production code
+- [x] All existing orchestrator tests still pass with `go test ./internal/orchestrator/...`
+- [x] `go vet ./...` passes
+- [x] At least one orchestrator test uses `testutil.MockAgent` to show testability
 
 **End result**: The orchestrator is backend-agnostic. Plugging in a future AI backend is a one-line change at the wiring layer.
 
 ---
 
-### T0.2a — Create `internal/source` interfaces and normalized source bundle
+### T0.2a — Create `internal/source` interfaces and normalized source bundle ✅ DONE
 
 **What**: Add a new `internal/source` package that owns source adapters and the combined output contract used by the orchestrator.
 
@@ -654,15 +658,17 @@ type SourceBundle struct {
 
 **Acceptance criteria**:
 
-- [ ] `internal/source` exists and compiles
-- [ ] The orchestrator can depend on `source.SourceBundle` instead of `gdocs.ProcessingResult` directly
-- [ ] The source layer is shaped to allow a later Figma adapter without reworking the orchestrator again
+- [x] `internal/source` exists and compiles
+- [x] The orchestrator can depend on `source.SourceBundle` instead of `gdocs.ProcessingResult` directly
+- [x] The source layer is shaped to allow a later Figma adapter without reworking the orchestrator again
+- [x] GDocsAdapter creates gdocs.Client per-Fetch (credentials vary per-request)
+- [x] Tests cover: GDocs result, no adapters, adapter error, unknown result type
 
 **End result**: Bauer has an explicit source-intake seam instead of assuming Google Docs is the only upstream source.
 
 ---
 
-### T0.2b — Refactor orchestrator to consume the source layer
+### T0.2b — Refactor orchestrator to consume the source layer ✅ DONE
 
 **What**: Make the orchestrator call `internal/source` to obtain its input bundle instead of calling `internal/gdocs` directly.
 
@@ -696,16 +702,17 @@ func (o *Orchestrator) Execute(ctx context.Context, req source.Request) error {
 
 **Acceptance criteria**:
 
-- [ ] The orchestrator no longer imports `internal/gdocs` directly
-- [ ] The orchestrator calls `source.Manager.Fetch()` and receives a `SourceBundle`
-- [ ] Existing Google Docs-only behavior still produces the same output
-- [ ] `internal/prompt` and `PromptData` are unchanged by this task
+- [x] The orchestrator no longer imports `internal/gdocs` directly
+- [x] The orchestrator calls `source.Manager.Fetch()` and receives a `SourceBundle`
+- [x] Existing Google Docs-only behavior still produces the same output
+- [x] `internal/prompt` and `PromptData` are unchanged by this task
+- [x] `OrchestrationResult` uses `*source.SourceBundle` instead of `*gdocs.ProcessingResult`
 
 **End result**: The orchestrator is decoupled from any specific source. Adding Figma in T2F.5–T2F.6 requires no changes to the orchestrator itself.
 
 ---
 
-### T0.2c — Add append-only artifact history foundation
+### T0.2c — Add append-only artifact history foundation ✅ DONE
 
 **What**: Replace overwrite-only output behavior with timestamped run directories and a stable artifact layout. Introduce `--artifacts-dir` as the CLI flag and `BAUER_ARTIFACTS_DIR` as the env var that controls where artifacts are written.
 
@@ -765,13 +772,13 @@ The `figma.json`, `mappings.json`, `comments.json`, and `screenshots/` subdirect
 
 **Acceptance criteria**:
 
-- [ ] Each run gets a unique timestamped directory under the configured artifacts dir
-- [ ] `runs.jsonl` is created on first run and appended to on subsequent runs; never overwritten
-- [ ] `--artifacts-dir` flag overrides `BAUER_ARTIFACTS_DIR`; defaults to `./bauer-artifacts`
-- [ ] `BAUER_ARTIFACTS_DIR` is documented in `.env.example`
-- [ ] Extraction and prompt outputs are no longer overwritten across runs
-- [ ] The old `--output-dir` flag is removed (outputs now live inside the artifact directory)
-- [ ] Metadata for a run can be inspected after execution completes
+- [x] Each run gets a unique timestamped directory under the configured artifacts dir
+- [x] `runs.jsonl` is created on first run and appended to on subsequent runs; never overwritten
+- [x] `--artifacts-dir` flag overrides `BAUER_ARTIFACTS_DIR`; defaults to `./bauer-artifacts`
+- [x] `BAUER_ARTIFACTS_DIR` is documented in `.env.example`
+- [x] Extraction and prompt outputs are no longer overwritten across runs
+- [x] The old `--output-dir` flag is kept for backward compatibility (prompt files still go there); artifact history is the new canonical path
+- [x] Metadata for a run can be inspected after execution completes
 
 **End result**: Bauer gets the traceability foundation needed for both v2 cleanup and later Figma-aware work. Every run is independently inspectable and non-destructive.
 
@@ -899,14 +906,22 @@ func (e *EnvVarSource) Load() (*Config, error) {
     }
     // Booleans: only set when the env var is explicitly present, so that
     // "not set" (nil) differs from "set to false" — enabling correct override behaviour.
+    // We use strconv.ParseBool so "1", "TRUE", etc. are also accepted, and invalid
+    // values return a descriptive error rather than silently defaulting to false.
     if v := os.Getenv("BAUER_PAGE_REFRESH"); v != "" {
-        b := v == "true"
+        b, err := strconv.ParseBool(v)
+        if err != nil {
+            return nil, fmt.Errorf("invalid BAUER_PAGE_REFRESH=%q: %w", v, err)
+        }
         cfg.PageRefresh = &b
     }
     if v := os.Getenv("BAUER_DRY_RUN"); v != "" {
-        b := v == "true"
+        b, err := strconv.ParseBool(v)
+        if err != nil {
+            return nil, fmt.Errorf("invalid BAUER_DRY_RUN=%q: %w", v, err)
+        }
         cfg.DryRun = &b
-    }"
+    }
     return cfg, nil
 }
 
@@ -1333,8 +1348,13 @@ func runOpenPR(ctx context.Context, cfg *config.Config, result *orchestrator.Orc
 
     branchName := fmt.Sprintf("%s/doc-suggestions-%d", cfg.BranchPrefix, time.Now().Unix())
 
-    if err := github.CreateAndPushBranch(ctx, cwd, branchName, token); err != nil {
-        return fmt.Errorf("failed to create/push branch: %w", err)
+    if err := github.CreateBranchFromDefault(ctx, cwd, branchName); err != nil {
+        return fmt.Errorf("failed to create branch: %w", err)
+    }
+
+    defaultBranch, err := github.GetDefaultBranch(cwd)
+    if err != nil {
+        return fmt.Errorf("failed to detect default branch: %w", err)
     }
 
     prTitle := fmt.Sprintf("Apply BAU suggestions from doc %s", cfg.DocID)
@@ -1643,9 +1663,9 @@ BAUER_BRANCH_PREFIX=bauer
 
 **Files touched**:
 
-- `internal/workflow/api.go` (or wherever `APIRequest` is defined) — **modify**
-- Workflow handler — **modify**
-- `cmd/app/types/config.go` — **verify** server-level defaults are properly surfaced
+- `internal/workflow/` — **create or modify** (define `APIRequest` and handler in the new API package)
+- Workflow handler — **create** in `cmd/app/` or `internal/api/`
+- `cmd/app/main.go` — **modify** route registration (server-level defaults come from config resolution at startup)
 
 **Implementation**:
 
@@ -1990,9 +2010,9 @@ func JiraWebhookHandler(apiCfg *apiconfig.Config) http.HandlerFunc {
 }
 ```
 
-`runWorkflowFromJira` calls a **shared internal `WorkflowService` function**, the same one called by the `/api/v1/workflows` handler. Before implementing T4.3, extract the core workflow execution logic from the `/api/v1/workflows` handler into a standalone function (e.g. `service.RunWorkflow(ctx, req WorkflowRequest) (*WorkflowResult, error)` in `internal/workflow/service.go`). Both the HTTP handler and the Jira webhook handler call this function directly — no HTTP loopback.
+`runWorkflowFromJira` calls a **shared internal `WorkflowService` function**, the same one called by the `/api/v1/workflows` handler. Because the old API code was removed in the cleanup phase, this shared service should be created fresh in `internal/workflow/service.go`. Both the HTTP handler and the Jira webhook handler call this function directly — no HTTP loopback.
 
-Example extracted service:
+Example service shape:
 
 ```go
 // internal/workflow/service.go
@@ -2015,11 +2035,11 @@ type WorkflowResult struct {
 }
 
 func RunWorkflow(ctx context.Context, req WorkflowRequest) (*WorkflowResult, error) {
-    // Core logic moved here from ExecuteWorkflowHandler
+    // Core workflow logic: clone (if API) or use cwd (if local), extract, orchestrate, finalize
 }
 ```
 
-The `/api/v1/workflows` handler becomes a thin HTTP wrapper around `service.RunWorkflow(...)`.
+The `/api/v1/workflows` handler is a thin HTTP wrapper around `service.RunWorkflow(...)`.
 The Jira webhook goroutine calls `service.RunWorkflow(...)` directly.
 
 Setting up the Jira webhook (ops runbook to include in docs):
