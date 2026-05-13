@@ -4,7 +4,10 @@ import (
 	"bauer/cmd/app/core/middleware"
 	"bauer/cmd/app/types"
 	v1 "bauer/cmd/app/v1"
+	"bauer/internal/artifacts"
+	"bauer/internal/copilotcli"
 	"bauer/internal/orchestrator"
+	"bauer/internal/source"
 	"bauer/internal/workflow"
 	"fmt"
 	"log/slog"
@@ -20,7 +23,29 @@ func run() error {
 	slog.Info("startup", "status", "initializing API")
 	defer slog.Info("shutdown complete")
 
-	orchestrator := orchestrator.NewOrchestrator()
+	cwd, err := os.Getwd()
+	if err != nil {
+		slog.Error("failed to get working directory", "error", err.Error())
+		return err
+	}
+
+	copilotClient, err := copilotcli.NewClient(cwd)
+	if err != nil {
+		slog.Error("failed to create Copilot client", "error", err.Error())
+		return err
+	}
+
+	gdocsAdapter := source.NewGDocsAdapter()
+	sources := source.NewManager(gdocsAdapter)
+
+	// API server resolves artifacts dir from env only (no CLI flag for the API)
+	resolvedArtifactsDir := os.Getenv("BAUER_ARTIFACTS_DIR")
+	if resolvedArtifactsDir == "" {
+		resolvedArtifactsDir = "bauer-artifacts"
+	}
+	artMgr := artifacts.NewManager(resolvedArtifactsDir)
+
+	orchestrator := orchestrator.NewOrchestrator(copilotClient, sources, artMgr)
 	cfg, err := types.LoadConfig()
 	if err != nil {
 		slog.Error("failed to load config", "error", err.Error())

@@ -189,9 +189,9 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 		if len(bauerResult.Chunks) > 0 {
 			output.BauerResult.ChunkCount = len(bauerResult.Chunks)
 		}
-		if bauerResult.ExtractionResult != nil {
+		if bauerResult.Bundle != nil && bauerResult.Bundle.Document != nil {
 			// Count total suggestions from extraction result
-			output.BauerResult.TotalSuggestions = 0 // TODO: adjust based on actual field
+			output.BauerResult.TotalSuggestions = len(bauerResult.Bundle.Document.GroupedSuggestions)
 		}
 	}
 

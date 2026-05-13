@@ -24,6 +24,7 @@ func Load() (*Config, error) {
 	model := flag.String("model", "gpt-5-mini-high", "Copilot model to use for sessions (default: gpt-5-mini-high)")
 	summaryModel := flag.String("summary-model", "gpt-5-mini-high", "Copilot model to use for summary session (default: gpt-5-mini-high)")
 	targetRepo := flag.String("target-repo", "", "Path to target repository where tasks should be executed (default: current directory)")
+	artifactsDir := flag.String("artifacts-dir", "", "Directory for run artifacts (default: ./bauer-artifacts)")
 
 	// Custom usage message
 	flag.Usage = func() {
@@ -47,6 +48,7 @@ func Load() (*Config, error) {
 			{"--model", "<string>", "Copilot model to use for sessions (default: gpt-5-mini-high)"},
 			{"--summary-model", "<string>", "Copilot model to use for summary session (default: gpt-5-mini-high)"},
 			{"--target-repo", "<string>", "Path to target repository where tasks should be executed (default: current directory)"},
+			{"--artifacts-dir", "<string>", "Directory for run artifacts (default: ./bauer-artifacts)"},
 		}
 
 		for _, f := range flags {
@@ -83,6 +85,7 @@ func Load() (*Config, error) {
 		Model:           *model,
 		SummaryModel:    *summaryModel,
 		TargetRepo:      *targetRepo,
+		ArtifactsDir:    *artifactsDir,
 	}
 
 	if err := cfg.Validate(); err != nil {

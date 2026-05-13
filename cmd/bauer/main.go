@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bauer/internal/artifacts"
+	"bauer/internal/copilotcli"
 	"bauer/internal/github"
 	"bauer/internal/orchestrator"
+	"bauer/internal/source"
 	"bauer/internal/workflow"
 	"context"
 	"flag"
@@ -20,6 +23,7 @@ func main() {
 	dryRun := flag.Bool("dry-run", false, "Perform a dry run without creating PR")
 	outputDir := flag.String("output-dir", "bauer-output", "Output directory for Bauer results")
 	branchPrefix := flag.String("branch-prefix", "bauer", "Branch naming prefix")
+	artifactsDir := flag.String("artifacts-dir", "", "Directory for append-only run artifacts (default: ./bauer-artifacts)")
 
 	flag.Parse()
 
@@ -56,7 +60,32 @@ func main() {
 		OutputDir:     *outputDir,
 	}
 
-	orch := orchestrator.NewOrchestrator()
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: failed to get working directory: %v\n", err)
+		os.Exit(1)
+	}
+
+	copilotClient, err := copilotcli.NewClient(cwd)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: failed to create Copilot client: %v\n", err)
+		os.Exit(1)
+	}
+
+	gdocsAdapter := source.NewGDocsAdapter()
+	sources := source.NewManager(gdocsAdapter)
+
+	// Resolve artifacts dir: flag → BAUER_ARTIFACTS_DIR env → default
+	resolvedArtifactsDir := *artifactsDir
+	if resolvedArtifactsDir == "" {
+		resolvedArtifactsDir = os.Getenv("BAUER_ARTIFACTS_DIR")
+	}
+	if resolvedArtifactsDir == "" {
+		resolvedArtifactsDir = "bauer-artifacts"
+	}
+	artMgr := artifacts.NewManager(resolvedArtifactsDir)
+
+	orch := orchestrator.NewOrchestrator(copilotClient, sources, artMgr)
 
 	// Execute the complete workflow
 	result, err := workflow.ExecuteWorkflow(context.Background(), workflowInput, orch)
