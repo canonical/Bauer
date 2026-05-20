@@ -24,7 +24,7 @@ Each sub-agent appends its entry to the **Branch Log** section below. You (the r
 | 2 | `feat/phase-0b-artifacts-config` | `feat/phase-0a-agent-source` | 001 Phase 0: T0.2c, T0.3, T0.4, T0.5 | ✅ done |
 | 3 | `feat/phase-1-cli-restore` | `feat/phase-0b-artifacts-config` | 001 Phase 1: T1.1, T1.2, T1.3 | ✅ done |
 | 4 | `feat/phase-2-cli-features` | `feat/phase-1-cli-restore` | 001 Phase 2: T2.1, T2.2, T2.3 | ✅ done |
-| 5 | `feat/figma-phase-b-client` | `feat/phase-2-cli-features` | 002 Phase B: T2F.0, T2F.1, T2F.2, T2F.3, T2F.4 | ⏳ pending |
+| 5 | `feat/figma-phase-b-client` | `feat/phase-2-cli-features` | 002 Phase B: T2F.0, T2F.1, T2F.2, T2F.3, T2F.4 | ✅ done |
 | 6 | `feat/figma-phase-c-mapping` | `feat/figma-phase-b-client` | 002 Phase C: T2F.5, T2F.6, T2F.7 | ⏳ pending |
 | 7 | `feat/figma-phase-d-cli` | `feat/figma-phase-c-mapping` | 002 Phase D: T2F.8, T2F.9 | ⏳ pending |
 | 8 | `feat/figma-phase-e-drift` | `feat/figma-phase-d-cli` | 002 Phase E: T2F.10 | ⏳ pending |
@@ -187,9 +187,22 @@ _Parent: `feat/phase-2-cli-features`_
 
 **Tasks:** T2F.0, T2F.1, T2F.2, T2F.3, T2F.4
 
-**Summary:** _(to be filled by agent)_
+**Summary:** Introduced the `internal/figma` package: URL parser, REST API client, raw API types, and a normalization layer. The `SourceBundle.Design` field upgraded from `any` to `*figma.NormalizedDesign`. Added `FetchFigma` to `source.Manager`. Updated the `verify-figma` Taskfile task output to label Name/Last modified. Added `--figma-url` CLI flag and Figma token validation to `Config.Validate()`. All config plumbing (env vars, flags, defaults) was already in place from phase-0b.
 
-**Files changed:** _(to be filled by agent)_
+**Files changed:**
+- `internal/figma/link.go` — new: `LinkRef`, `ParseLink` — extracts file key and node ID from `/file/` and `/design/` Figma URLs
+- `internal/figma/link_test.go` — new: table-driven tests for whole-file, node-specific, and invalid URLs
+- `internal/figma/types.go` — new: raw API types (`FileMeta`, `DocumentNode`, `NodeEntry`, `NodesResponse`, `Comment`, `CommentsResponse`, `imagesResponse`) and Bauer-owned types (`NormalizedDesign`, `DesignAnchor`, `DesignComment`, `ScreenshotArtifact`)
+- `internal/figma/client.go` — new: `Client` with `NewClient`, `NewClientWithHTTP` (for tests), `GetMeta`, `GetNodes`, `GetComments`, `GetImages`, `DownloadImage`; generic `doGet[T]` helper; structured error messages for 401/403/429/404
+- `internal/figma/client_test.go` — new: mock HTTP server tests via `httptest.NewServer` and `prefixTransport`; covers success path, auth failure, 404, rate limit, empty node/image ID short-circuits
+- `internal/figma/normalize.go` — new: `Normalize()` converts raw API payloads into `NormalizedDesign`; `extractAnchors` walks the node tree collecting TEXT/INSTANCE children
+- `internal/figma/normalize_test.go` — new: covers empty children, no comments/screenshots, resolved/unresolved comments, whole-file vs node-specific fetch, text extraction, component ID extraction, screenshots, meta fields
+- `internal/source/types.go` — `Design any` → `Design *figma.NormalizedDesign`
+- `internal/source/manager.go` — added `FetchFigma(ctx, client, ref, screenshotDir)` method; added `figma`, `path/filepath`, `strings` imports
+- `internal/config/cli.go` — `CLIFlags.FigmaURL` field added; `--figma-url` flag registered; `FigmaURL` mapped in `Config` construction
+- `internal/config/manager.go` — `FlagsSource.Load()` maps `FigmaURL`
+- `internal/config/config.go` — `Validate()` returns error when `FigmaURL != ""` and `FigmaToken == ""`
+- `Taskfile.yml` — `verify-figma` output updated to label `Name:` and `| Last modified:`
 
 **External API docs used:**
 - https://developers.figma.com/docs/rest-api/

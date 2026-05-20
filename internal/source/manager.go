@@ -3,7 +3,10 @@ package source
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"strings"
 
+	"bauer/internal/figma"
 	"bauer/internal/gdocs"
 )
 
@@ -35,4 +38,51 @@ func (m *Manager) Fetch(ctx context.Context, req Request) (*SourceBundle, error)
 	}
 
 	return bundle, nil
+}
+
+// FetchFigma fetches and normalizes Figma design data.
+// It downloads screenshots to screenshotDir.
+func (m *Manager) FetchFigma(ctx context.Context, client *figma.Client, ref *figma.LinkRef, screenshotDir string) (*figma.NormalizedDesign, error) {
+	meta, err := client.GetMeta(ctx, ref.FileKey)
+	if err != nil {
+		return nil, fmt.Errorf("fetching figma metadata: %w", err)
+	}
+
+	nodeIDs := []string{}
+	if ref.NodeID != "" {
+		nodeIDs = []string{ref.NodeID}
+	}
+	nodes, err := client.GetNodes(ctx, ref.FileKey, nodeIDs)
+	if err != nil {
+		return nil, fmt.Errorf("fetching figma nodes: %w", err)
+	}
+
+	comments, err := client.GetComments(ctx, ref.FileKey)
+	if err != nil {
+		return nil, fmt.Errorf("fetching figma comments: %w", err)
+	}
+
+	// Request screenshots for the specified node(s)
+	screenshotPaths := map[string]string{}
+	if len(nodeIDs) > 0 {
+		imageURLs, err := client.GetImages(ctx, ref.FileKey, nodeIDs)
+		if err != nil {
+			// Non-fatal: log and continue without screenshots
+			fmt.Printf("warning: could not fetch figma screenshots: %v\n", err)
+		} else {
+			for nodeID, imgURL := range imageURLs {
+				if imgURL == "" {
+					continue
+				}
+				destPath := filepath.Join(screenshotDir, fmt.Sprintf("shot-node-%s.png", strings.ReplaceAll(nodeID, ":", "-")))
+				if err := client.DownloadImage(ctx, imgURL, destPath); err != nil {
+					fmt.Printf("warning: could not download screenshot for node %s: %v\n", nodeID, err)
+					continue
+				}
+				screenshotPaths[nodeID] = destPath
+			}
+		}
+	}
+
+	return figma.Normalize(ref.FileKey, ref.NodeID, meta, nodes, comments, screenshotPaths), nil
 }
