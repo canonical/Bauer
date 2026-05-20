@@ -237,9 +237,13 @@ _Parent: `feat/figma-phase-c-mapping`_
 
 **Tasks:** T2F.8, T2F.9
 
-**Summary:** _(to be filled by agent)_
+**Summary:** Threaded Figma through the CLI and orchestrator (T2F.8) and added an optional MCP guidance block to prompts (T2F.9). Added `--figma-url` flag to `cmd/bauer/main.go`, wired into `CLIFlags.FigmaURL`. `orchestrator.Execute` now forks on `cfg.FigmaURL != ""`: the figma-aware path calls the new `generateChunksWithFigma()` method which fetches design data via `sources.FetchFigma`, runs `mapping.Resolver.Build`, persists figma artifacts (extraction, comments, mappings), and generates prompts via `engine.RenderChunksFromResolved`. For T2F.9: added `FigmaURL string` field (with `json:"-"`) to `figmaChunkContext` in `engine.go`; `RenderChunk` now sets `ctx.FigmaURL = data.FigmaURL` before template execution; added an optional MCP guidance block to `internal/prompt/templates/figma-context.md` that renders only when `{{if .FigmaURL}}`; added `Engine.RenderChunksFromResolved()` which generates figma-aware prompt files using `GenerateChunksFromResolved` + `RenderChunk`. `BAUER_FIGMA_TOKEN` env var usage mentioned in `--help` output.
 
-**Files changed:** _(to be filled by agent)_
+**Files changed:**
+- `cmd/bauer/main.go` — added `--figma-url` flag; `CLIFlags.FigmaURL` wired through `FlagsSource`; `BAUER_FIGMA_TOKEN` env var note in help text
+- `internal/orchestrator/orchestrator.go` — `Execute` forks on `cfg.FigmaURL != ""`; new `generateChunksWithFigma()` method: calls `figma.ParseLink`, `figma.NewClient`, `sources.FetchFigma`, `mapping.Resolver.Build`, `arts.WriteFigmaExtraction`/`WriteFigmaComments`/`WriteMappings`, `engine.RenderChunksFromResolved`; log line uses `design.Anchors` (not `.Nodes`)
+- `internal/prompt/engine.go` — `figmaChunkContext` gains `FigmaURL string` (json:"-"); `RenderChunk` sets `ctx.FigmaURL = data.FigmaURL`; new `RenderChunksFromResolved()` method that calls `GenerateChunksFromResolved` + `RenderChunk` and writes prompt files to disk
+- `internal/prompt/templates/figma-context.md` — optional `{{if .FigmaURL}}` MCP guidance block added at end of template
 
 ---
 
