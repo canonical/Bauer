@@ -298,6 +298,44 @@ func (o *DefaultOrchestrator) generateChunksWithFigma(
 
 	figmaClient := figma.NewClient(cfg.FigmaToken)
 
+	// Drift detection: check whether the Figma file version has changed since last run.
+	currentMeta, err := figmaClient.GetMeta(ctx, figmaRef.FileKey)
+	if err != nil {
+		return nil, fmt.Errorf("fetching figma metadata for drift check: %w", err)
+	}
+
+	suggestedURL := ""
+	if bundle.Document.Metadata != nil {
+		suggestedURL = bundle.Document.Metadata.SuggestedUrl
+	}
+
+	prevRunMeta := o.arts.LoadPreviousMeta(cfg.DocID, figmaRef.FileKey)
+	if prevRunMeta != nil && prevRunMeta.FigmaVersion == currentMeta.Version {
+		// Version unchanged: reuse stored mappings and skip re-fetch.
+		slog.Info("Figma version unchanged; reusing stored mappings",
+			slog.String("version", currentMeta.Version),
+			slog.String("prev_run_id", prevRunMeta.RunID),
+		)
+		resolvedChunks := o.arts.LoadMappings(prevRunMeta.RunID)
+		if resolvedChunks != nil {
+			return engine.RenderChunksFromResolved(
+				bundle.Document.DocumentTitle,
+				suggestedURL,
+				cfg.FigmaURL,
+				resolvedChunks,
+				cfg.ChunkSize,
+				cfg.OutputDir,
+			)
+		}
+		slog.Warn("Previous mappings could not be loaded; proceeding with full re-fetch",
+			slog.String("prev_run_id", prevRunMeta.RunID))
+	} else if prevRunMeta != nil {
+		slog.Warn("Figma version changed; re-fetching all design data",
+			slog.String("prev_version", prevRunMeta.FigmaVersion),
+			slog.String("current_version", currentMeta.Version),
+		)
+	}
+
 	// Determine screenshot directory (inside the artifact run when available).
 	screenshotDir := ""
 	if runID != "" {
@@ -319,6 +357,13 @@ func (o *DefaultOrchestrator) generateChunksWithFigma(
 		slog.Int("comments", len(design.Comments)),
 	)
 
+	// Store the figma version so future runs can use it for drift detection.
+	if runID != "" {
+		if verr := o.arts.UpdateRunFigmaVersion(runID, design.Version); verr != nil {
+			slog.Warn("Failed to update figma version in run metadata", slog.String("error", verr.Error()))
+		}
+	}
+
 	// Persist figma artifacts.
 	if runID != "" {
 		if werr := o.arts.WriteFigmaExtraction(runID, design); werr != nil {
@@ -338,12 +383,6 @@ func (o *DefaultOrchestrator) generateChunksWithFigma(
 		if werr := o.arts.WriteMappings(runID, resolvedChunks); werr != nil {
 			slog.Warn("Failed to write mappings artifact", slog.String("error", werr.Error()))
 		}
-	}
-
-	// Generate figma-aware prompt files.
-	suggestedURL := ""
-	if bundle.Document.Metadata != nil {
-		suggestedURL = bundle.Document.Metadata.SuggestedUrl
 	}
 
 	return engine.RenderChunksFromResolved(

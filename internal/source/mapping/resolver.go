@@ -32,6 +32,13 @@ func (r *Resolver) Build(
 			chunks[i].Comments = r.commentsForAnchors(anchors, design)
 		}
 	}
+	// Enforce: low-confidence and fallback/none mappings must never be silently promoted.
+	for i := range chunks {
+		m := &chunks[i].Mapping
+		if m.Confidence < 0.5 || m.Method == "fallback" || m.Method == "none" {
+			m.Status = "unresolved"
+		}
+	}
 	return chunks
 }
 

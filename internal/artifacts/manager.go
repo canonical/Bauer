@@ -1,6 +1,7 @@
 package artifacts
 
 import (
+	"bufio"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -15,28 +16,30 @@ import (
 
 // RunMetadata is written to metadata.json inside each run directory.
 type RunMetadata struct {
-	RunID       string `json:"run_id"`
-	StartedAt   string `json:"started_at"`
-	CompletedAt string `json:"completed_at,omitempty"`
-	Status      string `json:"status"` // "in_progress", "success", "failed"
-	DocID       string `json:"doc_id"`
-	FigmaURL    string `json:"figma_url,omitempty"`
-	Mode        string `json:"mode"` // "execute", "dry-run", "issue"
-	ChunkCount  int    `json:"chunk_count"`
-	ArtifactDir string `json:"artifact_dir"`
+	RunID        string `json:"run_id"`
+	StartedAt    string `json:"started_at"`
+	CompletedAt  string `json:"completed_at,omitempty"`
+	Status       string `json:"status"` // "in_progress", "success", "failed"
+	DocID        string `json:"doc_id"`
+	FigmaURL     string `json:"figma_url,omitempty"`
+	FigmaVersion string `json:"figma_version,omitempty"`
+	Mode         string `json:"mode"` // "execute", "dry-run", "issue"
+	ChunkCount   int    `json:"chunk_count"`
+	ArtifactDir  string `json:"artifact_dir"`
 }
 
 // RunIndexEntry is one line in runs.jsonl.
 type RunIndexEntry struct {
-	RunID       string `json:"run_id"`
-	StartedAt   string `json:"started_at"`
-	CompletedAt string `json:"completed_at,omitempty"`
-	Status      string `json:"status"`
-	DocID       string `json:"doc_id"`
-	FigmaURL    string `json:"figma_url,omitempty"`
-	Mode        string `json:"mode"`
-	ChunkCount  int    `json:"chunk_count"`
-	ArtifactDir string `json:"artifact_dir"`
+	RunID        string `json:"run_id"`
+	StartedAt    string `json:"started_at"`
+	CompletedAt  string `json:"completed_at,omitempty"`
+	Status       string `json:"status"`
+	DocID        string `json:"doc_id"`
+	FigmaURL     string `json:"figma_url,omitempty"`
+	FigmaVersion string `json:"figma_version,omitempty"`
+	Mode         string `json:"mode"`
+	ChunkCount   int    `json:"chunk_count"`
+	ArtifactDir  string `json:"artifact_dir"`
 }
 
 // Manager handles append-only artifact storage for Bauer runs.
@@ -117,15 +120,16 @@ func (m *Manager) CompleteRun(runID string, status string, chunkCount int) error
 
 	// Append to runs.jsonl
 	entry := RunIndexEntry{
-		RunID:       meta.RunID,
-		StartedAt:   meta.StartedAt,
-		CompletedAt: meta.CompletedAt,
-		Status:      status,
-		DocID:       meta.DocID,
-		FigmaURL:    meta.FigmaURL,
-		Mode:        meta.Mode,
-		ChunkCount:  chunkCount,
-		ArtifactDir: meta.ArtifactDir,
+		RunID:        meta.RunID,
+		StartedAt:    meta.StartedAt,
+		CompletedAt:  meta.CompletedAt,
+		Status:       status,
+		DocID:        meta.DocID,
+		FigmaURL:     meta.FigmaURL,
+		FigmaVersion: meta.FigmaVersion,
+		Mode:         meta.Mode,
+		ChunkCount:   chunkCount,
+		ArtifactDir:  meta.ArtifactDir,
 	}
 	line, err := json.Marshal(entry)
 	if err != nil {
@@ -198,6 +202,94 @@ func (m *Manager) RunDir(runID string) string {
 // Base returns the root artifacts directory.
 func (m *Manager) Base() string {
 	return m.base
+}
+
+// LoadPreviousMeta returns the RunMetadata from the most recent completed run
+// that matches the given (docID, figmaFileKey) pair, or nil if none exists.
+// It reads runs.jsonl in reverse order (last entry = most recent) to find the match.
+func (m *Manager) LoadPreviousMeta(docID, figmaFileKey string) *RunMetadata {
+	indexPath := filepath.Join(m.base, "runs.jsonl")
+	f, err := os.Open(indexPath)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+
+	// Collect matching entries (in file order; last = most recent).
+	var matched []RunIndexEntry
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			continue
+		}
+		var entry RunIndexEntry
+		if err := json.Unmarshal([]byte(line), &entry); err != nil {
+			continue
+		}
+		if entry.Status != "success" {
+			continue
+		}
+		if entry.DocID != docID {
+			continue
+		}
+		// Match figmaFileKey against the stored FigmaURL.
+		if entry.FigmaURL == "" {
+			continue
+		}
+		ref, err := figma.ParseLink(entry.FigmaURL)
+		if err != nil || ref.FileKey != figmaFileKey {
+			continue
+		}
+		matched = append(matched, entry)
+	}
+	if len(matched) == 0 {
+		return nil
+	}
+
+	// Last entry is the most recent run.
+	best := matched[len(matched)-1]
+	metaPath := filepath.Join(m.base, best.RunID, "metadata.json")
+	data, err := os.ReadFile(metaPath)
+	if err != nil {
+		return nil
+	}
+	var meta RunMetadata
+	if err := json.Unmarshal(data, &meta); err != nil {
+		return nil
+	}
+	return &meta
+}
+
+// LoadMappings returns the resolved chunks from a previous run's mappings.json.
+// Returns nil if the artifact does not exist or cannot be parsed.
+func (m *Manager) LoadMappings(runID string) []mapping.ResolvedChunk {
+	path := filepath.Join(m.base, runID, "extraction", "mappings.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	var chunks []mapping.ResolvedChunk
+	if err := json.Unmarshal(data, &chunks); err != nil {
+		return nil
+	}
+	return chunks
+}
+
+// UpdateRunFigmaVersion patches the run's metadata.json with the given figma version string.
+// This is called after a successful Figma fetch so future runs can use it for drift detection.
+func (m *Manager) UpdateRunFigmaVersion(runID, figmaVersion string) error {
+	metaPath := filepath.Join(m.base, runID, "metadata.json")
+	data, err := os.ReadFile(metaPath)
+	if err != nil {
+		return fmt.Errorf("read metadata for version update: %w", err)
+	}
+	var meta RunMetadata
+	if err := json.Unmarshal(data, &meta); err != nil {
+		return fmt.Errorf("parse metadata for version update: %w", err)
+	}
+	meta.FigmaVersion = figmaVersion
+	return m.writeJSON(runID, "metadata.json", meta)
 }
 
 func (m *Manager) writeJSON(runID, relPath string, data any) error {
