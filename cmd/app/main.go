@@ -13,6 +13,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 func run() error {
@@ -53,7 +55,7 @@ func run() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/job", v1.JobPost(rc))
 	mux.HandleFunc("/api/v1/health", v1.GetHealth)
-	mux.HandleFunc("/api/v1/workflow", workflow.ExecuteWorkflowHandler(orch))
+	mux.HandleFunc("POST /api/v1/workflows", workflow.ExecuteWorkflowHandler(orch))
 	slog.Info("starting server", "address", ":8090")
 	err = http.ListenAndServe(":8090", middleware.RequestTrace(mux))
 
@@ -66,6 +68,8 @@ func run() error {
 }
 
 func main() {
+	_ = godotenv.Load(".env")
+	_ = godotenv.Load(".env.local")
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 		os.Exit(1)

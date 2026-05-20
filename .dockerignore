@@ -1,0 +1,9 @@
+.env.local
+config.json
+*.pem
+bauer
+bauer-api
+bauer-output/
+bauer-log.json
+bauer-doc-suggestions.json
+.git/

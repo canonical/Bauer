@@ -268,9 +268,16 @@ _Parent: `feat/figma-phase-e-drift`_
 
 **Tasks:** T3.0, T3.1, T3.2, T3.3, T3.4
 
-**Summary:** _(to be filled by agent)_
+**Summary:** Added Docker support, env-file loading, secrets removal from the API request body, route rename, and a build task. T3.0 introduced a multi-stage `Dockerfile` (golang:1.22 builder + debian:bookworm-slim runtime with git, curl, and the GitHub CLI installed) and a `.dockerignore` that excludes secrets, build artifacts, and the git directory; two new Taskfile tasks (`docker-build`, `docker-run`) wire the image build and local container run. T3.1 installed `github.com/joho/godotenv` and updated `cmd/app/main.go` to call `godotenv.Load` for both `.env` and `.env.local` (errors silently ignored) before calling `run()`; `.env` was replaced with a committed, non-sensitive defaults file covering port, model, chunk size, page-refresh, output directory, and branch prefix. T3.2 stripped `Credentials`, `GitHubToken`, `OutputDir`, and `LocalRepoPath` from `APIRequest`, replacing them with env-var lookups (`BAUER_CREDENTIALS_PATH`/`GOOGLE_APPLICATION_CREDENTIALS` and `github.GetGitHubToken()`) inside the handler; `firstNonEmpty` and `firstNonZero` helpers apply request-field-overrides-env semantics; `SummaryModel` was added to `APIRequest` for future use. T3.3 renamed the `/api/v1/workflow` route to `POST /api/v1/workflows` using Go 1.22 method+path routing. T3.4 was already present in the Taskfile from a prior branch (`build-api` task).
 
-**Files changed:** _(to be filled by agent)_
+**Files changed:**
+- `Dockerfile`: New multi-stage build — golang:1.22 builder compiles `bauer-api`; debian:bookworm-slim runtime installs git, curl, ca-certificates, and the GitHub CLI; exposes port 8090.
+- `.dockerignore`: Excludes `.env.local`, `config.json`, `*.pem`, build binaries, `bauer-output/`, logs, and `.git/` from the Docker build context.
+- `Taskfile.yml`: Added `docker-build` (builds `bauer-api:latest`) and `docker-run` (runs container with `--env-file .env.local` and a read-only credentials volume mount) tasks.
+- `.env`: Replaced old placeholder content with committed non-sensitive defaults (`BAUER_API_PORT`, `BAUER_MODEL`, `BAUER_SUMMARY_MODEL`, `BAUER_CHUNK_SIZE`, `BAUER_PAGE_REFRESH`, `BAUER_OUTPUT_DIR`, `BAUER_BRANCH_PREFIX`).
+- `cmd/app/main.go`: Added `github.com/joho/godotenv` import; `main()` now calls `godotenv.Load(".env")` and `godotenv.Load(".env.local")` before `run()`; route changed from `"/api/v1/workflow"` to `"POST /api/v1/workflows"` using Go 1.22 method+path syntax.
+- `internal/workflow/api.go`: Removed `GitHubToken`, `Credentials`, `OutputDir`, and `LocalRepoPath` fields from `APIRequest`; added `SummaryModel` field; handler now resolves GitHub token via `github.GetGitHubToken()` and credentials from `BAUER_CREDENTIALS_PATH`/`GOOGLE_APPLICATION_CREDENTIALS`; added `firstNonEmpty` and `firstNonZero` helper functions; added `os` and `bauer/internal/github` imports.
+- `go.mod` / `go.sum`: Added `github.com/joho/godotenv v1.5.1` dependency.
 
 ---
 
