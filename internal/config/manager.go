@@ -101,15 +101,16 @@ func NewDefaultsSource() *DefaultsSource { return &DefaultsSource{} }
 
 func (d *DefaultsSource) Load() (*Config, error) {
 	return &Config{
-		Model:        "gpt-5-mini-high",
-		SummaryModel: "gpt-5-mini-high",
-		ChunkSize:    1,
-		ArtifactsDir: "./bauer-artifacts",
-		BranchPrefix: "bauer",
-		PageRefresh:  BoolPtr(false),
-		DryRun:       BoolPtr(false),
-		OpenPR:       BoolPtr(false),
-		OpenIssue:    BoolPtr(false),
+		Model:           "gpt-5-mini-high",
+		SummaryModel:    "gpt-5-mini-high",
+		ChunkSize:       1,
+		ArtifactsDir:    "./bauer-artifacts",
+		BranchPrefix:    "bauer",
+		CredentialsPath: "credentials.json",
+		PageRefresh:     BoolPtr(false),
+		DryRun:          BoolPtr(false),
+		OpenPR:          BoolPtr(false),
+		OpenIssue:       BoolPtr(false),
 	}, nil
 }
 
@@ -136,5 +137,8 @@ func (f *FlagsSource) Load() (*Config, error) {
 		SummaryModel:    f.flags.SummaryModel,
 		TargetRepo:      f.flags.TargetRepo,
 		ArtifactsDir:    f.flags.ArtifactsDir,
+		BranchPrefix:    f.flags.BranchPrefix,
+		OpenPR:          f.flags.OpenPR,
+		OpenIssue:       f.flags.OpenIssue,
 	}, nil
 }
