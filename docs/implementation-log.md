@@ -25,7 +25,7 @@ Each sub-agent appends its entry to the **Branch Log** section below. You (the r
 | 3 | `feat/phase-1-cli-restore` | `feat/phase-0b-artifacts-config` | 001 Phase 1: T1.1, T1.2, T1.3 | ✅ done |
 | 4 | `feat/phase-2-cli-features` | `feat/phase-1-cli-restore` | 001 Phase 2: T2.1, T2.2, T2.3 | ✅ done |
 | 5 | `feat/figma-phase-b-client` | `feat/phase-2-cli-features` | 002 Phase B: T2F.0, T2F.1, T2F.2, T2F.3, T2F.4 | ✅ done |
-| 6 | `feat/figma-phase-c-mapping` | `feat/figma-phase-b-client` | 002 Phase C: T2F.5, T2F.6, T2F.7 | ⏳ pending |
+| 6 | `feat/figma-phase-c-mapping` | `feat/figma-phase-b-client` | 002 Phase C: T2F.5, T2F.6, T2F.7 | ✅ done |
 | 7 | `feat/figma-phase-d-cli` | `feat/figma-phase-c-mapping` | 002 Phase D: T2F.8, T2F.9 | ⏳ pending |
 | 8 | `feat/figma-phase-e-drift` | `feat/figma-phase-d-cli` | 002 Phase E: T2F.10 | ⏳ pending |
 | 9 | `feat/phase-3-api-foundation` | `feat/figma-phase-e-drift` | 001 Phase 3: T3.0, T3.1, T3.2, T3.3, T3.4 | ⏳ pending |
@@ -217,9 +217,17 @@ _Parent: `feat/figma-phase-b-client`_
 
 **Tasks:** T2F.5, T2F.6, T2F.7
 
-**Summary:** _(to be filled by agent)_
+**Summary:** Introduced `internal/source/mapping` — a resolver that joins `gdocs.LocationGroupedSuggestions` with `figma.NormalizedDesign` data into `ResolvedChunk` values. The resolver uses a four-strategy priority chain: (1) user-supplied node ID from URL (confidence 1.0), (2) Jaccard text-layer similarity against `NearestText` (threshold 0.30, confidence 0.50–0.95), (3) frame-name overlap (threshold 0.50, confidence 0.50–0.85), (4) fallback to first anchor (confidence 0.50, status "unresolved"). Resolved Figma comments are excluded from `ResolvedChunk.Comments`; screenshots are matched by node ID. Updated `internal/prompt/engine.go`: added `FigmaContextJSON` and `FigmaURL` fields to `PromptData`; added `GenerateChunksFromResolved` that batches `[]mapping.ResolvedChunk` into `[]PromptData` and serializes figma context as JSON; updated `RenderChunk` to parse `FigmaContextJSON` and render the figma-context template with `text/template` when non-empty. Created `internal/prompt/templates/figma-context.md` with anchor, screenshot, and comment sections. Extended `internal/artifacts/manager.go` with `WriteFigmaExtraction`, `WriteMappings`, and `WriteFigmaComments` methods that persist design data to `extraction/` alongside the existing gdocs extraction.
 
-**Files changed:** _(to be filled by agent)_
+**Files changed:**
+- `internal/source/mapping/types.go` — new: `ResolvedChunk`, `DesignAnchorRef`, `DesignCommentRef`, `MappingMetadata`
+- `internal/source/mapping/resolver.go` — new: `Resolver.Build`, `resolveAnchor`, `matchByTextLayers` (Jaccard), `matchByFrameName`, `screenshotsForAnchors`, `commentsForAnchors`, `tokenize`, `tokenizeFromSuggestion`, `toSet`, `intersect`, `unionSets`
+- `internal/source/mapping/resolver_test.go` — new: 9 test cases covering nil design, URL method, text method, name method, fallback, no-anchors, resolved/unresolved comments, screenshots, empty input
+- `internal/prompt/engine.go` — `PromptData` gains `FigmaContextJSON` and `FigmaURL`; added `figmaContextTemplate` embed; added `figmaChunkContext` struct; added `GenerateChunksFromResolved`, `buildFigmaContextJSON`, `batchResolvedChunks`; `RenderChunk` appends figma section via `text/template` when `FigmaContextJSON != ""`; added imports `text/template`, `bauer/internal/source/mapping`
+- `internal/prompt/templates/figma-context.md` — new: design context template with anchors, screenshots, and comments sections rendered via `text/template`
+- `internal/prompt/engine_test.go` — added `mapping` import; 6 new test functions: `TestGenerateChunksFromResolved_NoFigma`, `TestGenerateChunksFromResolved_WithFigma`, `TestGenerateChunksFromResolved_MultiChunkBatching`, `TestRenderChunk_NoFigma_NoFigmaSection`, `TestRenderChunk_WithFigma_IncludesFigmaSection`; `makeResolvedChunk` helper
+- `internal/artifacts/manager.go` — added imports `bauer/internal/figma`, `bauer/internal/source/mapping`; added `WriteFigmaExtraction`, `WriteMappings`, `WriteFigmaComments`
+- `internal/artifacts/manager_test.go` — added imports for `figma`, `gdocs`, `mapping`; added `TestWriteFigmaExtraction`, `TestWriteMappings`, `TestWriteFigmaComments`
 
 ---
 
