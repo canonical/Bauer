@@ -309,9 +309,16 @@ _Parent: `feat/phase-4-api-endpoints`_
 
 **Tasks:** T5.1, T5.2, T5.3
 
-**Summary:** _(to be filled by agent)_
+**Summary:** T5.1 added GitHub App authentication as the first fallback in `GetGitHubToken()`: when `GITHUB_APP_ID` is set, a short-lived RS256 JWT is signed with the App's RSA private key and exchanged for an installation access token via the GitHub REST API; PAT env vars and `gh auth token` remain as lower-priority fallbacks. T5.2 introduced `internal/auth/middleware.go` with `JWTMiddleware`, which validates Bearer tokens against a JWKS fetched from the OIDC issuer's discovery document; the middleware is bypassed silently (logged at Info) when `BAUER_OIDC_ISSUER` is unset, making it safe for local development. In `cmd/app/main.go`, the health and readiness endpoints remain on the public mux while `POST /api/v1/workflows`, `POST /api/v1/issues`, and `POST /api/v1/webhooks/jira` are now wrapped with `auth.JWTMiddleware` on a separate protected sub-mux. T5.3 added `internal/logging/masking.go` with `MaskSecret` and `MaskPath` helpers plus full unit-test coverage; an audit of existing `slog` calls found no direct logging of raw token values or credential paths in the current codebase. Added `github.com/golang-jwt/jwt/v5` and `github.com/lestrrat-go/jwx/v2` as new direct dependencies.
 
-**Files changed:** _(to be filled by agent)_
+**Files changed:**
+- `internal/github/auth.go` — rewrote `GetGitHubToken` to try GitHub App first; added `generateAppInstallationToken` with PEM loading, RSA key parsing, JWT signing (RS256), and installation token exchange via HTTP POST; updated imports to add `crypto/x509`, `encoding/pem`, `encoding/json`, `net/http`, `strconv`, `time`, and `github.com/golang-jwt/jwt/v5`
+- `internal/auth/middleware.go` — new: `JWTMiddleware` wrapping protected routes with OIDC-based Bearer token validation; `resolveJWKSURL` fetches the OIDC discovery document; `extractBearerToken` parses the Authorization header; bypass mode when `BAUER_OIDC_ISSUER` is unset
+- `internal/logging/masking.go` — new: `MaskSecret` (empty → `<unset>`, ≤4 chars → `****`, longer → first 4 + `...`) and `MaskPath` (shows only `filename` prefixed with `.../`) helpers
+- `internal/logging/masking_test.go` — new: table-driven tests for `MaskSecret` (5 cases) and `MaskPath` (4 cases)
+- `cmd/app/main.go` — imported `bauer/internal/auth`; split route registration into public mux (health endpoints) and protected sub-mux wrapped with `auth.JWTMiddleware`
+- `.env.example` — added `GITHUB_APP_PRIVATE_KEY` entry alongside the existing `GITHUB_APP_PRIVATE_KEY_PATH`
+- `go.mod` / `go.sum` — added `github.com/golang-jwt/jwt/v5 v5.3.1` and `github.com/lestrrat-go/jwx/v2 v2.1.6` (plus transitive dependencies)
 
 ---
 
