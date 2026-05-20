@@ -28,6 +28,8 @@ type WorkflowInput struct {
 	OutputDir   string
 	Model       string
 	DryRun      bool
+	FigmaURL    string
+	FigmaToken  string
 
 	// Local repository path
 	LocalRepoPath string
@@ -168,6 +170,8 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 		OutputDir:       input.OutputDir,
 		Model:           input.Model,
 		TargetRepo:      ".", // Current directory is the cloned repo
+		FigmaURL:        input.FigmaURL,
+		FigmaToken:      input.FigmaToken,
 	}
 
 	logger.Info("workflow: Bauer target repository set at", "path", bauerCfg.TargetRepo)

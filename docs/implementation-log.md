@@ -328,9 +328,15 @@ _Parent: `feat/phase-5-auth-security`_
 
 **Tasks:** T4F.1, T4F.2
 
-**Summary:** _(to be filled by agent)_
+**Summary:** T4F.1 wires Figma into both API endpoints: `IssueRequest` already carried `figma_url` and `IssuesHandler` already set `cfg.FigmaURL`/`cfg.FigmaToken`, so the focus was adding `FigmaURL` to `workflow.APIRequest` and `WorkflowInput`, piping it through `ExecuteWorkflowHandler` and `ExecuteWorkflow` into `bauerCfg`, so `POST /api/v1/workflows` now also accepts optional `figma_url`. T4F.2 introduces the `ScreenshotHost` interface (`internal/artifacts/hosting.go`) with three implementations — `LocalFileServer`, `NopHost`, and an `S3Host` stub — and a `HostFromEnv` factory that selects the backend from `BAUER_STATIC_BASE_URL` / `BAUER_S3_BUCKET`. `IssuesHandler` now calls `formatIssueBodyWithHosting` and logs a warning when no hosting backend is configured but a `figma_url` was supplied. `cmd/app/main.go` conditionally mounts a `/static/` file-server route when `BAUER_STATIC_BASE_URL` is set, and `.env.example` documents the three new env vars.
 
-**Files changed:** _(to be filled by agent)_
+**Files changed:**
+- `internal/workflow/api.go` — added `FigmaURL` field to `APIRequest`; `ExecuteWorkflowHandler` now passes `FigmaURL` and `FigmaToken` (read from `BAUER_FIGMA_TOKEN`) into `WorkflowInput`
+- `internal/workflow/workflow.go` — added `FigmaURL` and `FigmaToken` fields to `WorkflowInput`; `ExecuteWorkflow` forwards them to `bauerCfg`
+- `internal/artifacts/hosting.go` — new file: `ScreenshotHost` interface, `LocalFileServer`, `NopHost`, `S3Host` (stub), and `HostFromEnv` factory
+- `cmd/app/v1/issues.go` — added `context` and `log/slog` imports; `IssuesHandler` now calls `artifacts.HostFromEnv` and `formatIssueBodyWithHosting`, warning when no host is configured with a Figma URL; new `formatIssueBodyWithHosting` helper wraps `formatIssueBody`
+- `cmd/app/main.go` — conditionally mounts `/static/` HTTP file-server route when `BAUER_STATIC_BASE_URL` is set
+- `.env.example` — added `BAUER_STATIC_BASE_URL`, `BAUER_S3_BUCKET`, and `BAUER_S3_REGION` under a new "Screenshot hosting" section
 
 ---
 
