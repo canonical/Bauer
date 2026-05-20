@@ -5,6 +5,7 @@ import (
 	"bauer/cmd/app/types"
 	v1 "bauer/cmd/app/v1"
 	"bauer/internal/artifacts"
+	"bauer/internal/auth"
 	"bauer/internal/copilotcli"
 	"bauer/internal/orchestrator"
 	"bauer/internal/source"
@@ -53,12 +54,19 @@ func run() error {
 	}
 
 	mux := http.NewServeMux()
+
+	// Public routes — no auth (K8s probes cannot send tokens)
 	mux.HandleFunc("/api/v1/job", v1.JobPost(rc))
 	mux.HandleFunc("/api/v1/health", v1.GetHealth)
 	mux.HandleFunc("GET /api/v1/health/ready", v1.ReadinessHandler)
-	mux.HandleFunc("POST /api/v1/workflows", workflow.ExecuteWorkflowHandler(orch))
-	mux.HandleFunc("POST /api/v1/issues", v1.IssuesHandler(cfg))
-	mux.HandleFunc("POST /api/v1/webhooks/jira", v1.JiraWebhookHandler(cfg))
+
+	// Protected routes wrapped in optional JWT middleware
+	protected := http.NewServeMux()
+	protected.HandleFunc("POST /api/v1/workflows", workflow.ExecuteWorkflowHandler(orch))
+	protected.HandleFunc("POST /api/v1/issues", v1.IssuesHandler(cfg))
+	protected.HandleFunc("POST /api/v1/webhooks/jira", v1.JiraWebhookHandler(cfg))
+
+	mux.Handle("/api/v1/", auth.JWTMiddleware(protected))
 	slog.Info("starting server", "address", ":8090")
 	err = http.ListenAndServe(":8090", middleware.RequestTrace(mux))
 
