@@ -2,9 +2,11 @@ package prompt
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"bauer/internal/gdocs"
+	"bauer/internal/source/mapping"
 )
 
 func TestNewEngine(t *testing.T) {
@@ -451,6 +453,202 @@ func TestReplaceVar(t *testing.T) {
 }
 
 // Helper functions
+
+func makeResolvedChunk(heading, section string, anchors []mapping.DesignAnchorRef, screenshots []string, comments []mapping.DesignCommentRef, method string, conf float64) mapping.ResolvedChunk {
+	return mapping.ResolvedChunk{
+		Locations: []gdocs.LocationGroupedSuggestions{
+			{
+				Location:    gdocs.SuggestionLocation{Section: section, ParentHeading: heading},
+				Suggestions: makeTestSuggestions(1),
+			},
+		},
+		DesignAnchors:   anchors,
+		ScreenshotPaths: screenshots,
+		Comments:        comments,
+		Mapping:         mapping.MappingMetadata{Method: method, Confidence: conf, Status: "healthy"},
+	}
+}
+
+func TestGenerateChunksFromResolved_NoFigma(t *testing.T) {
+	engine, err := NewEngine(false)
+	if err != nil {
+		t.Fatalf("NewEngine() failed: %v", err)
+	}
+
+	chunks := []mapping.ResolvedChunk{
+		makeResolvedChunk("Heading 1", "Body", nil, nil, nil, "none", 0),
+		makeResolvedChunk("Heading 2", "Body", nil, nil, nil, "none", 0),
+	}
+
+	prompts, err := engine.GenerateChunksFromResolved("Test Doc", "ubuntu.com/page", "", chunks, 10)
+	if err != nil {
+		t.Fatalf("GenerateChunksFromResolved() failed: %v", err)
+	}
+
+	if len(prompts) != 1 {
+		t.Fatalf("expected 1 prompt batch, got %d", len(prompts))
+	}
+
+	p := prompts[0]
+	if p.FigmaContextJSON != "" {
+		t.Errorf("expected empty FigmaContextJSON, got %q", p.FigmaContextJSON)
+	}
+	if p.ChunkNumber != 1 {
+		t.Errorf("ChunkNumber = %d, want 1", p.ChunkNumber)
+	}
+	if p.TotalChunks != 1 {
+		t.Errorf("TotalChunks = %d, want 1", p.TotalChunks)
+	}
+	if p.LocationCount != 2 {
+		t.Errorf("LocationCount = %d, want 2", p.LocationCount)
+	}
+}
+
+func TestGenerateChunksFromResolved_WithFigma(t *testing.T) {
+	engine, err := NewEngine(false)
+	if err != nil {
+		t.Fatalf("NewEngine() failed: %v", err)
+	}
+
+	anchors := []mapping.DesignAnchorRef{{FileKey: "f1", NodeID: "1:1", NodeName: "Login Frame"}}
+	screenshots := []string{"/tmp/screenshot.png"}
+	comments := []mapping.DesignCommentRef{{CommentID: "c1", Message: "check spacing", Author: "alice", NodeID: "1:1"}}
+
+	chunks := []mapping.ResolvedChunk{
+		makeResolvedChunk("Login", "Body", anchors, screenshots, comments, "url", 1.0),
+	}
+
+	prompts, err := engine.GenerateChunksFromResolved("Test Doc", "ubuntu.com/page", "https://figma.com/file/f1", chunks, 10)
+	if err != nil {
+		t.Fatalf("GenerateChunksFromResolved() failed: %v", err)
+	}
+
+	if len(prompts) != 1 {
+		t.Fatalf("expected 1 prompt, got %d", len(prompts))
+	}
+
+	p := prompts[0]
+	if p.FigmaContextJSON == "" {
+		t.Fatal("expected non-empty FigmaContextJSON")
+	}
+	if p.FigmaURL != "https://figma.com/file/f1" {
+		t.Errorf("FigmaURL = %q, want %q", p.FigmaURL, "https://figma.com/file/f1")
+	}
+	if !strings.Contains(p.FigmaContextJSON, "Login Frame") {
+		t.Errorf("FigmaContextJSON missing anchor name: %s", p.FigmaContextJSON)
+	}
+	if !strings.Contains(p.FigmaContextJSON, "/tmp/screenshot.png") {
+		t.Errorf("FigmaContextJSON missing screenshot: %s", p.FigmaContextJSON)
+	}
+	if !strings.Contains(p.FigmaContextJSON, "check spacing") {
+		t.Errorf("FigmaContextJSON missing comment: %s", p.FigmaContextJSON)
+	}
+}
+
+func TestGenerateChunksFromResolved_MultiChunkBatching(t *testing.T) {
+	engine, err := NewEngine(false)
+	if err != nil {
+		t.Fatalf("NewEngine() failed: %v", err)
+	}
+
+	// 5 chunks, batch size 2 → 3 batches (2+2+1)
+	var chunks []mapping.ResolvedChunk
+	for i := range 5 {
+		chunks = append(chunks, makeResolvedChunk("Heading", "Body", nil, nil, nil, "none", 0))
+		_ = i
+	}
+
+	prompts, err := engine.GenerateChunksFromResolved("Test Doc", "ubuntu.com/page", "", chunks, 2)
+	if err != nil {
+		t.Fatalf("GenerateChunksFromResolved() failed: %v", err)
+	}
+
+	if len(prompts) != 3 {
+		t.Fatalf("expected 3 batches, got %d", len(prompts))
+	}
+
+	// Verify ChunkNumber and TotalChunks
+	for i, p := range prompts {
+		if p.ChunkNumber != i+1 {
+			t.Errorf("prompts[%d].ChunkNumber = %d, want %d", i, p.ChunkNumber, i+1)
+		}
+		if p.TotalChunks != 3 {
+			t.Errorf("prompts[%d].TotalChunks = %d, want 3", i, p.TotalChunks)
+		}
+	}
+
+	// First two batches have 2 locations each, last has 1
+	if prompts[0].LocationCount != 2 {
+		t.Errorf("batch 0: LocationCount = %d, want 2", prompts[0].LocationCount)
+	}
+	if prompts[1].LocationCount != 2 {
+		t.Errorf("batch 1: LocationCount = %d, want 2", prompts[1].LocationCount)
+	}
+	if prompts[2].LocationCount != 1 {
+		t.Errorf("batch 2: LocationCount = %d, want 1", prompts[2].LocationCount)
+	}
+}
+
+func TestRenderChunk_NoFigma_NoFigmaSection(t *testing.T) {
+	engine, err := NewEngine(false)
+	if err != nil {
+		t.Fatalf("NewEngine() failed: %v", err)
+	}
+
+	data := PromptData{
+		DocumentTitle:   "Test Doc",
+		SuggestedURL:    "ubuntu.com/page",
+		ChunkNumber:     1,
+		TotalChunks:     1,
+		LocationCount:   1,
+		SuggestionsJSON: `[]`,
+	}
+
+	content, err := engine.RenderChunk(data)
+	if err != nil {
+		t.Fatalf("RenderChunk() failed: %v", err)
+	}
+
+	if strings.Contains(content, "Design Context") {
+		t.Error("expected no 'Design Context' section when FigmaContextJSON is empty")
+	}
+}
+
+func TestRenderChunk_WithFigma_IncludesFigmaSection(t *testing.T) {
+	engine, err := NewEngine(false)
+	if err != nil {
+		t.Fatalf("NewEngine() failed: %v", err)
+	}
+
+	data := PromptData{
+		DocumentTitle:    "Test Doc",
+		SuggestedURL:     "ubuntu.com/page",
+		ChunkNumber:      1,
+		TotalChunks:      1,
+		LocationCount:    1,
+		SuggestionsJSON:  `[]`,
+		FigmaContextJSON: `{"anchors":[{"file_key":"f1","node_id":"1:1","node_name":"Hero Frame"}],"screenshots":["/tmp/hero.png"],"comments":[{"comment_id":"c1","message":"align left","author":"bob","node_id":"1:1"}]}`,
+		FigmaURL:         "https://figma.com/file/f1",
+	}
+
+	content, err := engine.RenderChunk(data)
+	if err != nil {
+		t.Fatalf("RenderChunk() failed: %v", err)
+	}
+
+	expectedStrings := []string{
+		"Design Context",
+		"Hero Frame",
+		"/tmp/hero.png",
+		"align left",
+		"bob",
+	}
+	for _, expected := range expectedStrings {
+		if !strings.Contains(content, expected) {
+			t.Errorf("rendered content missing expected string: %q", expected)
+		}
+	}
+}
 
 func makeTestSuggestions(count int) []gdocs.GroupedActionableSuggestion {
 	suggestions := make([]gdocs.GroupedActionableSuggestion, count)

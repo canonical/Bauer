@@ -8,6 +8,9 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"bauer/internal/figma"
+	"bauer/internal/source/mapping"
 )
 
 // RunMetadata is written to metadata.json inside each run directory.
@@ -170,6 +173,21 @@ func (m *Manager) WriteIssueBody(runID string, content string) error {
 func (m *Manager) EnsureScreenshotsDir(runID string) (string, error) {
 	dir := filepath.Join(m.base, runID, "screenshots")
 	return dir, os.MkdirAll(dir, 0o755)
+}
+
+// WriteFigmaExtraction persists the normalized design to extraction/figma.json.
+func (m *Manager) WriteFigmaExtraction(runID string, design *figma.NormalizedDesign) error {
+	return m.writeJSON(runID, filepath.Join("extraction", "figma.json"), design)
+}
+
+// WriteMappings persists all resolved chunk mappings to extraction/mappings.json.
+func (m *Manager) WriteMappings(runID string, chunks []mapping.ResolvedChunk) error {
+	return m.writeJSON(runID, filepath.Join("extraction", "mappings.json"), chunks)
+}
+
+// WriteFigmaComments persists all extracted comments (including resolved) to extraction/comments.json.
+func (m *Manager) WriteFigmaComments(runID string, comments []figma.DesignComment) error {
+	return m.writeJSON(runID, filepath.Join("extraction", "comments.json"), comments)
 }
 
 // RunDir returns the path to the run's directory.
