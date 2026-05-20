@@ -16,7 +16,8 @@ type Config struct {
 	CredentialsPath string `json:"credentials"`
 
 	// DryRun indicates if the tool should skip side-effect operations (Copilot CLI, PR creation).
-	DryRun bool `json:"dry_run"`
+	// Uses *bool so that an explicit false from CLI flags can override a true from a config file.
+	DryRun *bool `json:"dry_run,omitempty"`
 
 	// ChunkSize is the total number of chunks to create from all locations.
 	// Default is 1 if not specified, or 5 if PageRefresh is true.
@@ -99,4 +100,15 @@ func ValidateCredentialsPath(path string) error {
 		return fmt.Errorf("%w", err)
 	}
 	return nil
+}
+
+// BoolPtr returns a pointer to the given bool value.
+func BoolPtr(v bool) *bool { return &v }
+
+// BoolVal dereferences a *bool pointer. Returns def if v is nil.
+func BoolVal(v *bool, def bool) bool {
+	if v == nil {
+		return def
+	}
+	return *v
 }

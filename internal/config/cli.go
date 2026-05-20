@@ -6,6 +6,20 @@ import (
 	"os"
 )
 
+// CLIFlags holds the raw command-line flag values before environment-variable resolution.
+type CLIFlags struct {
+	DocID           string
+	CredentialsPath string
+	ConfigFile      string
+	DryRun          *bool
+	ChunkSize       int
+	PageRefresh     *bool
+	OutputDir       string
+	Model           string
+	SummaryModel    string
+	TargetRepo      string
+}
+
 // Load parses command-line flags and returns a validated Config.
 func Load() (*Config, error) {
 	// Define flags
@@ -76,7 +90,7 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		DocID:           *docID,
 		CredentialsPath: *credentialsPath,
-		DryRun:          *dryRun,
+		DryRun:          dryRun,
 		ChunkSize:       *chunkSize,
 		PageRefresh:     *pageRefresh,
 		OutputDir:       *outputDir,
