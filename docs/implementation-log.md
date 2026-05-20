@@ -23,7 +23,7 @@ Each sub-agent appends its entry to the **Branch Log** section below. You (the r
 | 1 | `feat/phase-0a-agent-source` | `feature/bauer-v2` | 001 Phase 0: T0.1, T0.2, T0.2a, T0.2b | ✅ done |
 | 2 | `feat/phase-0b-artifacts-config` | `feat/phase-0a-agent-source` | 001 Phase 0: T0.2c, T0.3, T0.4, T0.5 | ✅ done |
 | 3 | `feat/phase-1-cli-restore` | `feat/phase-0b-artifacts-config` | 001 Phase 1: T1.1, T1.2, T1.3 | ✅ done |
-| 4 | `feat/phase-2-cli-features` | `feat/phase-1-cli-restore` | 001 Phase 2: T2.1, T2.2, T2.3 | ⏳ pending |
+| 4 | `feat/phase-2-cli-features` | `feat/phase-1-cli-restore` | 001 Phase 2: T2.1, T2.2, T2.3 | ✅ done |
 | 5 | `feat/figma-phase-b-client` | `feat/phase-2-cli-features` | 002 Phase B: T2F.0, T2F.1, T2F.2, T2F.3, T2F.4 | ⏳ pending |
 | 6 | `feat/figma-phase-c-mapping` | `feat/figma-phase-b-client` | 002 Phase C: T2F.5, T2F.6, T2F.7 | ⏳ pending |
 | 7 | `feat/figma-phase-d-cli` | `feat/figma-phase-c-mapping` | 002 Phase D: T2F.8, T2F.9 | ⏳ pending |
@@ -168,9 +168,16 @@ _Parent: `feat/phase-1-cli-restore`_
 
 **Tasks:** T2.1, T2.2, T2.3
 
-**Summary:** _(to be filled by agent)_
+**Summary:** Implemented `--open-issue` and `--open-pr` CLI modes. Added `--github-repo` flag (maps to `cfg.GitHubRepo`). Replaced the mutual-exclusion inline check with a pure `validateFlags(openPR, openIssue bool) error` function called immediately after `fs.Parse`, before any I/O or env-var resolution (T2.3). Implemented `runOpenIssue`: runs the orchestrator in dry-run mode to extract suggestions without invoking Copilot, then builds a structured markdown issue body (categorising suggestions as copy changes vs content additions, with optional Figma link and a next-steps command) and creates the issue via the GitHub REST API using `net/http` (T2.1). Implemented `runOpenPR`: resolves the GitHub token, runs the orchestrator with Copilot enabled, creates a new git branch `<prefix>/<runID>`, stages and commits all changes, pushes the branch, and opens a PR via the `gh` CLI (T2.2). Added `RunID string` field to `OrchestrationResult` so branch naming uses the artifact run ID. Added `GitHubRepo` to `CLIFlags` and `FlagsSource`. Created `internal/github/issue.go` (REST API `CreateIssue`) and `internal/github/git.go` (`RunGit` helper). Updated tests to use `validateFlags` and verify the workflow functions are implemented beyond stub status.
 
-**Files changed:** _(to be filled by agent)_
+**Files changed:**
+- `cmd/bauer/main.go` — full rewrite: adds `--github-repo` flag; `validateFlags` replaces inline mutual-exclusion guard; implements `runOpenIssue`, `buildIssueBody`, `runOpenPR`, `buildPRBody`, `countAllSuggestions`; `runOpenPR` signature gains `repoDir string`
+- `cmd/bauer/main_test.go` — replaces `checkMutualExclusion`/stub tests with `TestValidateFlags_*` suite (T2.3) and `TestRunOpenIssue/PR_ProceedsToWorkflow` (verifies stubs replaced)
+- `internal/orchestrator/orchestrator.go` — `OrchestrationResult` gains `RunID string`; both return paths populate it from `runID`
+- `internal/config/cli.go` — `CLIFlags` gains `GitHubRepo string`
+- `internal/config/manager.go` — `FlagsSource.Load()` maps `GitHubRepo`
+- `internal/github/issue.go` — new: `CreateIssue(ctx, token, repo, title, body) (string, error)` via `net/http` GitHub REST API
+- `internal/github/git.go` — new: `RunGit(ctx, dir string, args ...string) (string, error)` helper using `os/exec`
 
 ---
 
