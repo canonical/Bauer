@@ -22,7 +22,7 @@ Each sub-agent appends its entry to the **Branch Log** section below. You (the r
 | 0 | `feature/bauer-v2` | `main` | Base branch — no code changes | ✅ created |
 | 1 | `feat/phase-0a-agent-source` | `feature/bauer-v2` | 001 Phase 0: T0.1, T0.2, T0.2a, T0.2b | ✅ done |
 | 2 | `feat/phase-0b-artifacts-config` | `feat/phase-0a-agent-source` | 001 Phase 0: T0.2c, T0.3, T0.4, T0.5 | ✅ done |
-| 3 | `feat/phase-1-cli-restore` | `feat/phase-0b-artifacts-config` | 001 Phase 1: T1.1, T1.2, T1.3 | ⏳ pending |
+| 3 | `feat/phase-1-cli-restore` | `feat/phase-0b-artifacts-config` | 001 Phase 1: T1.1, T1.2, T1.3 | ✅ done |
 | 4 | `feat/phase-2-cli-features` | `feat/phase-1-cli-restore` | 001 Phase 2: T2.1, T2.2, T2.3 | ⏳ pending |
 | 5 | `feat/figma-phase-b-client` | `feat/phase-2-cli-features` | 002 Phase B: T2F.0, T2F.1, T2F.2, T2F.3, T2F.4 | ⏳ pending |
 | 6 | `feat/figma-phase-c-mapping` | `feat/figma-phase-b-client` | 002 Phase C: T2F.5, T2F.6, T2F.7 | ⏳ pending |
@@ -152,9 +152,13 @@ _Parent: `feat/phase-0b-artifacts-config`_
 
 **Tasks:** T1.1, T1.2, T1.3
 
-**Summary:** _(to be filled by agent)_
+**Summary:** Rewrote `cmd/bauer/main.go` to use the layered config resolver, restored all required CLI flags (`--doc-id`, `--credentials`, `--chunk-size`, `--page-refresh`, `--model`, `--summary-model`, `--dry-run`, `--artifacts-dir`, `--open-pr`, `--open-issue`, `--branch-prefix`). Switched from global `flag` package to `flag.FlagSet` for testability. Added mutual-exclusion check for `--open-pr` / `--open-issue` before any network calls. `--dry-run` semantics clarified in help text: standalone mode skips Copilot entirely; `--open-pr` mode applies changes locally but skips PR creation. Added `runOpenIssue` / `runOpenPR` stubs returning "not yet implemented". Added `BranchPrefix`, `OpenPR`, `OpenIssue` to `CLIFlags` struct and `FlagsSource.Load()`; added `CredentialsPath: "credentials.json"` fallback to `DefaultsSource`. Updated `Taskfile.yml` with split `build`/`build-api` tasks, standalone `run` using `{{.CLI_ARGS}}`, `run-api`, `test`, `lint`, and enhanced `verify-figma` with `FILE_KEY` check.
 
-**Files changed:** _(to be filled by agent)_
+**Files changed:**
+- `cmd/bauer/main.go` — full rewrite: `flag.FlagSet`; all flags; mutual-exclusion guard; `resolveCLIConfig` using `config.NewResolver`; `openPRExecutionConfig`; `runOpenIssue`/`runOpenPR` stubs; mode dispatch
+- `internal/config/cli.go` — `CLIFlags` extended with `BranchPrefix string`, `OpenPR *bool`, `OpenIssue *bool`
+- `internal/config/manager.go` — `DefaultsSource.Load()` adds `CredentialsPath: "credentials.json"`; `FlagsSource.Load()` maps `BranchPrefix`, `OpenPR`, `OpenIssue`
+- `Taskfile.yml` — split `build`/`build-api`; `run` → `go run ./cmd/bauer/ {{.CLI_ARGS}}`; `run-api`; `test` → `go test ./...`; `lint` → golangci-lint; `verify-figma` with FILE_KEY check; kept `clean`
 
 ---
 
