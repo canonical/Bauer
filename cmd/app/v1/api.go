@@ -4,11 +4,14 @@ import (
 	"bauer/cmd/app/models/v1"
 	"bauer/cmd/app/types"
 	"bauer/internal/config"
+	"bauer/internal/github"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"os/exec"
 )
 
 func JobPost(rc types.RouteConfig) func(w http.ResponseWriter, r *http.Request) {
@@ -91,4 +94,44 @@ func GetHealth(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Error("error writing response", "error", err.Error())
 	}
+}
+
+// ReadinessHandler checks that all required runtime dependencies are present.
+// It must be registered on the public (unauthenticated) mux so that K8s readiness
+// probes — which cannot send bearer tokens — can call it.
+func ReadinessHandler(w http.ResponseWriter, r *http.Request) {
+	failures := map[string]string{}
+
+	// Check credentials
+	credsPath := firstNonEmpty(
+		os.Getenv("BAUER_CREDENTIALS_PATH"),
+		os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"),
+	)
+	if credsPath == "" {
+		failures["credentials"] = "not configured (set BAUER_CREDENTIALS_PATH)"
+	} else if _, err := os.Stat(credsPath); err != nil {
+		slog.Warn("credentials file not readable", slog.String("error", err.Error()))
+		failures["credentials"] = "credentials file is not readable (check server logs for details)"
+	}
+
+	// Check GitHub token
+	if _, err := github.GetGitHubToken(); err != nil {
+		failures["github_token"] = "not configured (set BAUER_GITHUB_TOKEN or run 'gh auth login')"
+	}
+
+	// Check gh CLI
+	if _, err := exec.LookPath("gh"); err != nil {
+		failures["gh_cli"] = "not found in PATH"
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if len(failures) > 0 {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(map[string]any{
+			"status":  "not ready",
+			"missing": failures,
+		})
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]any{"status": "ready"})
 }
