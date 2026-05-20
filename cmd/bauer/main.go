@@ -49,10 +49,8 @@ func main() {
 	}
 
 	// Mutual exclusion check — before any network calls
-	if *openPR && *openIssue {
-		fmt.Fprintln(os.Stderr, "Error: --open-pr and --open-issue are mutually exclusive.")
-		fmt.Fprintln(os.Stderr, "  Use --open-pr to apply changes and open a PR.")
-		fmt.Fprintln(os.Stderr, "  Use --open-issue to generate a plan and open an issue without applying changes.")
+	if err := checkMutualExclusion(*openPR, *openIssue); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
@@ -127,6 +125,15 @@ func main() {
 			os.Exit(1)
 		}
 	}
+}
+
+// checkMutualExclusion returns an error if --open-pr and --open-issue are both set.
+// Extracted for testability — main() calls os.Exit on error.
+func checkMutualExclusion(openPR, openIssue bool) error {
+	if openPR && openIssue {
+		return fmt.Errorf("Error: --open-pr and --open-issue are mutually exclusive.\n  Use --open-pr to apply changes and open a PR.\n  Use --open-issue to generate a plan and open an issue without applying changes.")
+	}
+	return nil
 }
 
 // resolveCLIConfig builds a Config from CLI flags, falling back to environment variables
