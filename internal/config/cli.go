@@ -19,6 +19,7 @@ type CLIFlags struct {
 	TargetRepo      string
 	ArtifactsDir    string
 	BranchPrefix    string
+	GitHubRepo      string
 	OpenPR          *bool
 	OpenIssue       *bool
 }

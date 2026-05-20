@@ -22,6 +22,9 @@ type ChunkOutput struct {
 
 // OrchestrationResult contains all outputs from the orchestration flow.
 type OrchestrationResult struct {
+	// RunID is the artifact run identifier, empty if artifact storage was unavailable.
+	RunID string
+
 	// Extraction
 	ExtractionBundle   *source.SourceBundle
 	ExtractionDuration time.Duration
@@ -172,6 +175,7 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 		totalDuration := time.Since(startTime)
 		completeRun("success", len(chunks))
 		return &OrchestrationResult{
+			RunID:              runID,
 			ExtractionBundle:   bundle,
 			ExtractionDuration: extractionDuration,
 			Chunks:             chunks,
@@ -254,6 +258,7 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 	completeRun("success", len(chunks))
 
 	return &OrchestrationResult{
+		RunID:              runID,
 		ExtractionBundle:   bundle,
 		ExtractionDuration: extractionDuration,
 		Chunks:             chunks,

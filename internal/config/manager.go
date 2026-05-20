@@ -138,6 +138,7 @@ func (f *FlagsSource) Load() (*Config, error) {
 		TargetRepo:      f.flags.TargetRepo,
 		ArtifactsDir:    f.flags.ArtifactsDir,
 		BranchPrefix:    f.flags.BranchPrefix,
+		GitHubRepo:      f.flags.GitHubRepo,
 		OpenPR:          f.flags.OpenPR,
 		OpenIssue:       f.flags.OpenIssue,
 	}, nil
