@@ -10,7 +10,6 @@ import (
 type CLIFlags struct {
 	DocID           string
 	CredentialsPath string
-	ConfigFile      string
 	DryRun          *bool
 	ChunkSize       int
 	PageRefresh     *bool
@@ -18,6 +17,7 @@ type CLIFlags struct {
 	Model           string
 	SummaryModel    string
 	TargetRepo      string
+	ArtifactsDir    string
 }
 
 // Load parses command-line flags and returns a validated Config.
@@ -30,7 +30,6 @@ func Load() (*Config, error) {
 
 	docID := flag.String("doc-id", "", "Google Doc ID to extract feedback from (required)")
 	credentialsPath := flag.String("credentials", "", "Path to service account JSON (required)")
-	configFile := flag.String("config", "", "Path to JSON config file")
 	dryRun := flag.Bool("dry-run", false, "Run extraction and planning only; skip Copilot and PR creation")
 	chunkSize := flag.Int("chunk-size", 0, "Total number of chunks to create (default: 1, or 5 if --page-refresh is set)")
 	pageRefresh := flag.Bool("page-refresh", false, "Use page refresh mode with page-refresh-instructions template (default chunk size: 5)")
@@ -38,6 +37,7 @@ func Load() (*Config, error) {
 	model := flag.String("model", "gpt-5-mini-high", "Copilot model to use for sessions (default: gpt-5-mini-high)")
 	summaryModel := flag.String("summary-model", "gpt-5-mini-high", "Copilot model to use for summary session (default: gpt-5-mini-high)")
 	targetRepo := flag.String("target-repo", "", "Path to target repository where tasks should be executed (default: current directory)")
+	artifactsDir := flag.String("artifacts-dir", "", "Directory for run artifacts (default: ./bauer-artifacts)")
 
 	// Custom usage message
 	flag.Usage = func() {
@@ -51,13 +51,13 @@ func Load() (*Config, error) {
 			typ  string
 			desc string
 		}{
-			{"--config", "<string>", "Path to JSON config file"},
 			{"--doc-id", "<string>", "Google Doc ID to extract feedback from (required)"},
 			{"--credentials", "<string>", "Path to service account JSON (required)"},
 			{"--dry-run", "", "Run extraction and planning only; skip Copilot and PR creation"},
 			{"--page-refresh", "", "Use page refresh mode with page-refresh-instructions template"},
 			{"--chunk-size", "<int>", "Total number of chunks to create (default: 1, or 5 if --page-refresh is set)"},
 			{"--output-dir", "<string>", "Directory for generated prompt files (default: bauer-output)"},
+			{"--artifacts-dir", "<string>", "Directory for run artifacts (default: ./bauer-artifacts)"},
 			{"--model", "<string>", "Copilot model to use for sessions (default: gpt-5-mini-high)"},
 			{"--summary-model", "<string>", "Copilot model to use for summary session (default: gpt-5-mini-high)"},
 			{"--target-repo", "<string>", "Path to target repository where tasks should be executed (default: current directory)"},
@@ -76,11 +76,6 @@ func Load() (*Config, error) {
 
 	flag.Parse()
 
-	// If --config is provided, load from JSON file
-	if *configFile != "" {
-		return LoadFromJSONFile(*configFile)
-	}
-
 	// If no required flags are provided, show usage and exit
 	if *docID == "" && *credentialsPath == "" {
 		flag.Usage()
@@ -92,11 +87,12 @@ func Load() (*Config, error) {
 		CredentialsPath: *credentialsPath,
 		DryRun:          dryRun,
 		ChunkSize:       *chunkSize,
-		PageRefresh:     *pageRefresh,
+		PageRefresh:     pageRefresh,
 		OutputDir:       *outputDir,
 		Model:           *model,
 		SummaryModel:    *summaryModel,
 		TargetRepo:      *targetRepo,
+		ArtifactsDir:    *artifactsDir,
 	}
 
 	if err := cfg.Validate(); err != nil {

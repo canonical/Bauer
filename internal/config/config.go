@@ -25,7 +25,8 @@ type Config struct {
 
 	// PageRefresh indicates if the page refresh mode should be used.
 	// When true, uses page-refresh-instructions.md template and defaults ChunkSize to 5.
-	PageRefresh bool `json:"page_refresh"`
+	// Uses *bool so that an explicit false from CLI flags can override a true from defaults.
+	PageRefresh *bool `json:"page_refresh,omitempty"`
 
 	// OutputDir is the directory where generated prompt files will be saved.
 	// Default is "bauer-output" if not specified.
@@ -42,12 +43,34 @@ type Config struct {
 	// TargetRepo is the path (relative or absolute) to the target repository
 	// where tasks should be executed. If not specified, uses the current directory.
 	TargetRepo string `json:"target_repo"`
+
+	// ArtifactsDir is the directory for run artifacts. Defaults to "./bauer-artifacts".
+	// Overridden by --artifacts-dir flag or BAUER_ARTIFACTS_DIR env var.
+	ArtifactsDir string `json:"artifacts_dir,omitempty"`
+
+	// BranchPrefix is the prefix used when creating branches. Defaults to "bauer".
+	BranchPrefix string `json:"branch_prefix,omitempty"`
+
+	// FigmaURL is the Figma file URL for the design reference.
+	FigmaURL string `json:"figma_url,omitempty"`
+
+	// FigmaToken is the Figma API token. Overridden by BAUER_FIGMA_TOKEN env var.
+	FigmaToken string `json:"figma_token,omitempty"`
+
+	// GitHubRepo is the GitHub repository in owner/repo format.
+	GitHubRepo string `json:"github_repo,omitempty"`
+
+	// OpenPR controls whether a pull request is opened after applying changes.
+	OpenPR *bool `json:"open_pr,omitempty"`
+
+	// OpenIssue controls whether a GitHub issue is opened instead of a PR.
+	OpenIssue *bool `json:"open_issue,omitempty"`
 }
 
 // Apply default config values
 func (c *Config) ApplyDefaults() {
 	if c.ChunkSize == 0 {
-		if c.PageRefresh {
+		if BoolVal(c.PageRefresh, false) {
 			c.ChunkSize = 5
 		} else {
 			c.ChunkSize = 1
@@ -61,6 +84,9 @@ func (c *Config) ApplyDefaults() {
 	}
 	if c.SummaryModel == "" {
 		c.SummaryModel = "gpt-5-mini-high"
+	}
+	if c.ArtifactsDir == "" {
+		c.ArtifactsDir = "./bauer-artifacts"
 	}
 }
 

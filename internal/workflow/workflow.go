@@ -164,7 +164,7 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 		CredentialsPath: credentialsPath, // Use absolute path
 		DryRun:          config.BoolPtr(input.DryRun),
 		ChunkSize:       input.ChunkSize,
-		PageRefresh:     input.PageRefresh,
+		PageRefresh:     config.BoolPtr(input.PageRefresh),
 		OutputDir:       input.OutputDir,
 		Model:           input.Model,
 		TargetRepo:      ".", // Current directory is the cloned repo
