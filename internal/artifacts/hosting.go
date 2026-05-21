@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // ScreenshotHost uploads or serves a screenshot and returns its public URL.
@@ -24,7 +25,10 @@ type LocalFileServer struct {
 func (s *LocalFileServer) Host(_ context.Context, localPath string) (string, error) {
 	rel, err := filepath.Rel(s.ServeDir, localPath)
 	if err != nil {
-		return "", fmt.Errorf("screenshot %q not under serve directory %q: %w", localPath, s.ServeDir, err)
+		return "", fmt.Errorf("path %q is not under serve directory %q", localPath, s.ServeDir)
+	}
+	if strings.HasPrefix(rel, "..") {
+		return "", fmt.Errorf("path %q is not under serve directory %q", localPath, s.ServeDir)
 	}
 	return s.BaseURL + "/" + filepath.ToSlash(rel), nil
 }

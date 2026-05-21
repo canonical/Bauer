@@ -25,20 +25,24 @@ func JWTMiddleware(next http.Handler) http.Handler {
 	audience := os.Getenv("BAUER_OIDC_AUDIENCE")
 	jwksURL, err := resolveJWKSURL(issuer)
 	if err != nil {
-		slog.Error("Failed to resolve JWKS URL from OIDC discovery; JWT validation bypassed",
+		slog.Error("Failed to resolve JWKS URL from OIDC discovery; all protected endpoints will return 503",
 			slog.String("issuer", issuer),
 			slog.String("error", err.Error()),
 		)
-		return next
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "authentication service unavailable", http.StatusServiceUnavailable)
+		})
 	}
 
 	keySet, err := jwk.Fetch(context.Background(), jwksURL)
 	if err != nil {
-		slog.Error("Failed to fetch JWKS; JWT validation bypassed",
+		slog.Error("Failed to fetch JWKS; all protected endpoints will return 503",
 			slog.String("jwks_url", jwksURL),
 			slog.String("error", err.Error()),
 		)
-		return next
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "authentication service unavailable", http.StatusServiceUnavailable)
+		})
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
