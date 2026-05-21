@@ -66,10 +66,10 @@ tasks:
     desc: Run the Bauer API locally in Docker (reads .env.local for secrets)
     cmds:
       - docker run -p 8090:8090
-          --env-file .env.local
-          -v "${BAUER_CREDENTIALS_PATH}:/creds/service-account.json:ro"
-          -e BAUER_CREDENTIALS_PATH=/creds/service-account.json
-          bauer-api:latest
+        --env-file .env.local
+        -v "${BAUER_CREDENTIALS_PATH}:/creds/service-account.json:ro"
+        -e BAUER_CREDENTIALS_PATH=/creds/service-account.json
+        bauer-api:latest
 
   clean:
     desc: Clean up generated files
