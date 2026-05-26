@@ -37,6 +37,11 @@ func TestParseLink(t *testing.T) {
 			input:   "https://www.example.com/something",
 			wantErr: true,
 		},
+		{
+			name:    "figma substring in non-figma host",
+			input:   "https://evil.com/redirect?url=https://figma.com/file/abc123/Fake",
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

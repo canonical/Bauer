@@ -31,6 +31,7 @@ func main() {
 	openIssue := fs.Bool("open-issue", false, "Generate a plan and open a GitHub issue without applying changes (mutually exclusive with --open-pr)")
 	branchPrefix := fs.String("branch-prefix", "", "Prefix for created branches (default: bauer)")
 	githubRepo := fs.String("github-repo", "", "GitHub repository in owner/repo format (required for --open-pr and --open-issue)")
+	figmaURL := fs.String("figma-url", "", "Figma file or design URL for design reference (optional)")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage:\n\n")
@@ -71,6 +72,7 @@ func main() {
 		ArtifactsDir:    *artifactsDir,
 		BranchPrefix:    *branchPrefix,
 		GitHubRepo:      *githubRepo,
+		FigmaURL:        *figmaURL,
 	}
 	fs.Visit(func(f *flag.Flag) {
 		switch f.Name {

@@ -79,7 +79,7 @@ func (c *Client) GetImages(ctx context.Context, fileKey string, nodeIDs []string
 }
 
 // DownloadImage downloads a pre-signed image URL (no auth needed) to destPath.
-// The file is created with 0o644 permissions.
+// The file is created with default permissions (0666 & ~umask).
 func (c *Client) DownloadImage(ctx context.Context, presignedURL, destPath string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, presignedURL, nil)
 	if err != nil {

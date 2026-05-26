@@ -52,9 +52,16 @@ func (m *Manager) FetchFigma(ctx context.Context, client *figma.Client, ref *fig
 	if ref.NodeID != "" {
 		nodeIDs = []string{ref.NodeID}
 	}
-	nodes, err := client.GetNodes(ctx, ref.FileKey, nodeIDs)
-	if err != nil {
-		return nil, fmt.Errorf("fetching figma nodes: %w", err)
+
+	var nodes *figma.NodesResponse
+	if len(nodeIDs) == 0 {
+		fmt.Printf("warning: whole-file Figma link — no specific node requested, skipping node fetch\n")
+		nodes = &figma.NodesResponse{}
+	} else {
+		nodes, err = client.GetNodes(ctx, ref.FileKey, nodeIDs)
+		if err != nil {
+			return nil, fmt.Errorf("fetching figma nodes: %w", err)
+		}
 	}
 
 	comments, err := client.GetComments(ctx, ref.FileKey)

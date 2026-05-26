@@ -70,8 +70,8 @@ func Normalize(
 	return design
 }
 
-// extractAnchors recursively extracts DesignAnchor values from a document node subtree.
-// path is the breadcrumb from the root to the current node (used for NodePath).
+// extractAnchors extracts a DesignAnchor from a document node, collecting text and
+// component IDs from its direct children. path is the breadcrumb from the root (used for NodePath).
 func extractAnchors(nodeID string, doc *DocumentNode, path []string) []DesignAnchor {
 	currentPath := append(append([]string{}, path...), doc.Name)
 	anchor := DesignAnchor{

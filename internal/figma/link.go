@@ -19,16 +19,18 @@ type LinkRef struct {
 // Accepts /file/ and /design/ URL patterns.
 // Returns a clear error for non-Figma URLs.
 func ParseLink(rawURL string) (*LinkRef, error) {
+	u, err := url.Parse(rawURL)
+	if err != nil || (u.Host != "www.figma.com" && u.Host != "figma.com") {
+		return nil, fmt.Errorf("not a valid Figma link: %q (expected figma.com/file/... or figma.com/design/...)", rawURL)
+	}
+
 	matches := figmaFilePattern.FindStringSubmatch(rawURL)
 	if len(matches) < 2 {
 		return nil, fmt.Errorf("not a valid Figma link: %q (expected figma.com/file/... or figma.com/design/...)", rawURL)
 	}
 	ref := &LinkRef{FileKey: matches[1], RawURL: rawURL}
 
-	u, err := url.Parse(rawURL)
-	if err == nil {
-		// url.Query().Get() URL-decodes automatically: "1%3A42" → "1:42"
-		ref.NodeID = u.Query().Get("node-id")
-	}
+	// url.Query().Get() URL-decodes automatically: "1%3A42" → "1:42"
+	ref.NodeID = u.Query().Get("node-id")
 	return ref, nil
 }
