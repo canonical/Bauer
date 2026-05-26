@@ -163,11 +163,44 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 			}
 		}
 
-		output.BauerResult.CopilotDuration = time.Since(bauerStartTime)
+		// Parse-only mode forces the orchestrator into DryRun, so Copilot is not executed.
+		output.BauerResult.CopilotDuration = 0
+
+		// Move the raw extraction JSON produced by the orchestrator into the output dir.
+		outputPath := filepath.Join(input.OutputDir, "bauer-parse-result.json")
+		if err := os.MkdirAll(input.OutputDir, 0755); err != nil {
+			output.Status = "failed"
+			output.Errors = append(output.Errors, fmt.Sprintf("failed to create output directory: %v", err))
+			output.EndTime = time.Now()
+			output.TotalDuration = output.EndTime.Sub(output.StartTime)
+			return output, err
+		}
+
+		const rawOutputFile = "bauer-doc-suggestions.json"
+		if err := os.Rename(rawOutputFile, outputPath); err != nil {
+			// Cross-device rename fallback: copy + remove
+			b, readErr := os.ReadFile(rawOutputFile)
+			if readErr != nil {
+				output.Status = "failed"
+				output.Errors = append(output.Errors, fmt.Sprintf("failed to move parse-only output file: %v", err))
+				output.EndTime = time.Now()
+				output.TotalDuration = output.EndTime.Sub(output.StartTime)
+				return output, err
+			}
+			if writeErr := os.WriteFile(outputPath, b, 0644); writeErr != nil {
+				output.Status = "failed"
+				output.Errors = append(output.Errors, fmt.Sprintf("failed to write parse-only output file: %v", writeErr))
+				output.EndTime = time.Now()
+				output.TotalDuration = output.EndTime.Sub(output.StartTime)
+				return output, writeErr
+			}
+			_ = os.Remove(rawOutputFile)
+		}
+
 		output.EndTime = time.Now()
 		output.TotalDuration = output.EndTime.Sub(output.StartTime)
 		output.Status = "success"
-		output.OutputFile = filepath.Join(input.OutputDir, "bauer-parse-result.json")
+		output.OutputFile = outputPath
 
 		logger.Info("workflow: Parse-only mode complete",
 			"output_file", output.OutputFile,
