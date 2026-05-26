@@ -253,9 +253,12 @@ _Parent: `feat/figma-phase-d-cli`_
 
 **Tasks:** T2F.10
 
-**Summary:** _(to be filled by agent)_
+**Summary:** Implemented drift detection and mapping cache reuse for Figma-backed runs. `RunMetadata` and `RunIndexEntry` gained a `FigmaVersion` field, and three new methods were added to `artifacts.Manager`: `LoadPreviousMeta` (scans `runs.jsonl` forward and selects the last matching entry for the most recent successful run with a matching DocID and Figma file key), `LoadMappings` (reads `extraction/mappings.json` from a prior run), and `UpdateRunFigmaVersion` (patches the current run's `metadata.json` after a fresh Figma fetch). In `generateChunksWithFigma`, a `GetMeta` call is now made before any other Figma API calls; if the version is unchanged versus the previous run, the stored mappings are reused and `GetNodes`/screenshot downloads are skipped; if changed, a warning is logged and a full re-fetch proceeds. `Resolver.Build` was hardened with a post-process normalization step that explicitly marks any chunk with `Confidence < 0.5`, `Method == "fallback"`, or `Method == "none"` as `Status: "unresolved"`, preventing silent promotion of low-quality mappings.
 
-**Files changed:** _(to be filled by agent)_
+**Files changed:**
+- `internal/artifacts/manager.go`: Added `FigmaVersion` field to `RunMetadata` and `RunIndexEntry`; added `LoadPreviousMeta`, `LoadMappings`, and `UpdateRunFigmaVersion` methods; added `bufio` import for JSONL scanning.
+- `internal/orchestrator/orchestrator.go`: Rewrote `generateChunksWithFigma` to call `GetMeta` first for drift detection, consult `LoadPreviousMeta`/`LoadMappings` for cache reuse, log version changes as warnings, and call `UpdateRunFigmaVersion` after each fresh Figma fetch.
+- `internal/source/mapping/resolver.go`: Added post-process normalization loop in `Build` that sets `Status: "unresolved"` for any mapping with `Confidence < 0.5`, `Method == "fallback"`, or `Method == "none"`.
 
 ---
 

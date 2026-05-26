@@ -22,7 +22,7 @@ func (r *Resolver) Build(
 	for i, group := range groups {
 		chunks[i] = ResolvedChunk{
 			Locations: []gdocs.LocationGroupedSuggestions{group},
-			Mapping:   MappingMetadata{Method: "none", Confidence: 0, Status: "none"},
+			Mapping:   MappingMetadata{Method: "none", Confidence: 0, Status: "unresolved"},
 		}
 		if design != nil {
 			anchors, meta := r.resolveAnchor(group, design)
@@ -30,6 +30,14 @@ func (r *Resolver) Build(
 			chunks[i].Mapping = meta
 			chunks[i].ScreenshotPaths = r.screenshotsForAnchors(anchors, design)
 			chunks[i].Comments = r.commentsForAnchors(anchors, design)
+		}
+	}
+	// Post-process: low-confidence, fallback, and unmatched ("none") mappings are
+	// promoted to status "unresolved" so they are never silently treated as healthy.
+	for i := range chunks {
+		m := &chunks[i].Mapping
+		if m.Confidence < 0.5 || m.Method == "fallback" || m.Method == "none" {
+			m.Status = "unresolved"
 		}
 	}
 	return chunks
