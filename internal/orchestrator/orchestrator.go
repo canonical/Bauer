@@ -281,7 +281,6 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 	}, nil
 }
 
-// executeAgentChunks executes each chunk via the agent and returns outputs.
 // generateChunksWithFigma fetches Figma design data and produces figma-aware prompt files.
 // It is called by Execute when cfg.FigmaURL is non-empty.
 func (o *DefaultOrchestrator) generateChunksWithFigma(
@@ -307,6 +306,10 @@ func (o *DefaultOrchestrator) generateChunksWithFigma(
 				slog.String("error", err.Error()))
 			screenshotDir = ""
 		}
+	}
+
+	if screenshotDir == "" {
+		slog.Warn("Screenshot directory unavailable, skipping screenshot download")
 	}
 
 	slog.Info("Fetching Figma design data", slog.String("figma_url", cfg.FigmaURL))
@@ -357,7 +360,7 @@ func (o *DefaultOrchestrator) generateChunksWithFigma(
 }
 
 // executeAgentChunks executes each chunk via the agent and returns outputs.
-func executeAgentChunks(	ctx context.Context,
+func executeAgentChunks(ctx context.Context,
 	chunks []prompt.ChunkResult,
 	cfg *config.Config,
 	a agent.Agent,

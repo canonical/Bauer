@@ -342,42 +342,43 @@ func indexOf(s, substr string) int {
 	}
 	return -1
 }
+
 // RenderChunksFromResolved generates figma-aware prompt files from pre-resolved chunks.
 // It is used when --figma-url is supplied so that Figma design context is embedded in
 // each prompt. outputDir is created if it does not exist.
 // The returned ChunkResults contain Filenames suitable for agent execution.
 func (e *Engine) RenderChunksFromResolved(
-        docTitle, suggestedURL, figmaURL string,
-        chunks []mapping.ResolvedChunk,
-        chunkSize int,
-        outputDir string,
+	docTitle, suggestedURL, figmaURL string,
+	chunks []mapping.ResolvedChunk,
+	chunkSize int,
+	outputDir string,
 ) ([]ChunkResult, error) {
-        if err := os.MkdirAll(outputDir, 0755); err != nil {
-                return nil, fmt.Errorf("creating output directory %q: %w", outputDir, err)
-        }
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return nil, fmt.Errorf("creating output directory %q: %w", outputDir, err)
+	}
 
-        promptDatas, err := e.GenerateChunksFromResolved(docTitle, suggestedURL, figmaURL, chunks, chunkSize)
-        if err != nil {
-                return nil, err
-        }
+	promptDatas, err := e.GenerateChunksFromResolved(docTitle, suggestedURL, figmaURL, chunks, chunkSize)
+	if err != nil {
+		return nil, err
+	}
 
-        results := make([]ChunkResult, len(promptDatas))
-        for i, pd := range promptDatas {
-                content, err := e.RenderChunk(pd)
-                if err != nil {
-                        return nil, fmt.Errorf("rendering chunk %d: %w", i+1, err)
-                }
-                fname := fmt.Sprintf("chunk-%d-of-%d.md", pd.ChunkNumber, pd.TotalChunks)
-                fpath := filepath.Join(outputDir, fname)
-                if err := os.WriteFile(fpath, []byte(content), 0644); err != nil {
-                        return nil, fmt.Errorf("writing chunk %d to file: %w", i+1, err)
-                }
-                results[i] = ChunkResult{
-                        ChunkNumber:   pd.ChunkNumber,
-                        Content:       content,
-                        Filename:      fpath,
-                        LocationCount: pd.LocationCount,
-                }
-        }
-        return results, nil
+	results := make([]ChunkResult, len(promptDatas))
+	for i, pd := range promptDatas {
+		content, err := e.RenderChunk(pd)
+		if err != nil {
+			return nil, fmt.Errorf("rendering chunk %d: %w", i+1, err)
+		}
+		fname := fmt.Sprintf("chunk-%d-of-%d.md", pd.ChunkNumber, pd.TotalChunks)
+		fpath := filepath.Join(outputDir, fname)
+		if err := os.WriteFile(fpath, []byte(content), 0644); err != nil {
+			return nil, fmt.Errorf("writing chunk %d to file: %w", i+1, err)
+		}
+		results[i] = ChunkResult{
+			ChunkNumber:   pd.ChunkNumber,
+			Content:       content,
+			Filename:      fpath,
+			LocationCount: pd.LocationCount,
+		}
+	}
+	return results, nil
 }
