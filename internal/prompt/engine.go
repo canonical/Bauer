@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"text/template"
 
 	"bauer/internal/gdocs"
+	"bauer/internal/source/mapping"
 )
 
 //go:embed templates/page-refresh-instructions.md
@@ -19,6 +21,9 @@ var copyDocsInstructionsTemplate string
 
 //go:embed templates/vanilla-patterns.md
 var vanillaPatterns string
+
+//go:embed templates/figma-context.md
+var figmaContextTemplate string
 
 // Engine handles prompt generation for Copilot
 type Engine struct {
@@ -41,6 +46,12 @@ type PromptData struct {
 
 	// Location-grouped suggestions for this chunk (raw JSON)
 	SuggestionsJSON string
+
+	// FigmaContextJSON is serialised figma enrichment — empty string when no Figma URL was supplied.
+	FigmaContextJSON string
+
+	// FigmaURL is the optional Figma URL, stored for metadata/artifact output (not rendered in templates).
+	FigmaURL string
 }
 
 // ChunkResult contains the rendered prompt and metadata for a chunk
@@ -130,6 +141,22 @@ func (e *Engine) RenderChunk(data PromptData) (string, error) {
 	buf.WriteString(data.SuggestionsJSON)
 	buf.WriteString("\n```\n")
 
+	// Append figma context section when design data is present
+	if data.FigmaContextJSON != "" {
+		var ctx figmaChunkContext
+		if err := json.Unmarshal([]byte(data.FigmaContextJSON), &ctx); err != nil {
+			return "", fmt.Errorf("parsing figma context JSON: %w", err)
+		}
+		tmpl, err := template.New("figma-context").Parse(figmaContextTemplate)
+		if err != nil {
+			return "", fmt.Errorf("parsing figma context template: %w", err)
+		}
+		buf.WriteString("\n\n---\n\n")
+		if err := tmpl.Execute(&buf, ctx); err != nil {
+			return "", fmt.Errorf("rendering figma context: %w", err)
+		}
+	}
+
 	return buf.String(), nil
 }
 
@@ -200,6 +227,107 @@ func (e *Engine) GenerateAllChunks(
 	}
 
 	return results, nil
+}
+
+// figmaChunkContext is the data structure serialized into FigmaContextJSON.
+type figmaChunkContext struct {
+	Anchors     []mapping.DesignAnchorRef  `json:"anchors,omitempty"`
+	Screenshots []string                   `json:"screenshots,omitempty"`
+	Comments    []mapping.DesignCommentRef `json:"comments,omitempty"`
+}
+
+// GenerateChunksFromResolved creates one PromptData per batch of resolved chunks.
+// chunkSize controls how many ResolvedChunks are combined into one prompt.
+// When FigmaContextJSON is non-empty, the rendered prompt includes the figma-context section.
+func (e *Engine) GenerateChunksFromResolved(
+	docTitle, suggestedURL, figmaURL string,
+	chunks []mapping.ResolvedChunk,
+	chunkSize int,
+) ([]PromptData, error) {
+	batches := batchResolvedChunks(chunks, chunkSize)
+	result := make([]PromptData, len(batches))
+
+	for i, batch := range batches {
+		var locations []gdocs.LocationGroupedSuggestions
+		for _, rc := range batch {
+			locations = append(locations, rc.Locations...)
+		}
+
+		suggestionsJSON, err := json.MarshalIndent(locations, "", "  ")
+		if err != nil {
+			return nil, fmt.Errorf("marshaling suggestions for chunk %d: %w", i+1, err)
+		}
+
+		figmaJSON, err := buildFigmaContextJSON(batch)
+		if err != nil {
+			return nil, fmt.Errorf("building figma context for chunk %d: %w", i+1, err)
+		}
+
+		result[i] = PromptData{
+			DocumentTitle:    docTitle,
+			SuggestedURL:     suggestedURL,
+			ChunkNumber:      i + 1,
+			TotalChunks:      len(batches),
+			LocationCount:    len(locations),
+			SuggestionsJSON:  string(suggestionsJSON),
+			FigmaContextJSON: figmaJSON,
+			FigmaURL:         figmaURL,
+		}
+	}
+	return result, nil
+}
+
+func buildFigmaContextJSON(batch []mapping.ResolvedChunk) (string, error) {
+	ctx := figmaChunkContext{}
+	seenAnchors := map[string]bool{}
+	seenScreenshots := map[string]bool{}
+	seenComments := map[string]bool{}
+
+	for _, rc := range batch {
+		for _, a := range rc.DesignAnchors {
+			if !seenAnchors[a.NodeID] {
+				seenAnchors[a.NodeID] = true
+				ctx.Anchors = append(ctx.Anchors, a)
+			}
+		}
+		for _, s := range rc.ScreenshotPaths {
+			if !seenScreenshots[s] {
+				seenScreenshots[s] = true
+				ctx.Screenshots = append(ctx.Screenshots, s)
+			}
+		}
+		for _, c := range rc.Comments {
+			if !seenComments[c.CommentID] {
+				seenComments[c.CommentID] = true
+				ctx.Comments = append(ctx.Comments, c)
+			}
+		}
+	}
+
+	if len(ctx.Anchors) == 0 && len(ctx.Screenshots) == 0 && len(ctx.Comments) == 0 {
+		return "", nil
+	}
+
+	b, err := json.MarshalIndent(ctx, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+func batchResolvedChunks(chunks []mapping.ResolvedChunk, size int) [][]mapping.ResolvedChunk {
+	if size <= 0 {
+		size = 1
+	}
+	var batches [][]mapping.ResolvedChunk
+	for i := 0; i < len(chunks); i += size {
+		end := i + size
+		if end > len(chunks) {
+			end = len(chunks)
+		}
+		batches = append(batches, chunks[i:end])
+	}
+	return batches
 }
 
 // replaceVar is a simple string replacement helper for template variables

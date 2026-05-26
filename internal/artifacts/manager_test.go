@@ -8,6 +8,9 @@ import (
 	"testing"
 
 	"bauer/internal/artifacts"
+	"bauer/internal/figma"
+	"bauer/internal/gdocs"
+	"bauer/internal/source/mapping"
 )
 
 func TestNewRunID_Format(t *testing.T) {
@@ -159,4 +162,121 @@ func splitLines(data []byte) []string {
 		}
 	}
 	return lines
+}
+
+func TestWriteFigmaExtraction(t *testing.T) {
+	tmpDir := t.TempDir()
+	mgr := artifacts.NewManager(tmpDir)
+	runID, err := mgr.StartRun(artifacts.RunMetadata{DocID: "doc-figma", Mode: "dry-run"})
+	if err != nil {
+		t.Fatalf("StartRun() error = %v", err)
+	}
+
+	design := &figma.NormalizedDesign{
+		FileKey:    "abc123",
+		RootNodeID: "1:1",
+		Version:    "v1",
+		Anchors: []figma.DesignAnchor{
+			{NodeID: "1:1", NodeName: "Frame A"},
+		},
+	}
+
+	if err := mgr.WriteFigmaExtraction(runID, design); err != nil {
+		t.Fatalf("WriteFigmaExtraction() error = %v", err)
+	}
+
+	path := filepath.Join(tmpDir, runID, "extraction", "figma.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("expected extraction/figma.json to exist: %v", err)
+	}
+
+	var result figma.NormalizedDesign
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("failed to parse figma.json: %v", err)
+	}
+	if result.FileKey != "abc123" {
+		t.Errorf("FileKey = %q, want %q", result.FileKey, "abc123")
+	}
+	if len(result.Anchors) != 1 {
+		t.Errorf("expected 1 anchor, got %d", len(result.Anchors))
+	}
+}
+
+func TestWriteMappings(t *testing.T) {
+	tmpDir := t.TempDir()
+	mgr := artifacts.NewManager(tmpDir)
+	runID, err := mgr.StartRun(artifacts.RunMetadata{DocID: "doc-mappings", Mode: "dry-run"})
+	if err != nil {
+		t.Fatalf("StartRun() error = %v", err)
+	}
+
+	chunks := []mapping.ResolvedChunk{
+		{
+			Locations: []gdocs.LocationGroupedSuggestions{
+				{Location: gdocs.SuggestionLocation{Section: "Body"}},
+			},
+			DesignAnchors: []mapping.DesignAnchorRef{
+				{FileKey: "file1", NodeID: "1:1", NodeName: "Frame"},
+			},
+			Mapping: mapping.MappingMetadata{Method: "url", Confidence: 1.0, Status: "healthy"},
+		},
+	}
+
+	if err := mgr.WriteMappings(runID, chunks); err != nil {
+		t.Fatalf("WriteMappings() error = %v", err)
+	}
+
+	path := filepath.Join(tmpDir, runID, "extraction", "mappings.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("expected extraction/mappings.json to exist: %v", err)
+	}
+
+	var result []mapping.ResolvedChunk
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("failed to parse mappings.json: %v", err)
+	}
+	if len(result) != 1 {
+		t.Fatalf("expected 1 chunk, got %d", len(result))
+	}
+	if result[0].Mapping.Method != "url" {
+		t.Errorf("Method = %q, want %q", result[0].Mapping.Method, "url")
+	}
+}
+
+func TestWriteFigmaComments(t *testing.T) {
+	tmpDir := t.TempDir()
+	mgr := artifacts.NewManager(tmpDir)
+	runID, err := mgr.StartRun(artifacts.RunMetadata{DocID: "doc-comments", Mode: "dry-run"})
+	if err != nil {
+		t.Fatalf("StartRun() error = %v", err)
+	}
+
+	comments := []figma.DesignComment{
+		{ID: "c1", NodeID: "1:1", Message: "open comment", Author: "alice", Resolved: false},
+		{ID: "c2", NodeID: "1:1", Message: "resolved comment", Author: "bob", Resolved: true},
+	}
+
+	if err := mgr.WriteFigmaComments(runID, comments); err != nil {
+		t.Fatalf("WriteFigmaComments() error = %v", err)
+	}
+
+	path := filepath.Join(tmpDir, runID, "extraction", "comments.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("expected extraction/comments.json to exist: %v", err)
+	}
+
+	var result []figma.DesignComment
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("failed to parse comments.json: %v", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("expected 2 comments, got %d", len(result))
+	}
+	// Both resolved and unresolved are persisted
+	if result[0].ID != "c1" || result[1].ID != "c2" {
+		t.Errorf("unexpected comment IDs: %q, %q", result[0].ID, result[1].ID)
+	}
 }
