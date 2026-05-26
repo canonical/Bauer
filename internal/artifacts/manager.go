@@ -247,18 +247,23 @@ func (m *Manager) LoadPreviousMeta(docID, figmaFileKey string) *RunMetadata {
 		return nil
 	}
 
-	// Last entry is the most recent run.
-	best := matched[len(matched)-1]
-	metaPath := filepath.Join(m.base, best.RunID, "metadata.json")
-	data, err := os.ReadFile(metaPath)
-	if err != nil {
-		return nil
+	// Iterate backwards to find the most recent run with a non-empty FigmaVersion.
+	for i := len(matched) - 1; i >= 0; i-- {
+		metaPath := filepath.Join(m.base, matched[i].RunID, "metadata.json")
+		data, err := os.ReadFile(metaPath)
+		if err != nil {
+			continue
+		}
+		var meta RunMetadata
+		if err := json.Unmarshal(data, &meta); err != nil {
+			continue
+		}
+		if meta.FigmaVersion == "" {
+			continue
+		}
+		return &meta
 	}
-	var meta RunMetadata
-	if err := json.Unmarshal(data, &meta); err != nil {
-		return nil
-	}
-	return &meta
+	return nil
 }
 
 // LoadMappings returns the resolved chunks from a previous run's mappings.json.

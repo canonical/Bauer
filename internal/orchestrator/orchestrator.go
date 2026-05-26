@@ -324,6 +324,10 @@ func (o *DefaultOrchestrator) generateChunksWithFigma(
 					slog.Warn("Failed to persist reused mappings to current run",
 						slog.String("error", err.Error()))
 				}
+				if err := o.arts.UpdateRunFigmaVersion(runID, currentMeta.Version); err != nil {
+					slog.Warn("Failed to record figma version on cache-hit run",
+						slog.String("error", err.Error()))
+				}
 			}
 			return engine.RenderChunksFromResolved(
 				bundle.Document.DocumentTitle,

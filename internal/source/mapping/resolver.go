@@ -22,7 +22,7 @@ func (r *Resolver) Build(
 	for i, group := range groups {
 		chunks[i] = ResolvedChunk{
 			Locations: []gdocs.LocationGroupedSuggestions{group},
-			Mapping:   MappingMetadata{Method: "none", Confidence: 0, Status: "none"},
+			Mapping:   MappingMetadata{Method: "none", Confidence: 0, Status: "unresolved"},
 		}
 		if design != nil {
 			anchors, meta := r.resolveAnchor(group, design)
