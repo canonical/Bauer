@@ -57,6 +57,21 @@ tasks:
           "https://api.figma.com/v1/files/{{.FILE_KEY}}/meta" \
           | python3 -c "import sys,json; d=json.load(sys.stdin); print('Name:', d.get('name','?'), '| Last modified:', d.get('lastModified','?'))"
 
+  docker-build:
+    desc: Build the Bauer API Docker image
+    cmds:
+      - docker build -t bauer-api:latest .
+
+  docker-run:
+    desc: Run the Bauer API locally in Docker (reads .env.local for secrets)
+    cmds:
+      - |
+        docker run -p 8090:8090 \
+          --env-file .env.local \
+          -v "${BAUER_CREDENTIALS_PATH}:/creds/service-account.json:ro" \
+          -e BAUER_CREDENTIALS_PATH=/creds/service-account.json \
+          bauer-api:latest
+
   clean:
     desc: Clean up generated files
     cmds:

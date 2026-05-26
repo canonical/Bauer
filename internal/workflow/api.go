@@ -5,29 +5,27 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
+	"bauer/internal/github"
 	"bauer/internal/orchestrator"
 )
 
 // APIRequest represents the API request for executing a workflow
 type APIRequest struct {
 	// GitHub configuration
-	GitHubRepo   string `json:"github_repo" binding:"required"`  // "owner/repo" or HTTPS URL
-	GitHubToken  string `json:"github_token" binding:"required"` // Personal access token
-	BranchPrefix string `json:"branch_prefix" default:"bauer"`   // Branch naming prefix
+	GitHubRepo   string `json:"github_repo"`   // "owner/repo" or HTTPS URL
+	BranchPrefix string `json:"branch_prefix,omitempty"` // Branch naming prefix
 
 	// Bauer configuration
-	DocID       string `json:"doc_id" binding:"required"`         // Google Doc ID
-	Credentials string `json:"credentials" binding:"required"`    // Path to service account JSON
-	ChunkSize   int    `json:"chunk_size" default:"1"`            // Number of chunks
-	PageRefresh bool   `json:"page_refresh" default:"false"`      // Page refresh mode
-	OutputDir   string `json:"output_dir" default:"bauer-output"` // Output directory
-	Model       string `json:"model" default:"gpt-5-mini-high"`   // Copilot model
-	DryRun      bool   `json:"dry_run" default:"false"`           // Dry run mode
-
-	// Local repository path
-	LocalRepoPath string `json:"local_repo_path" default:"/tmp"` // Where to clone (optional)
+	DocID        string `json:"doc_id"`                  // Google Doc ID
+	ChunkSize    int    `json:"chunk_size,omitempty"`    // Number of chunks
+	PageRefresh  bool   `json:"page_refresh,omitempty"`  // Page refresh mode
+	Model        string `json:"model,omitempty"`         // Copilot model
+	SummaryModel string `json:"summary_model,omitempty"` // Copilot summary model
+	DryRun       bool   `json:"dry_run,omitempty"`       // Dry run mode
 }
 
 // APIResponse represents the API response from workflow execution
@@ -62,49 +60,37 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 			writeError(w, http.StatusBadRequest, "github_repo is required")
 			return
 		}
-		if req.GitHubToken == "" {
-			writeError(w, http.StatusBadRequest, "github_token is required")
-			return
-		}
 		if req.DocID == "" {
 			writeError(w, http.StatusBadRequest, "doc_id is required")
 			return
 		}
-		if req.Credentials == "" {
-			writeError(w, http.StatusBadRequest, "credentials is required")
+
+		// Resolve secrets from environment
+		token, err := github.GetGitHubToken()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "no GitHub token configured: "+err.Error())
+			return
+		}
+		credentials := firstNonEmpty(os.Getenv("BAUER_CREDENTIALS_PATH"), os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"))
+		if credentials == "" {
+			writeError(w, http.StatusInternalServerError, "no credentials configured: set BAUER_CREDENTIALS_PATH or GOOGLE_APPLICATION_CREDENTIALS")
 			return
 		}
 
-		// Set defaults
-		if req.BranchPrefix == "" {
-			req.BranchPrefix = "bauer"
-		}
-		if req.LocalRepoPath == "" {
-			req.LocalRepoPath = "/tmp"
-		}
-		if req.OutputDir == "" {
-			req.OutputDir = "bauer-output"
-		}
-		if req.Model == "" {
-			req.Model = "gpt-5-mini-high"
-		}
-		if req.ChunkSize == 0 {
-			req.ChunkSize = 1
-		}
-
-		// Create workflow input
+		// Create workflow input (request fields override env defaults)
 		input := WorkflowInput{
 			GitHubRepo:    req.GitHubRepo,
-			GitHubToken:   req.GitHubToken,
-			BranchPrefix:  req.BranchPrefix,
+			GitHubToken:   token,
+			BranchPrefix:  firstNonEmpty(req.BranchPrefix, os.Getenv("BAUER_BRANCH_PREFIX"), "bauer"),
 			DocID:         req.DocID,
-			Credentials:   req.Credentials,
-			ChunkSize:     req.ChunkSize,
-			PageRefresh:   req.PageRefresh,
-			OutputDir:     req.OutputDir,
-			Model:         req.Model,
+			Credentials:   credentials,
+			ChunkSize:     firstNonZero(req.ChunkSize, envInt("BAUER_CHUNK_SIZE"), 1),
+			PageRefresh:   req.PageRefresh || envBool("BAUER_PAGE_REFRESH"),
+			OutputDir:     firstNonEmpty(os.Getenv("BAUER_OUTPUT_DIR"), "bauer-output"),
+			Model:         firstNonEmpty(req.Model, os.Getenv("BAUER_MODEL"), "gpt-5-mini-high"),
+			SummaryModel:  firstNonEmpty(req.SummaryModel, os.Getenv("BAUER_SUMMARY_MODEL"), "gpt-5-mini-high"),
 			DryRun:        req.DryRun,
-			LocalRepoPath: fmt.Sprintf("%s/%s-%d", req.LocalRepoPath, "bauer-workflow", time.Now().Unix()),
+			LocalRepoPath: fmt.Sprintf("%s/%s-%d", "/tmp", "bauer-workflow", time.Now().Unix()),
 		}
 
 		logger.Info("workflow API request",
@@ -187,4 +173,32 @@ func writeError(w http.ResponseWriter, statusCode int, message string) {
 		"error":     message,
 		"timestamp": time.Now(),
 	})
+}
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+func firstNonZero(vals ...int) int {
+	for _, v := range vals {
+		if v != 0 {
+			return v
+		}
+	}
+	return 0
+}
+
+func envInt(key string) int {
+	v, _ := strconv.Atoi(os.Getenv(key))
+	return v
+}
+
+func envBool(key string) bool {
+	v, _ := strconv.ParseBool(os.Getenv(key))
+	return v
 }
