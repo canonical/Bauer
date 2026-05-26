@@ -56,12 +56,12 @@ func run() error {
 	mux := http.NewServeMux()
 
 	// Public routes — no auth (K8s probes cannot send tokens)
-	mux.HandleFunc("/api/v1/job", v1.JobPost(rc))
 	mux.HandleFunc("/api/v1/health", v1.GetHealth)
 	mux.HandleFunc("GET /api/v1/health/ready", v1.ReadinessHandler)
 
 	// Protected routes wrapped in optional JWT middleware
 	protected := http.NewServeMux()
+	protected.HandleFunc("POST /api/v1/job", v1.JobPost(rc))
 	protected.HandleFunc("POST /api/v1/workflows", workflow.ExecuteWorkflowHandler(orch))
 	protected.HandleFunc("POST /api/v1/issues", v1.IssuesHandler(cfg))
 	protected.HandleFunc("POST /api/v1/webhooks/jira", v1.JiraWebhookHandler(cfg))

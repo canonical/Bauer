@@ -8,10 +8,19 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
+
+func unauthorizedHandler(msg string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": msg})
+	})
+}
 
 // JWTMiddleware returns middleware that validates Bearer tokens using JWKS from the OIDC issuer.
 // If BAUER_OIDC_ISSUER is not configured, the handler is returned unchanged (bypass mode).
@@ -25,20 +34,23 @@ func JWTMiddleware(next http.Handler) http.Handler {
 	audience := os.Getenv("BAUER_OIDC_AUDIENCE")
 	jwksURL, err := resolveJWKSURL(issuer)
 	if err != nil {
-		slog.Error("Failed to resolve JWKS URL from OIDC discovery; JWT validation bypassed",
+		slog.Error("Failed to resolve JWKS URL from OIDC discovery",
 			slog.String("issuer", issuer),
 			slog.String("error", err.Error()),
 		)
-		return next
+		return unauthorizedHandler("authentication service unavailable")
 	}
 
-	keySet, err := jwk.Fetch(context.Background(), jwksURL)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	keySet, err := jwk.Fetch(ctx, jwksURL)
 	if err != nil {
-		slog.Error("Failed to fetch JWKS; JWT validation bypassed",
+		slog.Error("Failed to fetch JWKS",
 			slog.String("jwks_url", jwksURL),
 			slog.String("error", err.Error()),
 		)
-		return next
+		return unauthorizedHandler("authentication service unavailable")
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -73,10 +85,10 @@ func JWTMiddleware(next http.Handler) http.Handler {
 
 func extractBearerToken(r *http.Request) string {
 	authHeader := r.Header.Get("Authorization")
-	if !strings.HasPrefix(authHeader, "Bearer ") {
+	if len(authHeader) < 7 || !strings.EqualFold(authHeader[:7], "bearer ") {
 		return ""
 	}
-	return strings.TrimPrefix(authHeader, "Bearer ")
+	return authHeader[7:]
 }
 
 func resolveJWKSURL(issuer string) (string, error) {
@@ -86,6 +98,10 @@ func resolveJWKSURL(issuer string) (string, error) {
 		return "", fmt.Errorf("fetching OIDC discovery document: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("OIDC discovery endpoint returned status %d", resp.StatusCode)
+	}
 
 	var doc struct {
 		JWKSURI string `json:"jwks_uri"`

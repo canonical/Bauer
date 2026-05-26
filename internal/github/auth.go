@@ -1,6 +1,7 @@
 package github
 
 import (
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -81,14 +82,22 @@ func generateAppInstallationToken() (string, error) {
 		return "", fmt.Errorf("set GITHUB_APP_PRIVATE_KEY or GITHUB_APP_PRIVATE_KEY_PATH")
 	}
 
-	// Parse RSA private key
+	// Parse RSA private key (try PKCS#1 first, then PKCS#8)
 	block, _ := pem.Decode(pemData)
 	if block == nil {
 		return "", fmt.Errorf("failed to decode PEM block from GitHub App private key")
 	}
 	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
-		return "", fmt.Errorf("parsing GitHub App private key: %w", err)
+		parsedKey, pkcs8Err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if pkcs8Err != nil {
+			return "", fmt.Errorf("parsing GitHub App private key (tried PKCS#1 and PKCS#8): %w", err)
+		}
+		rsaKey, ok := parsedKey.(*rsa.PrivateKey)
+		if !ok {
+			return "", fmt.Errorf("PKCS#8 key is not an RSA private key")
+		}
+		privateKey = rsaKey
 	}
 
 	// Create JWT (signed with RS256, valid 10 min)
@@ -114,7 +123,8 @@ func generateAppInstallationToken() (string, error) {
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 
-	resp, err := http.DefaultClient.Do(req)
+	httpClient := &http.Client{Timeout: 30 * time.Second}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("exchanging JWT for installation token: %w", err)
 	}
@@ -136,15 +146,23 @@ func generateAppInstallationToken() (string, error) {
 	return result.Token, nil
 }
 
-// ValidateGitHubAuth checks if GitHub authentication is configured
+// ValidateGitHubAuth checks if GitHub authentication is configured.
+// If a token is available via App auth or env vars, gh CLI is not required.
 func ValidateGitHubAuth() error {
-	// Get token
 	_, err := GetGitHubToken()
 	if err != nil {
 		return fmt.Errorf("GitHub authentication not configured: %w", err)
 	}
 
-	// Authenticate token
+	// If we have a token from App auth or env vars, we don't need gh CLI
+	if os.Getenv("GITHUB_APP_ID") != "" ||
+		os.Getenv("BAUER_GITHUB_TOKEN") != "" ||
+		os.Getenv("GITHUB_TOKEN") != "" ||
+		os.Getenv("GH_TOKEN") != "" {
+		return nil
+	}
+
+	// Token came from gh CLI — verify it's still valid
 	cmd := exec.Command("gh", "auth", "status")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
