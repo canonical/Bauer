@@ -31,9 +31,9 @@ type OrchestrationResult struct {
 	PlanDuration time.Duration
 
 	// Only populated if not dry run
-	CopilotOutputs  []ChunkOutput
-	Summary         string
-	CopilotDuration time.Duration
+	AgentOutputs  []ChunkOutput
+	Summary       string
+	AgentDuration time.Duration
 	SummaryDuration time.Duration
 
 	// Metadata
@@ -137,8 +137,8 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 			ExtractionDuration: extractionDuration,
 			Chunks:             chunks,
 			PlanDuration:       planDuration,
-			CopilotOutputs:     []ChunkOutput{},
-			CopilotDuration:    0,
+			AgentOutputs:  []ChunkOutput{},
+			AgentDuration: 0,
 			SummaryDuration:    0,
 			TotalDuration:      totalDuration,
 			DryRun:             true,
@@ -203,9 +203,9 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 		ExtractionDuration: extractionDuration,
 		Chunks:             chunks,
 		PlanDuration:       planDuration,
-		CopilotOutputs:     chunkOutputs,
-		Summary:            summary,
-		CopilotDuration:    copilotDuration,
+		AgentOutputs:  chunkOutputs,
+		Summary:       summary,
+		AgentDuration: copilotDuration,
 		SummaryDuration:    summaryDuration,
 		TotalDuration:      totalDuration,
 		DryRun:             false,

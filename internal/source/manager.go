@@ -7,7 +7,7 @@ import (
 	"bauer/internal/gdocs"
 )
 
-// Manager holds all registered source adapters and orchestrates fetching.
+// Manager coordinates fetching from source systems (Google Docs, and later Figma).
 type Manager struct {
 	credentialsPath string
 }

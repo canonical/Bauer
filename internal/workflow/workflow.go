@@ -185,7 +185,7 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	if bauerResult != nil {
 		output.BauerResult.ExtractionDuration = bauerResult.ExtractionDuration
 		output.BauerResult.PlanDuration = bauerResult.PlanDuration
-		output.BauerResult.CopilotDuration = bauerResult.CopilotDuration
+		output.BauerResult.CopilotDuration = bauerResult.AgentDuration
 		if len(bauerResult.Chunks) > 0 {
 			output.BauerResult.ChunkCount = len(bauerResult.Chunks)
 		}
