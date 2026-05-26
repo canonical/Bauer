@@ -4,149 +4,163 @@ import (
 	"bauer/internal/artifacts"
 	"bauer/internal/config"
 	"bauer/internal/copilotcli"
-	"bauer/internal/github"
 	"bauer/internal/orchestrator"
 	"bauer/internal/source"
-	"bauer/internal/workflow"
 	"context"
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 )
 
 func main() {
-	// Parse CLI flags
-	githubRepo := flag.String("github-repo", "", "GitHub repository (owner/repo or HTTPS URL)")
-	docID := flag.String("doc-id", "", "Google Doc ID")
-	credentialsPath := flag.String("credentials", "bau-test-creds.json", "Path to service account credentials JSON")
-	localRepoPath := flag.String("local-repo-path", "/tmp/ubuntu.com", "Local path for cloned repository")
-	dryRun := flag.Bool("dry-run", false, "Perform a dry run without creating PR")
-	outputDir := flag.String("output-dir", "bauer-output", "Output directory for Bauer results")
-	branchPrefix := flag.String("branch-prefix", "bauer", "Branch naming prefix")
+	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 
-	flag.Parse()
+	docID := fs.String("doc-id", "", "Google Doc ID to extract feedback from (required, or set BAUER_DOC_ID)")
+	credentialsPath := fs.String("credentials", "", "Path to service account credentials JSON\n\t(falls back to BAUER_CREDENTIALS_PATH → GOOGLE_APPLICATION_CREDENTIALS → credentials.json)")
+	chunkSize := fs.Int("chunk-size", 0, "Total number of chunks (default: 1, or 5 if --page-refresh)")
+	pageRefresh := fs.Bool("page-refresh", false, "Use page-refresh-instructions template (default chunk-size: 5)")
+	model := fs.String("model", "", "Copilot model for sessions (default: gpt-5-mini-high)")
+	summaryModel := fs.String("summary-model", "", "Copilot model for summary session (default: gpt-5-mini-high)")
+	dryRun := fs.Bool("dry-run", false, "In standalone mode: skip Copilot, write chunk files only.\n\tIn --open-pr mode: apply changes locally, skip PR creation.")
+	artifactsDir := fs.String("artifacts-dir", "", "Directory for run artifacts (default: ./bauer-artifacts)")
+	openPR := fs.Bool("open-pr", false, "Apply changes and open a pull request (mutually exclusive with --open-issue)")
+	openIssue := fs.Bool("open-issue", false, "Generate a plan and open a GitHub issue without applying changes (mutually exclusive with --open-pr)")
+	branchPrefix := fs.String("branch-prefix", "", "Prefix for created branches (default: bauer)")
 
-	// Validate required flags
-	if *githubRepo == "" {
-		fmt.Fprintf(os.Stderr, "ERROR: --github-repo is required\n")
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage:\n\n")
+		fmt.Fprintf(os.Stderr, "\t%s --doc-id <doc-id> [--credentials <path>] [flags]\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Flags:\n\n")
+		fs.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\nEnvironment variables:\n\n")
+		fmt.Fprintf(os.Stderr, "\tBAUER_DOC_ID                    Override for --doc-id\n")
+		fmt.Fprintf(os.Stderr, "\tBAUER_CREDENTIALS_PATH          Override for --credentials\n")
+		fmt.Fprintf(os.Stderr, "\tGOOGLE_APPLICATION_CREDENTIALS  Fallback credentials path\n")
+		fmt.Fprintf(os.Stderr, "\tBAUER_MODEL                     Override for --model\n")
+		fmt.Fprintf(os.Stderr, "\tBAUER_SUMMARY_MODEL             Override for --summary-model\n")
+		fmt.Fprintf(os.Stderr, "\tBAUER_DRY_RUN                   Override for --dry-run (true/false)\n")
+		fmt.Fprintf(os.Stderr, "\tBAUER_ARTIFACTS_DIR             Override for --artifacts-dir\n")
+		fmt.Fprintf(os.Stderr, "\tBAUER_BRANCH_PREFIX             Override for --branch-prefix\n")
+		fmt.Fprintf(os.Stderr, "\n")
+	}
+
+	if err := fs.Parse(os.Args[1:]); err != nil {
 		os.Exit(1)
 	}
-	if *docID == "" {
-		fmt.Fprintf(os.Stderr, "ERROR: --doc-id is required\n")
+
+	// Mutual exclusion check — before any network calls
+	if err := checkMutualExclusion(*openPR, *openIssue); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	fmt.Println(strings.Repeat("=", 80))
-	fmt.Println("Bauer - A tool to automate BAU tasks")
-	fmt.Println(strings.Repeat("=", 80))
-	fmt.Println()
+	// Build CLIFlags — *bool fields are only set for explicitly-provided flags
+	// so they don't override env vars when the user didn't pass the flag.
+	flags := config.CLIFlags{
+		DocID:           *docID,
+		CredentialsPath: *credentialsPath,
+		ChunkSize:       *chunkSize,
+		Model:           *model,
+		SummaryModel:    *summaryModel,
+		ArtifactsDir:    *artifactsDir,
+		BranchPrefix:    *branchPrefix,
+	}
+	fs.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "dry-run":
+			flags.DryRun = config.BoolPtr(*dryRun)
+		case "page-refresh":
+			flags.PageRefresh = config.BoolPtr(*pageRefresh)
+		case "open-pr":
+			flags.OpenPR = config.BoolPtr(*openPR)
+		case "open-issue":
+			flags.OpenIssue = config.BoolPtr(*openIssue)
+		}
+	})
 
-	// Create workflow input from CLI flags/config
-	ghToken, err := github.GetGitHubToken()
+	cfg, err := resolveCLIConfig(flags)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "WARNING: Could not get GitHub token: %v\n", err)
-		ghToken = ""
-	}
-
-	workflowInput := workflow.WorkflowInput{
-		GitHubRepo:    *githubRepo,
-		GitHubToken:   ghToken,
-		BranchPrefix:  *branchPrefix,
-		DocID:         *docID,
-		Credentials:   *credentialsPath,
-		LocalRepoPath: *localRepoPath,
-		DryRun:        *dryRun,
-		OutputDir:     *outputDir,
-	}
-
-	// Resolve credentials path to absolute so it remains valid after directory changes.
-	absCredentials, err := filepath.Abs(*credentialsPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: failed to resolve credentials path: %v\n", err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+
+	cfg.ApplyDefaults()
+	if err := cfg.Validate(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	ctx := context.Background()
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: failed to get working directory: %v\n", err)
+		fmt.Fprintln(os.Stderr, "ERROR: failed to get working directory:", err)
 		os.Exit(1)
 	}
 
 	copilotAgent, err := copilotcli.NewClient(cwd)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: failed to create Copilot client: %v\n", err)
+		fmt.Fprintln(os.Stderr, "ERROR: failed to create Copilot client:", err)
 		os.Exit(1)
 	}
 
-	sources := source.NewManager(absCredentials)
-	arts := artifacts.NewManager("")
+	sources := source.NewManager(cfg.CredentialsPath)
+	arts := artifacts.NewManager(cfg.ArtifactsDir)
 	orch := orchestrator.New(copilotAgent, sources, arts)
 
-	// Execute the complete workflow
-	result, err := workflow.ExecuteWorkflow(context.Background(), workflowInput, orch)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
+	switch {
+	case *openIssue:
+		if err := runOpenIssue(ctx, cfg, orch); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	case *openPR:
+		if err := runOpenPR(ctx, cfg, orch); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	default:
+		if _, err := orch.Execute(ctx, cfg); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	}
+}
 
-	// Print results
-	fmt.Printf("Status: %s\n", result.Status)
-	fmt.Printf("Branch: %s\n", result.RepositoryInfo.BranchName)
-	fmt.Printf("PR: %s\n", result.FinalizationInfo.PullRequest.URL)
+// checkMutualExclusion returns an error if --open-pr and --open-issue are both set.
+// Extracted for testability — main() calls os.Exit on error.
+func checkMutualExclusion(openPR, openIssue bool) error {
+	if openPR && openIssue {
+		return fmt.Errorf("Error: --open-pr and --open-issue are mutually exclusive.\n  Use --open-pr to apply changes and open a PR.\n  Use --open-issue to generate a plan and open an issue without applying changes.")
+	}
+	return nil
 }
 
 // resolveCLIConfig builds a Config from CLI flags, falling back to environment variables
-// when flag values are empty. It does NOT call Validate — callers must do that separately.
+// and then hardcoded defaults. FlagsSource has highest priority.
 func resolveCLIConfig(flags config.CLIFlags) (*config.Config, error) {
-	docID := flags.DocID
-	if docID == "" {
-		docID = os.Getenv("BAUER_DOC_ID")
-	}
-
-	credentialsPath := flags.CredentialsPath
-	if credentialsPath == "" {
-		credentialsPath = os.Getenv("BAUER_CREDENTIALS")
-	}
-
-	outputDir := flags.OutputDir
-	if outputDir == "" {
-		outputDir = os.Getenv("BAUER_OUTPUT_DIR")
-	}
-
-	model := flags.Model
-	if model == "" {
-		model = os.Getenv("BAUER_MODEL")
-	}
-
-	summaryModel := flags.SummaryModel
-	if summaryModel == "" {
-		summaryModel = os.Getenv("BAUER_SUMMARY_MODEL")
-	}
-
-	targetRepo := flags.TargetRepo
-	if targetRepo == "" {
-		targetRepo = os.Getenv("BAUER_TARGET_REPO")
-	}
-
-	return &config.Config{
-		DocID:           docID,
-		CredentialsPath: credentialsPath,
-		DryRun:          flags.DryRun,
-		ChunkSize:       flags.ChunkSize,
-		OutputDir:       outputDir,
-		Model:           model,
-		SummaryModel:    summaryModel,
-		TargetRepo:      targetRepo,
-	}, nil
+	return config.NewResolver(
+		config.NewFlagsSource(flags),
+		config.NewEnvVarSource(),
+		config.NewDefaultsSource(),
+	).Resolve()
 }
 
-// openPRExecutionConfig returns a copy of cfg with DryRun forced to false,
-// so that the Copilot agent runs even when the overall --dry-run flag was set.
-func openPRExecutionConfig(cfg *config.Config) *config.Config {
-	copy := *cfg
-	f := false
-	copy.DryRun = &f
+// openPRExecutionConfig returns a copy of cfg with DryRun disabled.
+// In --open-pr mode, Copilot runs to apply changes locally; only PR creation
+// is skipped when the original cfg has DryRun=true.
+func openPRExecutionConfig(original *config.Config) *config.Config {
+	copy := *original
+	copy.DryRun = config.BoolPtr(false)
 	return &copy
+}
+
+// runOpenIssue is a stub — to be fully implemented in Phase 2.
+func runOpenIssue(_ context.Context, _ *config.Config, _ orchestrator.Orchestrator) error {
+	return fmt.Errorf("--open-issue not yet implemented")
+}
+
+// runOpenPR is a stub — to be fully implemented in Phase 2.
+func runOpenPR(_ context.Context, _ *config.Config, _ orchestrator.Orchestrator) error {
+	return fmt.Errorf("--open-pr not yet implemented")
 }

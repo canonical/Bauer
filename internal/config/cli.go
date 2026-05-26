@@ -18,6 +18,9 @@ type CLIFlags struct {
 	SummaryModel    string
 	TargetRepo      string
 	ArtifactsDir    string
+	BranchPrefix    string
+	OpenPR          *bool
+	OpenIssue       *bool
 }
 
 // Load parses command-line flags and returns a validated Config.

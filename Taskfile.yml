@@ -5,47 +5,60 @@ version: "3"
 
 tasks:
   build:
-    desc: Build the Bauer and Bauer API binaries
+    desc: Build the Bauer CLI binary
     cmds:
-      - go build -o bauer cmd/bauer/main.go
-      - go build -o bauer-api cmd/app/main.go
+      - go build -o bauer ./cmd/bauer/
+
+  build-api:
+    desc: Build the Bauer API server binary
+    cmds:
+      - go build -o bauer-api ./cmd/app/
+
+  run:
+    desc: Run Bauer CLI in standalone mode.
+    summary: |
+      Requires BAUER_DOC_ID and BAUER_CREDENTIALS_PATH (or --credentials flag).
+      Example: task run -- --doc-id 1abc --credentials ./creds.json
+    cmds:
+      - go run ./cmd/bauer/ {{.CLI_ARGS}}
+
+  run-api:
+    desc: Build and start the API server (reads config from .env / .env.local)
+    cmds:
+      - task: build-api
+      - ./bauer-api
 
   test:
-    desc: Run all tests
+    desc: Run all unit tests
     cmds:
-      - go test --cover ./...
+      - go test ./...
 
   lint:
-    desc: Format code using gofmt
+    desc: Run linter (requires golangci-lint)
     cmds:
-      - gofmt -w .
-
-  run-server:
-    desc: Run the API server locally
-    cmds:
-      - ./bauer-api --credentials ${BAUER_CREDENTIALS_PATH}
+      - golangci-lint run ./...
 
   verify-figma:
-    desc: Verify Figma token is set and reachable
+    desc: Verify Figma token and REST API access. Pass FILE_KEY=<your-figma-file-key>.
     cmds:
       - |
-        if [ -z "$BAUER_FIGMA_TOKEN" ] && [ -z "$FIGMA_TOKEN" ]; then
-          echo "ERROR: BAUER_FIGMA_TOKEN (or FIGMA_TOKEN) must be set" >&2
-          exit 1
+        TOKEN="${BAUER_FIGMA_TOKEN:-$FIGMA_TOKEN}"
+        if [ -z "$TOKEN" ]; then
+          echo "ERROR: set BAUER_FIGMA_TOKEN or FIGMA_TOKEN"; exit 1
         fi
-        echo "Figma token is set."
+      - |
+        if [ -z "{{.FILE_KEY}}" ]; then
+          echo "ERROR: provide FILE_KEY=your-figma-file-key"; exit 1
+        fi
+      - |
+        curl -sf -H "Authorization: Bearer ${BAUER_FIGMA_TOKEN:-$FIGMA_TOKEN}" \
+          "https://api.figma.com/v1/files/{{.FILE_KEY}}/meta" \
+          | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('name','?'), d.get('lastModified','?'))"
 
   clean:
     desc: Clean up generated files
     cmds:
       - rm -rf bauer-output
-      - rm -f bauer
+      - rm -f bauer bauer-api
       - rm -f bauer.log
       - rm -rf /tmp/gh* /tmp/tmp* /tmp/test-bauer-repo* || true
-
-  run:
-    desc: Clean up generated files, build and run Bauer server
-    cmds:
-      - task: clean
-      - task: build
-      - task: run-server

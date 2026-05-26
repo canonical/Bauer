@@ -11,7 +11,7 @@ bauer-output/
 .DS_Store
 .vscode/
 *.exe
-bauer
+/bauer
 # Added by goreleaser init:
 dist/
 config.json
