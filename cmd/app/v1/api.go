@@ -99,11 +99,13 @@ func GetHealth(w http.ResponseWriter, r *http.Request) {
 // ReadinessHandler checks that all required runtime dependencies are present.
 // It must be registered on the public (unauthenticated) mux so that K8s readiness
 // probes — which cannot send bearer tokens — can call it.
-func ReadinessHandler(w http.ResponseWriter, r *http.Request) {
+func ReadinessHandler(apiCfg *types.APIConfig) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	failures := map[string]string{}
 
-	// Check credentials
+	// Check credentials — prefer config flag, fall back to env vars.
 	credsPath := firstNonEmpty(
+		apiCfg.CredentialsPath,
 		os.Getenv("BAUER_CREDENTIALS_PATH"),
 		os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"),
 	)
@@ -134,4 +136,5 @@ func ReadinessHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]any{"status": "ready"})
+	}
 }

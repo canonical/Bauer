@@ -19,7 +19,8 @@ import (
 
 // JiraWebhookHandler handles POST /api/v1/webhooks/jira.
 // It validates a shared secret, extracts the Google Doc ID from the Jira issue payload,
-// and fires the full BAU workflow asynchronously so the response is immediate.
+// and runs the orchestrator (extraction + generation) asynchronously so the response
+// is immediate. It does not perform Git operations (branch/PR creation).
 func JiraWebhookHandler(apiCfg *types.APIConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// 1. Validate shared secret (constant-time comparison prevents timing attacks).

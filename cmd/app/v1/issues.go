@@ -47,11 +47,17 @@ func IssuesHandler(apiCfg *types.APIConfig) http.HandlerFunc {
 		}
 
 		credsPath := firstNonEmpty(
+			apiCfg.CredentialsPath,
 			os.Getenv("BAUER_CREDENTIALS_PATH"),
 			os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"),
 		)
 		if credsPath == "" {
 			httpError(w, http.StatusInternalServerError, "credentials not configured (set BAUER_CREDENTIALS_PATH)")
+			return
+		}
+
+		if req.ChunkSize < 0 {
+			httpError(w, http.StatusBadRequest, "chunk_size must be a positive integer")
 			return
 		}
 

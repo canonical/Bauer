@@ -55,7 +55,7 @@ func run() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/job", v1.JobPost(rc))
 	mux.HandleFunc("/api/v1/health", v1.GetHealth)
-	mux.HandleFunc("GET /api/v1/health/ready", v1.ReadinessHandler)
+	mux.HandleFunc("GET /api/v1/health/ready", v1.ReadinessHandler(cfg))
 	mux.HandleFunc("POST /api/v1/workflows", workflow.ExecuteWorkflowHandler(orch))
 	mux.HandleFunc("POST /api/v1/issues", v1.IssuesHandler(cfg))
 	mux.HandleFunc("POST /api/v1/webhooks/jira", v1.JiraWebhookHandler(cfg))
