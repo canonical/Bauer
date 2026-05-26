@@ -396,7 +396,7 @@ func (o *DefaultOrchestrator) generateChunksWithFigma(
 }
 
 // executeAgentChunks executes each chunk via the agent and returns outputs.
-func executeAgentChunks(	ctx context.Context,
+func executeAgentChunks(ctx context.Context,
 	chunks []prompt.ChunkResult,
 	cfg *config.Config,
 	a agent.Agent,

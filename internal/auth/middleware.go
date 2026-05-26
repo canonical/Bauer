@@ -30,7 +30,9 @@ func JWTMiddleware(next http.Handler) http.Handler {
 			slog.String("error", err.Error()),
 		)
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.Error(w, "authentication service unavailable", http.StatusServiceUnavailable)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			json.NewEncoder(w).Encode(map[string]string{"error": "authentication service unavailable"})
 		})
 	}
 
@@ -41,7 +43,9 @@ func JWTMiddleware(next http.Handler) http.Handler {
 			slog.String("error", err.Error()),
 		)
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.Error(w, "authentication service unavailable", http.StatusServiceUnavailable)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			json.NewEncoder(w).Encode(map[string]string{"error": "authentication service unavailable"})
 		})
 	}
 

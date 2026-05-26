@@ -1,36 +1,31 @@
 ## Design Context
 
 Design information has been extracted from Figma for the suggestions in this chunk.
-{{if .Anchors}}
+{{- if .Anchors}}
 
 ### Referenced design nodes
 
-{{range .Anchors}}
-
+{{range .Anchors -}}
 - **{{.NodeName}}** (node: `{{.NodeID}}`)
-  {{- end}}
-  {{end}}
-  {{if .Screenshots}}
+{{end -}}
+{{end -}}
+{{- if .Screenshots}}
 
 ### Screenshots
 
 The following screenshots are available locally for the regions related to this chunk:
-{{range .Screenshots}}
-
+{{range .Screenshots -}}
 - `{{.}}`
-  {{- end}}
-
-Examine them carefully to validate spacing, component usage, and text content before making changes.
 {{end}}
-{{if .Comments}}
+Examine them carefully to validate spacing, component usage, and text content before making changes.
+{{end -}}
+{{- if .Comments}}
 
 ### Designer comments (treat as hard requirements unless they conflict with the Google Doc)
 
-{{range .Comments}}
-
+{{range .Comments -}}
 - **{{.Author}}**: {{.Message}} _(node: `{{.NodeID}}`)_
-  {{- end}}
-
+{{end}}
 The Google Doc is the canonical intent source. Designer comments are requirements within that intent.
 {{end}}
 

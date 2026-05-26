@@ -86,7 +86,6 @@ func executeJob(requestID string, cfg config.Config, rc types.RouteConfig) {
 	)
 }
 
-
 func GetHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

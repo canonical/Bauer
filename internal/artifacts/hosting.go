@@ -19,7 +19,7 @@ type ScreenshotHost interface {
 // responsible for ensuring the directory is actually being served at BaseURL.
 type LocalFileServer struct {
 	BaseURL  string // e.g. "https://bauer.example.com/static"
-	ServeDir string // absolute path to the artifact root (the base being served)
+	ServeDir string // path to the artifact root (relative or absolute)
 }
 
 func (s *LocalFileServer) Host(_ context.Context, localPath string) (string, error) {
@@ -27,10 +27,10 @@ func (s *LocalFileServer) Host(_ context.Context, localPath string) (string, err
 	if err != nil {
 		return "", fmt.Errorf("path %q is not under serve directory %q", localPath, s.ServeDir)
 	}
-	if strings.HasPrefix(rel, "..") {
+	if rel == ".." || strings.HasPrefix(rel, "../") {
 		return "", fmt.Errorf("path %q is not under serve directory %q", localPath, s.ServeDir)
 	}
-	return s.BaseURL + "/" + filepath.ToSlash(rel), nil
+	return strings.TrimRight(s.BaseURL, "/") + "/" + filepath.ToSlash(rel), nil
 }
 
 // NopHost is a no-op implementation that returns the local path unchanged.
@@ -49,7 +49,7 @@ type S3Host struct {
 }
 
 func (s *S3Host) Host(_ context.Context, localPath string) (string, error) {
-	return "", fmt.Errorf("S3Host not yet implemented")
+	return "", fmt.Errorf("S3 screenshot hosting is not yet implemented; unset BAUER_S3_BUCKET to use local file serving")
 }
 
 // HostFromEnv returns a ScreenshotHost configured from environment variables.

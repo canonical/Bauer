@@ -73,7 +73,7 @@ func IssuesHandler(apiCfg *types.APIConfig) http.HandlerFunc {
 		cfg.ApplyDefaults()
 
 		sources := source.NewManager(cfg.CredentialsPath)
-		arts := artifacts.NewManager(firstNonEmpty(os.Getenv("BAUER_ARTIFACTS_DIR"), "./bauer-artifacts"))
+		arts := artifacts.NewManager(apiCfg.ArtifactsDir)
 		copilotAgent, err := copilotcli.NewClient(os.TempDir())
 		if err != nil {
 			httpError(w, http.StatusInternalServerError, "failed to create copilot client")
@@ -96,7 +96,7 @@ func IssuesHandler(apiCfg *types.APIConfig) http.HandlerFunc {
 
 		title := fmt.Sprintf("BAU: Apply suggestions from doc %s", req.DocID)
 
-		artsDir := firstNonEmpty(os.Getenv("BAUER_ARTIFACTS_DIR"), "./bauer-artifacts")
+		artsDir := apiCfg.ArtifactsDir
 		host := artifacts.HostFromEnv(artsDir)
 		if _, isNop := host.(*artifacts.NopHost); isNop && req.FigmaURL != "" {
 			slog.Warn("BAUER_STATIC_BASE_URL not set; issue body will contain local screenshot paths",

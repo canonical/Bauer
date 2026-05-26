@@ -14,6 +14,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/joho/godotenv"
 )
@@ -69,13 +70,10 @@ func run() error {
 	mux.Handle("/api/v1/", auth.JWTMiddleware(protected))
 
 	// Serve artifact screenshots at /static/ when BAUER_STATIC_BASE_URL is configured.
-	artsDir := os.Getenv("BAUER_ARTIFACTS_DIR")
-	if artsDir == "" {
-		artsDir = "./bauer-artifacts"
-	}
 	if baseURL := os.Getenv("BAUER_STATIC_BASE_URL"); baseURL != "" {
-		slog.Info("Serving artifact screenshots at /static/", slog.String("base_url", baseURL))
-		mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(artsDir))))
+		screenshotsDir := filepath.Join(cfg.ArtifactsDir, "screenshots")
+		slog.Info("Serving artifact screenshots at /static/", slog.String("base_url", baseURL), slog.String("dir", screenshotsDir))
+		mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(screenshotsDir))))
 	}
 
 	slog.Info("starting server", "address", ":8090")
@@ -97,4 +95,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-

@@ -15,7 +15,7 @@ import (
 // APIRequest represents the API request for executing a workflow
 type APIRequest struct {
 	// GitHub configuration
-	GitHubRepo   string `json:"github_repo"`   // "owner/repo" or HTTPS URL
+	GitHubRepo   string `json:"github_repo"`             // "owner/repo" or HTTPS URL
 	BranchPrefix string `json:"branch_prefix,omitempty"` // Branch naming prefix
 
 	// Bauer configuration
@@ -90,7 +90,7 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 			Model:         firstNonEmpty(req.Model, os.Getenv("BAUER_MODEL"), "gpt-5-mini-high"),
 			DryRun:        req.DryRun,
 			FigmaURL:      req.FigmaURL,
-			FigmaToken:    os.Getenv("BAUER_FIGMA_TOKEN"),
+			FigmaToken:    firstNonEmpty(os.Getenv("BAUER_FIGMA_TOKEN"), os.Getenv("FIGMA_TOKEN")),
 			LocalRepoPath: fmt.Sprintf("%s/%s-%d", "/tmp", "bauer-workflow", time.Now().Unix()),
 		}
 

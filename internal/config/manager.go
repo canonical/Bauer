@@ -38,22 +38,54 @@ func (r *Resolver) Resolve() (*Config, error) {
 }
 
 func mergeConfig(base, override *Config) {
-	if override.DocID != ""           { base.DocID = override.DocID }
-	if override.CredentialsPath != "" { base.CredentialsPath = override.CredentialsPath }
-	if override.Model != ""           { base.Model = override.Model }
-	if override.SummaryModel != ""    { base.SummaryModel = override.SummaryModel }
-	if override.ArtifactsDir != ""    { base.ArtifactsDir = override.ArtifactsDir }
-	if override.BranchPrefix != ""    { base.BranchPrefix = override.BranchPrefix }
-	if override.ChunkSize != 0        { base.ChunkSize = override.ChunkSize }
-	if override.GitHubRepo != ""      { base.GitHubRepo = override.GitHubRepo }
-	if override.FigmaURL != ""        { base.FigmaURL = override.FigmaURL }
-	if override.FigmaToken != ""      { base.FigmaToken = override.FigmaToken }
-	if override.OutputDir != ""       { base.OutputDir = override.OutputDir }
-	if override.TargetRepo != ""      { base.TargetRepo = override.TargetRepo }
-	if override.PageRefresh != nil    { base.PageRefresh = override.PageRefresh }
-	if override.DryRun != nil         { base.DryRun = override.DryRun }
-	if override.OpenPR != nil         { base.OpenPR = override.OpenPR }
-	if override.OpenIssue != nil      { base.OpenIssue = override.OpenIssue }
+	if override.DocID != "" {
+		base.DocID = override.DocID
+	}
+	if override.CredentialsPath != "" {
+		base.CredentialsPath = override.CredentialsPath
+	}
+	if override.Model != "" {
+		base.Model = override.Model
+	}
+	if override.SummaryModel != "" {
+		base.SummaryModel = override.SummaryModel
+	}
+	if override.ArtifactsDir != "" {
+		base.ArtifactsDir = override.ArtifactsDir
+	}
+	if override.BranchPrefix != "" {
+		base.BranchPrefix = override.BranchPrefix
+	}
+	if override.ChunkSize != 0 {
+		base.ChunkSize = override.ChunkSize
+	}
+	if override.GitHubRepo != "" {
+		base.GitHubRepo = override.GitHubRepo
+	}
+	if override.FigmaURL != "" {
+		base.FigmaURL = override.FigmaURL
+	}
+	if override.FigmaToken != "" {
+		base.FigmaToken = override.FigmaToken
+	}
+	if override.OutputDir != "" {
+		base.OutputDir = override.OutputDir
+	}
+	if override.TargetRepo != "" {
+		base.TargetRepo = override.TargetRepo
+	}
+	if override.PageRefresh != nil {
+		base.PageRefresh = override.PageRefresh
+	}
+	if override.DryRun != nil {
+		base.DryRun = override.DryRun
+	}
+	if override.OpenPR != nil {
+		base.OpenPR = override.OpenPR
+	}
+	if override.OpenIssue != nil {
+		base.OpenIssue = override.OpenIssue
+	}
 }
 
 // EnvVarSource reads BAUER_* env vars.
@@ -69,14 +101,14 @@ func (e *EnvVarSource) Load() (*Config, error) {
 	} else if v := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"); v != "" {
 		cfg.CredentialsPath = v
 	}
-	cfg.DocID        = os.Getenv("BAUER_DOC_ID")
-	cfg.Model        = os.Getenv("BAUER_MODEL")
+	cfg.DocID = os.Getenv("BAUER_DOC_ID")
+	cfg.Model = os.Getenv("BAUER_MODEL")
 	cfg.SummaryModel = os.Getenv("BAUER_SUMMARY_MODEL")
 	cfg.ArtifactsDir = os.Getenv("BAUER_ARTIFACTS_DIR")
 	cfg.BranchPrefix = os.Getenv("BAUER_BRANCH_PREFIX")
-	cfg.GitHubRepo   = os.Getenv("BAUER_GITHUB_REPO")
-	cfg.FigmaURL     = os.Getenv("BAUER_FIGMA_URL")
-	cfg.FigmaToken   = os.Getenv("BAUER_FIGMA_TOKEN")
+	cfg.GitHubRepo = os.Getenv("BAUER_GITHUB_REPO")
+	cfg.FigmaURL = os.Getenv("BAUER_FIGMA_URL")
+	cfg.FigmaToken = os.Getenv("BAUER_FIGMA_TOKEN")
 	if cfg.FigmaToken == "" {
 		cfg.FigmaToken = os.Getenv("FIGMA_TOKEN")
 	}
