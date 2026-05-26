@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -69,6 +70,74 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 		return nil, fmt.Errorf("failed to process document: %w", err)
 	}
 	extractionDuration := time.Since(extractionStart)
+
+	// PHASE 1: Parse-only mode - output enhanced JSON with file/location mappings
+	if cfg.ParseOnly {
+		slog.Info("Orchestrator: Phase 1 parse-only mode - generating simplified agent-optimized output")
+
+		// Build file mappings from metadata and suggestions
+		fileMappings := buildFileMappings(result)
+
+		// Build simplified suggestions with file references
+		simplifiedSuggestions := buildSimplifiedSuggestions(result.ActionableSuggestions, fileMappings)
+
+		// Build summary for agent planning
+		summary := buildParseResultSummary(simplifiedSuggestions, fileMappings)
+
+		// Create parse result with simplified structure
+		parseResult := &ParseResult{
+			Metadata: ParseResultMetadata{
+				DocumentTitle:      result.DocumentTitle,
+				DocumentID:         result.DocumentID,
+				ExtractionTime:     extractionStart,
+				ExtractionDuration: extractionDuration,
+				ProcessingDuration: time.Since(extractionStart),
+				TotalDuration:      time.Since(startTime),
+			},
+			DocumentMetadata:      result.Metadata,
+			Summary:               summary,
+			FileMappings:          fileMappings,
+			ActionableSuggestions: simplifiedSuggestions,
+			GroupedSuggestions:    result.GroupedSuggestions,
+			Comments:              result.Comments,
+		}
+
+		// Write parse result to JSON file
+		outputJSON, err := json.MarshalIndent(parseResult, "", "  ")
+		if err != nil {
+			slog.Error("Failed to marshal parse result", slog.String("error", err.Error()))
+			return nil, fmt.Errorf("failed to generate output JSON: %w", err)
+		}
+
+		outputFile := filepath.Join(cfg.OutputDir, "bauer-parse-result.json")
+		err = os.WriteFile(outputFile, outputJSON, 0644)
+		if err != nil {
+			slog.Error("Failed to write parse result file", slog.String("error", err.Error()))
+			return nil, fmt.Errorf("failed to write output file: %w", err)
+		}
+
+		slog.Info("Parse-only extraction complete",
+			slog.String("output_file", outputFile),
+			slog.Duration("extraction_duration", extractionDuration),
+			slog.Int("total_suggestions", len(simplifiedSuggestions)),
+			slog.Int("insertions", summary.ByType.Insert),
+			slog.Int("deletions", summary.ByType.Delete),
+			slog.Int("replacements", summary.ByType.Replace),
+			slog.Int("file_mappings", len(fileMappings)),
+		)
+
+		return &OrchestrationResult{
+			ExtractionResult:   result,
+			ExtractionDuration: extractionDuration,
+			Chunks:             []prompt.ChunkResult{},
+			PlanDuration:       0,
+			CopilotOutputs:     []copilotcli.ChunkOutput{},
+			CopilotDuration:    0,
+			SummaryDuration:    0,
+			TotalDuration:      time.Since(startTime),
+			DryRun:             true,
+		}, nil
+	}
 
 	// 3. Write extraction result to file
 	outputJSON, err := json.MarshalIndent(result, "", "  ")

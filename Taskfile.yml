@@ -22,6 +22,11 @@ tasks:
     cmds:
       - ./bauer-api --config config.json
 
+  run-client:
+    desc: Run the Bauer client locally
+    cmds:
+      - ./bauer --doc-id 000 --credentials ./credentials.json --parse-only
+
   clean:
     desc: Clean up generated files
     cmds:
@@ -35,4 +40,4 @@ tasks:
     cmds:
       - task: clean
       - task: build
-      - task: run-server
+      - task: run-client

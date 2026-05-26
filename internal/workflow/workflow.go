@@ -82,7 +82,7 @@ type WorkflowOutput struct {
 // 1. GitHub Setup (clone, create branch)
 // 2. Bauer Processing (extract, chunk, apply changes)
 // 3. GitHub Finalization (commit, push, create PR)
-// 
+//
 // If ParseOnly is true, skips steps 1 and 3, outputs parsed data to JSON
 func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator.Orchestrator) (*WorkflowOutput, error) {
 	output := &WorkflowOutput{
