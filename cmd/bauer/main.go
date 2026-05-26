@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 
 	docID := fs.String("doc-id", "", "Google Doc ID to extract feedback from (required, or set BAUER_DOC_ID)")
 	credentialsPath := fs.String("credentials", "", "Path to service account credentials JSON\n\t(falls back to BAUER_CREDENTIALS_PATH → GOOGLE_APPLICATION_CREDENTIALS → credentials.json)")
@@ -45,7 +45,10 @@ func main() {
 	}
 
 	if err := fs.Parse(os.Args[1:]); err != nil {
-		os.Exit(1)
+		if err == flag.ErrHelp {
+			os.Exit(0)
+		}
+		os.Exit(2)
 	}
 
 	// Mutual exclusion check — before any network calls
@@ -84,7 +87,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	cfg.ApplyDefaults()
 	if err := cfg.Validate(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
