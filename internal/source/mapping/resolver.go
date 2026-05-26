@@ -71,7 +71,7 @@ func (r *Resolver) resolveAnchor(
 		}}, MappingMetadata{Method: "name", Confidence: conf, Status: "healthy"}
 	}
 
-	// Strategy 4: fallback to first anchor (root node), sorted for determinism
+	// Strategy 4: fallback — picks the anchor with the lowest NodeID for determinism
 	if len(design.Anchors) > 0 {
 		sorted := make([]figma.DesignAnchor, len(design.Anchors))
 		copy(sorted, design.Anchors)
@@ -88,10 +88,10 @@ func (r *Resolver) resolveAnchor(
 	return nil, MappingMetadata{Method: "none", Confidence: 0, Status: "unresolved"}
 }
 
-// matchByTextLayers uses Jaccard similarity on token bags.
+// matchByTextLayers uses Jaccard similarity on token sets.
 // Returns the best matching anchor and its confidence, or nil if no match meets threshold.
 func matchByTextLayers(group gdocs.LocationGroupedSuggestions, anchors []figma.DesignAnchor) (*figma.DesignAnchor, float64) {
-	// Build token bag from gdocs suggestion group
+	// Build token set from gdocs suggestion group
 	gdocsTokens := tokenize(group.Location.ParentHeading + " " + group.Location.Section)
 	for _, sug := range group.Suggestions {
 		gdocsTokens = append(gdocsTokens, tokenizeFromSuggestion(sug)...)

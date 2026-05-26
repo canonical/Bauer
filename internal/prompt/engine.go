@@ -253,7 +253,7 @@ func (e *Engine) GenerateChunksFromResolved(
 			locations = append(locations, rc.Locations...)
 		}
 
-		suggestionsJSON, err := json.Marshal(locations)
+		suggestionsJSON, err := json.MarshalIndent(locations, "", "  ")
 		if err != nil {
 			return nil, fmt.Errorf("marshaling suggestions for chunk %d: %w", i+1, err)
 		}
@@ -279,17 +279,36 @@ func (e *Engine) GenerateChunksFromResolved(
 
 func buildFigmaContextJSON(batch []mapping.ResolvedChunk) (string, error) {
 	ctx := figmaChunkContext{}
+	seenAnchors := map[string]bool{}
+	seenScreenshots := map[string]bool{}
+	seenComments := map[string]bool{}
+
 	for _, rc := range batch {
-		ctx.Anchors = append(ctx.Anchors, rc.DesignAnchors...)
-		ctx.Screenshots = append(ctx.Screenshots, rc.ScreenshotPaths...)
-		ctx.Comments = append(ctx.Comments, rc.Comments...)
+		for _, a := range rc.DesignAnchors {
+			if !seenAnchors[a.NodeID] {
+				seenAnchors[a.NodeID] = true
+				ctx.Anchors = append(ctx.Anchors, a)
+			}
+		}
+		for _, s := range rc.ScreenshotPaths {
+			if !seenScreenshots[s] {
+				seenScreenshots[s] = true
+				ctx.Screenshots = append(ctx.Screenshots, s)
+			}
+		}
+		for _, c := range rc.Comments {
+			if !seenComments[c.CommentID] {
+				seenComments[c.CommentID] = true
+				ctx.Comments = append(ctx.Comments, c)
+			}
+		}
 	}
 
 	if len(ctx.Anchors) == 0 && len(ctx.Screenshots) == 0 && len(ctx.Comments) == 0 {
 		return "", nil
 	}
 
-	b, err := json.Marshal(ctx)
+	b, err := json.MarshalIndent(ctx, "", "  ")
 	if err != nil {
 		return "", err
 	}
