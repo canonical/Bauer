@@ -124,10 +124,19 @@ func buildSimplifiedSuggestions(originalSuggestions []gdocs.ActionableSuggestion
 		// Find which file this suggestion maps to
 		targetFile := suggestionToFile[suggestion.ID]
 		if targetFile == "" {
-			// Fallback to first file mapping if not found
-			for file := range fileMappings {
-				targetFile = file
-				break
+			// Deterministic fallback strategy to avoid nondeterministic map iteration:
+			// 1. Prefer "general" if it exists in mappings
+			if _, hasGeneral := fileMappings["general"]; hasGeneral {
+				targetFile = "general"
+			} else if len(fileMappings) == 1 {
+				// 2. If exactly one file mapping exists, use it
+				for file := range fileMappings {
+					targetFile = file
+					break
+				}
+			} else {
+				// 3. Default to "general" as a catch-all
+				targetFile = "general"
 			}
 		}
 

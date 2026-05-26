@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -82,7 +83,7 @@ type WorkflowOutput struct {
 // 1. GitHub Setup (clone, create branch)
 // 2. Bauer Processing (extract, chunk, apply changes)
 // 3. GitHub Finalization (commit, push, create PR)
-// 
+//
 // If ParseOnly is true, skips steps 1 and 3, outputs parsed data to JSON
 func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator.Orchestrator) (*WorkflowOutput, error) {
 	output := &WorkflowOutput{
@@ -114,17 +115,6 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	if input.ParseOnly {
 		logger.Info("workflow: Phase 1 - Parse-only mode")
 
-		// Save original directory
-		originalDir, err := os.Getwd()
-		if err != nil {
-			output.Status = "failed"
-			output.Errors = append(output.Errors, fmt.Sprintf("failed to get current directory: %v", err))
-			output.EndTime = time.Now()
-			output.TotalDuration = output.EndTime.Sub(output.StartTime)
-			return output, err
-		}
-		defer os.Chdir(originalDir)
-
 		// Create Bauer config for parsing
 		bauerCfg := &config.Config{
 			DocID:           input.DocID,
@@ -138,8 +128,11 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 			ParseOnly:       true,
 		}
 
+		bauerCfg.ApplyDefaults()
+		input.OutputDir = bauerCfg.OutputDir
+		input.Model = bauerCfg.Model
+
 		logger.Info("workflow: Executing parse-only orchestration")
-		bauerStartTime := time.Now()
 
 		// Execute parse-only orchestration
 		bauerResult, err := orch.Execute(ctx, bauerCfg)
@@ -151,24 +144,27 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 			return output, err
 		}
 
-		// Store results
+		// Store results from orchestrator
 		if bauerResult != nil {
 			output.BauerResult.ExtractionDuration = bauerResult.ExtractionDuration
-			output.BauerResult.PlanDuration = bauerResult.PlanDuration
-			if len(bauerResult.Chunks) > 0 {
-				output.BauerResult.ChunkCount = len(bauerResult.Chunks)
-			}
-			if bauerResult.ExtractionResult != nil {
-				output.BauerResult.TotalSuggestions = len(bauerResult.ExtractionResult.ActionableSuggestions)
+			output.BauerResult.PlanDuration = 0    // No prompt generation in parse-only mode
+			output.BauerResult.CopilotDuration = 0 // No Copilot execution in parse-only mode
+			if bauerResult.ParseResult != nil {
+				output.BauerResult.TotalSuggestions = len(bauerResult.ParseResult.ActionableSuggestions)
 			}
 		}
 
-		// Parse-only mode forces the orchestrator into DryRun, so Copilot is not executed.
-		output.BauerResult.CopilotDuration = 0
+		// Write the simplified ParseResult to JSON file
+		absOutputDir, err := filepath.Abs(input.OutputDir)
+		if err != nil {
+			output.Status = "failed"
+			output.Errors = append(output.Errors, fmt.Sprintf("failed to resolve output directory path: %v", err))
+			output.EndTime = time.Now()
+			output.TotalDuration = output.EndTime.Sub(output.StartTime)
+			return output, err
+		}
 
-		// Move the raw extraction JSON produced by the orchestrator into the output dir.
-		outputPath := filepath.Join(input.OutputDir, "bauer-parse-result.json")
-		if err := os.MkdirAll(input.OutputDir, 0755); err != nil {
+		if err := os.MkdirAll(absOutputDir, 0755); err != nil {
 			output.Status = "failed"
 			output.Errors = append(output.Errors, fmt.Sprintf("failed to create output directory: %v", err))
 			output.EndTime = time.Now()
@@ -176,25 +172,33 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 			return output, err
 		}
 
-		const rawOutputFile = "bauer-doc-suggestions.json"
-		if err := os.Rename(rawOutputFile, outputPath); err != nil {
-			// Cross-device rename fallback: copy + remove
-			b, readErr := os.ReadFile(rawOutputFile)
-			if readErr != nil {
+		outputPath := filepath.Join(absOutputDir, "bauer-parse-result.json")
+		if bauerResult != nil && bauerResult.ParseResult != nil {
+			parseResultJSON, err := json.MarshalIndent(bauerResult.ParseResult, "", "  ")
+			if err != nil {
 				output.Status = "failed"
-				output.Errors = append(output.Errors, fmt.Sprintf("failed to move parse-only output file: %v", err))
+				output.Errors = append(output.Errors, fmt.Sprintf("failed to marshal parse result: %v", err))
 				output.EndTime = time.Now()
 				output.TotalDuration = output.EndTime.Sub(output.StartTime)
 				return output, err
 			}
-			if writeErr := os.WriteFile(outputPath, b, 0644); writeErr != nil {
+
+			if err := os.WriteFile(outputPath, parseResultJSON, 0644); err != nil {
 				output.Status = "failed"
-				output.Errors = append(output.Errors, fmt.Sprintf("failed to write parse-only output file: %v", writeErr))
+				output.Errors = append(output.Errors, fmt.Sprintf("failed to write parse result file: %v", err))
 				output.EndTime = time.Now()
 				output.TotalDuration = output.EndTime.Sub(output.StartTime)
-				return output, writeErr
+				return output, err
 			}
-			_ = os.Remove(rawOutputFile)
+		}
+
+		// Verify the file actually exists
+		if _, err := os.Stat(outputPath); err != nil {
+			output.Status = "failed"
+			output.Errors = append(output.Errors, fmt.Sprintf("parse result file was not created at expected location: %s: %v", outputPath, err))
+			output.EndTime = time.Now()
+			output.TotalDuration = output.EndTime.Sub(output.StartTime)
+			return output, err
 		}
 
 		output.EndTime = time.Now()
@@ -202,10 +206,17 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 		output.Status = "success"
 		output.OutputFile = outputPath
 
+		// Safely compute totalFiles with nil checks
+		totalFiles := 0
+		if bauerResult != nil && bauerResult.ParseResult != nil {
+			totalFiles = len(bauerResult.ParseResult.FileMappings)
+		}
+
 		logger.Info("workflow: Parse-only mode complete",
 			"output_file", output.OutputFile,
 			"extraction_duration", output.BauerResult.ExtractionDuration,
 			"total_suggestions", output.BauerResult.TotalSuggestions,
+			"total_files", totalFiles,
 		)
 
 		return output, nil
@@ -263,8 +274,6 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	// Bauer processing
 	logger.Info("workflow: starting phase 2 - Bauer processing")
 
-	bauerStartTime := time.Now()
-
 	// Create Bauer config with target repo (now current directory)
 	bauerCfg := &config.Config{
 		DocID:           input.DocID,
@@ -309,7 +318,6 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 		"chunk_count", output.BauerResult.ChunkCount,
 		"total_suggestions", output.BauerResult.TotalSuggestions,
 	)
-	output.BauerResult.CopilotDuration = time.Since(bauerStartTime)
 	logger.Info("workflow success: Bauer processing finished")
 
 	// GitHub finalization

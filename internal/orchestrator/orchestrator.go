@@ -19,6 +19,9 @@ type OrchestrationResult struct {
 	ExtractionResult   *gdocs.ProcessingResult
 	ExtractionDuration time.Duration
 
+	// Parse-only result (populated when ParseOnly is true)
+	ParseResult *ParseResult
+
 	// Prompt generation
 	Chunks       []prompt.ChunkResult
 	PlanDuration time.Duration
@@ -86,6 +89,50 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 		slog.String("output_file", outputFile),
 		slog.Duration("extraction_duration", extractionDuration),
 	)
+
+	// Parse-only mode: return immediately after extraction without generating chunks
+	if cfg.ParseOnly {
+		totalDuration := time.Since(startTime)
+		fileMappings := buildFileMappings(result)
+		simplifiedSuggestions := buildSimplifiedSuggestions(result.ActionableSuggestions, fileMappings)
+		summary := buildParseResultSummary(simplifiedSuggestions, fileMappings)
+
+		parseResult := &ParseResult{
+			Metadata: ParseResultMetadata{
+				DocumentTitle:      result.DocumentTitle,
+				DocumentID:         cfg.DocID,
+				ExtractionTime:     time.Now(),
+				ExtractionDuration: extractionDuration,
+				ProcessingDuration: totalDuration,
+				TotalDuration:      totalDuration,
+			},
+			DocumentMetadata:      result.Metadata,
+			Summary:               summary,
+			FileMappings:          fileMappings,
+			ActionableSuggestions: simplifiedSuggestions,
+			GroupedSuggestions:    result.GroupedSuggestions,
+			Comments:              result.Comments,
+		}
+
+		slog.Info("Parse-only mode: returning early after extraction",
+			slog.Int("suggestion_count", len(simplifiedSuggestions)),
+			slog.Int("file_count", len(fileMappings)),
+			slog.Duration("total_duration", totalDuration),
+		)
+
+		return &OrchestrationResult{
+			ExtractionResult:   result,
+			ExtractionDuration: extractionDuration,
+			ParseResult:        parseResult,
+			Chunks:             []prompt.ChunkResult{},
+			PlanDuration:       0,
+			CopilotOutputs:     []copilotcli.ChunkOutput{},
+			CopilotDuration:    0,
+			SummaryDuration:    0,
+			TotalDuration:      totalDuration,
+			DryRun:             false,
+		}, nil
+	}
 
 	// 4. Initialize Prompt Engine
 	planStart := time.Now()
