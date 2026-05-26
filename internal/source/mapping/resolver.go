@@ -32,7 +32,8 @@ func (r *Resolver) Build(
 			chunks[i].Comments = r.commentsForAnchors(anchors, design)
 		}
 	}
-	// Enforce: low-confidence and fallback/none mappings must never be silently promoted.
+	// Post-process: low-confidence, fallback, and unmatched ("none") mappings are
+	// promoted to status "unresolved" so they are never silently treated as healthy.
 	for i := range chunks {
 		m := &chunks[i].Mapping
 		if m.Confidence < 0.5 || m.Method == "fallback" || m.Method == "none" {

@@ -206,7 +206,7 @@ func (m *Manager) Base() string {
 
 // LoadPreviousMeta returns the RunMetadata from the most recent completed run
 // that matches the given (docID, figmaFileKey) pair, or nil if none exists.
-// It reads runs.jsonl in reverse order (last entry = most recent) to find the match.
+// It scans runs.jsonl forward and returns metadata from the last matching entry.
 func (m *Manager) LoadPreviousMeta(docID, figmaFileKey string) *RunMetadata {
 	indexPath := filepath.Join(m.base, "runs.jsonl")
 	f, err := os.Open(indexPath)

@@ -318,6 +318,13 @@ func (o *DefaultOrchestrator) generateChunksWithFigma(
 		)
 		resolvedChunks := o.arts.LoadMappings(prevRunMeta.RunID)
 		if resolvedChunks != nil {
+			// Persist reused mappings into the current run so it is self-contained.
+			if runID != "" {
+				if err := o.arts.WriteMappings(runID, resolvedChunks); err != nil {
+					slog.Warn("Failed to persist reused mappings to current run",
+						slog.String("error", err.Error()))
+				}
+			}
 			return engine.RenderChunksFromResolved(
 				bundle.Document.DocumentTitle,
 				suggestedURL,
