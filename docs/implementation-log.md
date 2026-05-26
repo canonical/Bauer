@@ -21,7 +21,7 @@ Each sub-agent appends its entry to the **Branch Log** section below. You (the r
 |-------|--------|--------|---------------|--------|
 | 0 | `feature/bauer-v2` | `main` | Base branch — no code changes | ✅ created |
 | 1 | `feat/phase-0a-agent-source` | `feature/bauer-v2` | 001 Phase 0: T0.1, T0.2, T0.2a, T0.2b | ✅ done |
-| 2 | `feat/phase-0b-artifacts-config` | `feat/phase-0a-agent-source` | 001 Phase 0: T0.2c, T0.3, T0.4, T0.5 | ⏳ pending |
+| 2 | `feat/phase-0b-artifacts-config` | `feat/phase-0a-agent-source` | 001 Phase 0: T0.2c, T0.3, T0.4, T0.5 | ✅ done |
 | 3 | `feat/phase-1-cli-restore` | `feat/phase-0b-artifacts-config` | 001 Phase 1: T1.1, T1.2, T1.3 | ⏳ pending |
 | 4 | `feat/phase-2-cli-features` | `feat/phase-1-cli-restore` | 001 Phase 2: T2.1, T2.2, T2.3 | ⏳ pending |
 | 5 | `feat/figma-phase-b-client` | `feat/phase-2-cli-features` | 002 Phase B: T2F.0, T2F.1, T2F.2, T2F.3, T2F.4 | ⏳ pending |
@@ -112,11 +112,37 @@ _Parent: `feat/phase-0a-agent-source`_
 
 **Tasks:** T0.2c, T0.3, T0.4, T0.5
 
-**Summary:** _(to be filled by agent)_
+**Summary:** Added append-only artifact storage (`internal/artifacts`) that writes per-run directories with extraction results, prompts, outputs, and a `runs.jsonl` index. Introduced a layered config resolver (`internal/config/manager.go`) with `DefaultsSource`, `EnvVarSource`, and `FlagsSource`; `Config.PageRefresh` promoted to `*bool` to enable explicit-false override. Removed `json.go` and the `--config` flag; credentials are now supplied exclusively via flags or `BAUER_*` env vars. `BAUER_GITHUB_TOKEN` is now checked first in `GetGitHubToken`. Added `.env.example`, updated `.gitignore` (adds `config.json`, `*.pem`), and refreshed `Taskfile.yml` (removes `--config config.json` reference, adds `verify-figma` task).
 
-**Files changed:** _(to be filled by agent)_
+**Files changed:**
+- `internal/artifacts/manager.go` — new: `Manager`, `RunMetadata`, `RunIndexEntry`; `NewManager`, `NewRunID`, `StartRun`, `CompleteRun`, `WriteGDocsExtraction`, `WritePrompt`, `WriteOutput`, `WriteSummary`, `WriteIssueBody`, `EnsureScreenshotsDir`
+- `internal/artifacts/manager_test.go` — new: tests for `NewRunID` format, `StartRun` directory structure, `CompleteRun` JSONL append
+- `internal/config/config.go` — `PageRefresh bool→*bool`; new fields: `ArtifactsDir`, `BranchPrefix`, `FigmaURL`, `FigmaToken`, `GitHubRepo`, `OpenPR *bool`, `OpenIssue *bool`; `ApplyDefaults` uses `BoolVal(PageRefresh)` and sets `ArtifactsDir` default
+- `internal/config/cli.go` — removed `ConfigFile` field and `--config` flag; added `ArtifactsDir` field and `--artifacts-dir` flag; `PageRefresh` now assigned as `*bool` pointer
+- `internal/config/json.go` — deleted
+- `internal/config/manager.go` — new: `Source` interface, `Resolver`, `mergeConfig`, `EnvVarSource`, `DefaultsSource`, `FlagsSource`
+- `internal/config/manager_test.go` — new: tests for env override, zero-value non-override, bool pointer behaviour, credentials fallback chain
+- `internal/config/config_test.go` — `PageRefresh: tt.pageRefreshFlag` → `BoolPtr(tt.pageRefreshFlag)`
+- `internal/orchestrator/orchestrator.go` — accepts `*artifacts.Manager` in `New`; `Execute` calls `StartRun`/`WriteGDocsExtraction`/`WritePrompt`/`WriteOutput`/`WriteSummary`/`CompleteRun`; `cfg.PageRefresh` uses `BoolVal`
+- `internal/github/auth.go` — `GetGitHubToken` checks `BAUER_GITHUB_TOKEN` before `GITHUB_TOKEN`/`GH_TOKEN`
+- `cmd/bauer/main.go` — passes `artifacts.NewManager("")` to `orchestrator.New`
+- `cmd/app/main.go` — passes `artifacts.NewManager(cfg.ArtifactsDir)` to `orchestrator.New`
+- `cmd/app/types/config.go` — added `ArtifactsDir` field; removed `--config` flag and `LoadFromJSONFile` call; credentials env fallback added
+- `cmd/app/v1/api.go` — `PageRefresh: config.BoolPtr(payload.PageRefresh)`
+- `internal/workflow/workflow.go` — `PageRefresh: config.BoolPtr(input.PageRefresh)`
+- `.gitignore` — added `config.json`, `*.pem`
+- `.env.example` — new: full reference for all `BAUER_*` env vars
+- `Taskfile.yml` — `run-server` uses `--credentials` flag; added `verify-figma` task; added `.env.example` comment
 
-**Docs / references:** _(to be filled by agent)_
+**Config resolution priority (highest → lowest):**
+
+```mermaid
+graph TD
+    A[FlagsSource<br/>--flag values] -->|highest priority| M[Resolver.Resolve]
+    B[EnvVarSource<br/>BAUER_* env vars] --> M
+    C[DefaultsSource<br/>hardcoded fallbacks] -->|lowest priority| M
+    M --> D[Final Config]
+```
 
 ---
 

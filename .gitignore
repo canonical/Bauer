@@ -14,3 +14,5 @@ bauer-output/
 bauer
 # Added by goreleaser init:
 dist/
+config.json
+*.pem

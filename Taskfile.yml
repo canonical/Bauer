@@ -1,5 +1,8 @@
 version: "3"
 
+# Copy .env.example to .env.local and fill in your values before running.
+# .env.local is gitignored — never commit secrets.
+
 tasks:
   build:
     desc: Build the Bauer and Bauer API binaries
@@ -20,7 +23,17 @@ tasks:
   run-server:
     desc: Run the API server locally
     cmds:
-      - ./bauer-api --config config.json
+      - ./bauer-api --credentials ${BAUER_CREDENTIALS_PATH}
+
+  verify-figma:
+    desc: Verify Figma token is set
+    cmds:
+      - |
+        if [ -z "$BAUER_FIGMA_TOKEN" ] && [ -z "$FIGMA_TOKEN" ]; then
+          echo "ERROR: BAUER_FIGMA_TOKEN (or FIGMA_TOKEN) must be set" >&2
+          exit 1
+        fi
+        echo "Figma token is set."
 
   clean:
     desc: Clean up generated files

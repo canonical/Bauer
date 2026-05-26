@@ -186,7 +186,7 @@ func TestChunkSizeDefaults(t *testing.T) {
 				DocID:           "test-doc-id",
 				CredentialsPath: validCredsFile,
 				ChunkSize:       effectiveChunkSize,
-				PageRefresh:     tt.pageRefreshFlag,
+				PageRefresh:     BoolPtr(tt.pageRefreshFlag),
 				OutputDir:       "bauer-output",
 				Model:           "gpt-5-mini-high",
 				SummaryModel:    "gpt-5-mini-high",

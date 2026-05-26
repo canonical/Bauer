@@ -9,11 +9,10 @@ import (
 
 // GetGitHubToken retrieves a GitHub token from environment variables or gh CLI
 func GetGitHubToken() (string, error) {
-	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
-		return token, nil
-	}
-	if token := os.Getenv("GH_TOKEN"); token != "" {
-		return token, nil
+	for _, env := range []string{"BAUER_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"} {
+		if v := os.Getenv(env); v != "" {
+			return v, nil
+		}
 	}
 
 	// Get token from gh CLI config

@@ -4,6 +4,7 @@ import (
 	"bauer/cmd/app/core/middleware"
 	"bauer/cmd/app/types"
 	v1 "bauer/cmd/app/v1"
+	"bauer/internal/artifacts"
 	"bauer/internal/copilotcli"
 	"bauer/internal/orchestrator"
 	"bauer/internal/source"
@@ -41,7 +42,8 @@ func run() error {
 	}
 
 	sources := source.NewManager(cfg.CredentialsPath)
-	orch := orchestrator.New(copilotAgent, sources)
+	arts := artifacts.NewManager(cfg.ArtifactsDir)
+	orch := orchestrator.New(copilotAgent, sources, arts)
 
 	rc := types.RouteConfig{
 		APIConfig:    *cfg,
@@ -69,4 +71,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-

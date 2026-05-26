@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bauer/internal/artifacts"
 	"bauer/internal/config"
 	"bauer/internal/copilotcli"
 	"bauer/internal/github"
@@ -80,7 +81,8 @@ func main() {
 	}
 
 	sources := source.NewManager(absCredentials)
-	orch := orchestrator.New(copilotAgent, sources)
+	arts := artifacts.NewManager("")
+	orch := orchestrator.New(copilotAgent, sources, arts)
 
 	// Execute the complete workflow
 	result, err := workflow.ExecuteWorkflow(context.Background(), workflowInput, orch)
