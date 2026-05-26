@@ -18,18 +18,21 @@ func main() {
 	credentialsPath := flag.String("credentials", "bau-test-creds.json", "Path to service account credentials JSON")
 	localRepoPath := flag.String("local-repo-path", "/tmp/ubuntu.com", "Local path for cloned repository")
 	dryRun := flag.Bool("dry-run", false, "Perform a dry run without creating PR")
+	parseOnly := flag.Bool("parse-only", false, "Phase 1: Parse document and output machine-readable JSON (skip GitHub integration)")
 	outputDir := flag.String("output-dir", "bauer-output", "Output directory for Bauer results")
 	branchPrefix := flag.String("branch-prefix", "bauer", "Branch naming prefix")
 
 	flag.Parse()
 
 	// Validate required flags
-	if *githubRepo == "" {
-		fmt.Fprintf(os.Stderr, "ERROR: --github-repo is required\n")
-		os.Exit(1)
-	}
 	if *docID == "" {
 		fmt.Fprintf(os.Stderr, "ERROR: --doc-id is required\n")
+		os.Exit(1)
+	}
+
+	// GitHub repo is optional for parse-only mode
+	if !*parseOnly && *githubRepo == "" {
+		fmt.Fprintf(os.Stderr, "ERROR: --github-repo is required (unless using --parse-only)\n")
 		os.Exit(1)
 	}
 
@@ -39,10 +42,13 @@ func main() {
 	fmt.Println()
 
 	// Create workflow input from CLI flags/config
-	ghToken, err := github.GetGitHubToken()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "WARNING: Could not get GitHub token: %v\n", err)
-		ghToken = ""
+	ghToken := ""
+	if !*parseOnly {
+		var err error
+		ghToken, err = github.GetGitHubToken()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "WARNING: Could not get GitHub token: %v\n", err)
+		}
 	}
 
 	workflowInput := workflow.WorkflowInput{
@@ -53,6 +59,7 @@ func main() {
 		Credentials:   *credentialsPath,
 		LocalRepoPath: *localRepoPath,
 		DryRun:        *dryRun,
+		ParseOnly:     *parseOnly,
 		OutputDir:     *outputDir,
 	}
 
@@ -66,7 +73,12 @@ func main() {
 	}
 
 	// Print results
-	fmt.Printf("Status: %s\n", result.Status)
-	fmt.Printf("Branch: %s\n", result.RepositoryInfo.BranchName)
-	fmt.Printf("PR: %s\n", result.FinalizationInfo.PullRequest.URL)
+	if *parseOnly {
+		fmt.Printf("Status: %s\n", result.Status)
+		fmt.Printf("Output file: %s\n", result.OutputFile)
+	} else {
+		fmt.Printf("Status: %s\n", result.Status)
+		fmt.Printf("Branch: %s\n", result.RepositoryInfo.BranchName)
+		fmt.Printf("PR: %s\n", result.FinalizationInfo.PullRequest.URL)
+	}
 }

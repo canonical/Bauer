@@ -28,6 +28,7 @@ type WorkflowInput struct {
 	OutputDir   string
 	Model       string
 	DryRun      bool
+	ParseOnly   bool // Phase 1: Parse document only, skip GitHub integration
 
 	// Local repository path
 	LocalRepoPath string
@@ -65,6 +66,9 @@ type WorkflowOutput struct {
 		}
 	} `json:"finalization_info"`
 
+	// Parse-only output
+	OutputFile string `json:"output_file,omitempty"` // Path to generated JSON for parse-only mode
+
 	// Overall
 	Status        string        `json:"status"` // "success", "partial", "failed"
 	StartTime     time.Time     `json:"start_time"`
@@ -78,6 +82,8 @@ type WorkflowOutput struct {
 // 1. GitHub Setup (clone, create branch)
 // 2. Bauer Processing (extract, chunk, apply changes)
 // 3. GitHub Finalization (commit, push, create PR)
+// 
+// If ParseOnly is true, skips steps 1 and 3, outputs parsed data to JSON
 func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator.Orchestrator) (*WorkflowOutput, error) {
 	output := &WorkflowOutput{
 		Status:    "pending",
@@ -88,7 +94,91 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 
 	logger := slog.Default()
 
-	// GitHub setup
+	// Convert credentials path to absolute
+	// Do this before changing directory so relative paths work
+	var credentialsPath string
+	if input.Credentials != "" {
+		absPath, err := filepath.Abs(input.Credentials)
+		if err != nil {
+			output.Status = "failed"
+			output.Errors = append(output.Errors, fmt.Sprintf("failed to resolve credentials path: %v", err))
+			output.EndTime = time.Now()
+			output.TotalDuration = output.EndTime.Sub(output.StartTime)
+			return output, err
+		}
+		credentialsPath = absPath
+		logger.Info("workflow: resolved credentials path", "path", credentialsPath)
+	}
+
+	// PHASE 1: Parse-only mode - extract and output JSON without GitHub integration
+	if input.ParseOnly {
+		logger.Info("workflow: Phase 1 - Parse-only mode")
+
+		// Save original directory
+		originalDir, err := os.Getwd()
+		if err != nil {
+			output.Status = "failed"
+			output.Errors = append(output.Errors, fmt.Sprintf("failed to get current directory: %v", err))
+			output.EndTime = time.Now()
+			output.TotalDuration = output.EndTime.Sub(output.StartTime)
+			return output, err
+		}
+		defer os.Chdir(originalDir)
+
+		// Create Bauer config for parsing
+		bauerCfg := &config.Config{
+			DocID:           input.DocID,
+			CredentialsPath: credentialsPath,
+			DryRun:          true, // Always dry-run in parse-only mode
+			ChunkSize:       input.ChunkSize,
+			PageRefresh:     input.PageRefresh,
+			OutputDir:       input.OutputDir,
+			Model:           input.Model,
+			TargetRepo:      ".", // Current directory (doesn't matter for parse-only)
+			ParseOnly:       true,
+		}
+
+		logger.Info("workflow: Executing parse-only orchestration")
+		bauerStartTime := time.Now()
+
+		// Execute parse-only orchestration
+		bauerResult, err := orch.Execute(ctx, bauerCfg)
+		if err != nil {
+			output.Status = "failed"
+			output.Errors = append(output.Errors, fmt.Sprintf("Bauer parsing error: %v", err))
+			output.EndTime = time.Now()
+			output.TotalDuration = output.EndTime.Sub(output.StartTime)
+			return output, err
+		}
+
+		// Store results
+		if bauerResult != nil {
+			output.BauerResult.ExtractionDuration = bauerResult.ExtractionDuration
+			output.BauerResult.PlanDuration = bauerResult.PlanDuration
+			if len(bauerResult.Chunks) > 0 {
+				output.BauerResult.ChunkCount = len(bauerResult.Chunks)
+			}
+			if bauerResult.ExtractionResult != nil {
+				output.BauerResult.TotalSuggestions = len(bauerResult.ExtractionResult.ActionableSuggestions)
+			}
+		}
+
+		output.BauerResult.CopilotDuration = time.Since(bauerStartTime)
+		output.EndTime = time.Now()
+		output.TotalDuration = output.EndTime.Sub(output.StartTime)
+		output.Status = "success"
+		output.OutputFile = filepath.Join(input.OutputDir, "bauer-parse-result.json")
+
+		logger.Info("workflow: Parse-only mode complete",
+			"output_file", output.OutputFile,
+			"extraction_duration", output.BauerResult.ExtractionDuration,
+			"total_suggestions", output.BauerResult.TotalSuggestions,
+		)
+
+		return output, nil
+	}
+
+	// PHASES 2-4: Full workflow with GitHub integration
 	logger.Info("workflow: Setting up GitHub")
 
 	githubSetupInput := github.GitHubSetupInput{
@@ -115,22 +205,6 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	output.RepositoryInfo.CurrentBranch = githubSetupOutput.CurrentBranch
 
 	logger.Info("workflow success: GitHub setup successful")
-
-	// Convert credentials path to absolute
-	// Do this before changing directory so relative paths work
-	var credentialsPath string
-	if input.Credentials != "" {
-		absPath, err := filepath.Abs(input.Credentials)
-		if err != nil {
-			output.Status = "failed"
-			output.Errors = append(output.Errors, fmt.Sprintf("failed to resolve credentials path: %v", err))
-			output.EndTime = time.Now()
-			output.TotalDuration = output.EndTime.Sub(output.StartTime)
-			return output, err
-		}
-		credentialsPath = absPath
-		logger.Info("workflow: resolved credentials path", "path", credentialsPath)
-	}
 
 	// Change to target repository directory
 	// Save original directory to restore later
