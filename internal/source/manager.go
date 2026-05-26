@@ -64,7 +64,7 @@ func (m *Manager) FetchFigma(ctx context.Context, client *figma.Client, ref *fig
 
 	// Request screenshots for the specified node(s)
 	screenshotPaths := map[string]string{}
-	if len(nodeIDs) > 0 {
+	if len(nodeIDs) > 0 && screenshotDir != "" {
 		imageURLs, err := client.GetImages(ctx, ref.FileKey, nodeIDs)
 		if err != nil {
 			// Non-fatal: log and continue without screenshots

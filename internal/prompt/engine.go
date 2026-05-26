@@ -147,6 +147,7 @@ func (e *Engine) RenderChunk(data PromptData) (string, error) {
 		if err := json.Unmarshal([]byte(data.FigmaContextJSON), &ctx); err != nil {
 			return "", fmt.Errorf("parsing figma context JSON: %w", err)
 		}
+		ctx.FigmaURL = data.FigmaURL
 		tmpl, err := template.New("figma-context").Parse(figmaContextTemplate)
 		if err != nil {
 			return "", fmt.Errorf("parsing figma context template: %w", err)
@@ -230,10 +231,13 @@ func (e *Engine) GenerateAllChunks(
 }
 
 // figmaChunkContext is the data structure serialized into FigmaContextJSON.
+// FigmaURL is NOT serialized; it is set at render time from PromptData.FigmaURL
+// to power the optional MCP guidance block in the figma-context template.
 type figmaChunkContext struct {
 	Anchors     []mapping.DesignAnchorRef  `json:"anchors,omitempty"`
 	Screenshots []string                   `json:"screenshots,omitempty"`
 	Comments    []mapping.DesignCommentRef `json:"comments,omitempty"`
+	FigmaURL    string                     `json:"-"`
 }
 
 // GenerateChunksFromResolved creates one PromptData per batch of resolved chunks.
@@ -356,4 +360,44 @@ func indexOf(s, substr string) int {
 		}
 	}
 	return -1
+}
+
+// RenderChunksFromResolved generates figma-aware prompt files from pre-resolved chunks.
+// It is used when --figma-url is supplied so that Figma design context is embedded in
+// each prompt. outputDir is created if it does not exist.
+// The returned ChunkResults contain Filenames suitable for agent execution.
+func (e *Engine) RenderChunksFromResolved(
+	docTitle, suggestedURL, figmaURL string,
+	chunks []mapping.ResolvedChunk,
+	chunkSize int,
+	outputDir string,
+) ([]ChunkResult, error) {
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return nil, fmt.Errorf("creating output directory %q: %w", outputDir, err)
+	}
+
+	promptDatas, err := e.GenerateChunksFromResolved(docTitle, suggestedURL, figmaURL, chunks, chunkSize)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]ChunkResult, len(promptDatas))
+	for i, pd := range promptDatas {
+		content, err := e.RenderChunk(pd)
+		if err != nil {
+			return nil, fmt.Errorf("rendering chunk %d: %w", i+1, err)
+		}
+		fname := fmt.Sprintf("chunk-%d-of-%d.md", pd.ChunkNumber, pd.TotalChunks)
+		fpath := filepath.Join(outputDir, fname)
+		if err := os.WriteFile(fpath, []byte(content), 0644); err != nil {
+			return nil, fmt.Errorf("writing chunk %d to file: %w", i+1, err)
+		}
+		results[i] = ChunkResult{
+			ChunkNumber:   pd.ChunkNumber,
+			Content:       content,
+			Filename:      fpath,
+			LocationCount: pd.LocationCount,
+		}
+	}
+	return results, nil
 }

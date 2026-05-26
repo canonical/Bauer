@@ -4,8 +4,10 @@ import (
 	"bauer/internal/agent"
 	"bauer/internal/artifacts"
 	"bauer/internal/config"
+	"bauer/internal/figma"
 	"bauer/internal/prompt"
 	"bauer/internal/source"
+	"bauer/internal/source/mapping"
 	"context"
 	"fmt"
 	"log/slog"
@@ -137,11 +139,18 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 		slog.Int("total_locations", totalLocations),
 		slog.Int("chunk_size", cfg.ChunkSize),
 	)
-	chunks, err := engine.GenerateAllChunks(
-		bundle.Document,
-		cfg.ChunkSize,
-		cfg.OutputDir,
-	)
+
+	// When a Figma URL is configured, fetch design data and use figma-aware prompt generation.
+	var chunks []prompt.ChunkResult
+	if cfg.FigmaURL != "" {
+		chunks, err = o.generateChunksWithFigma(ctx, cfg, bundle, engine, runID)
+	} else {
+		chunks, err = engine.GenerateAllChunks(
+			bundle.Document,
+			cfg.ChunkSize,
+			cfg.OutputDir,
+		)
+	}
 	if err != nil {
 		slog.Error("Failed to generate prompts", slog.String("error", err.Error()))
 		completeRun("failed", 0)
@@ -272,9 +281,86 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 	}, nil
 }
 
-// executeAgentChunks executes each chunk via the agent and returns outputs.
-func executeAgentChunks(
+// generateChunksWithFigma fetches Figma design data and produces figma-aware prompt files.
+// It is called by Execute when cfg.FigmaURL is non-empty.
+func (o *DefaultOrchestrator) generateChunksWithFigma(
 	ctx context.Context,
+	cfg *config.Config,
+	bundle *source.SourceBundle,
+	engine *prompt.Engine,
+	runID string,
+) ([]prompt.ChunkResult, error) {
+	figmaRef, err := figma.ParseLink(cfg.FigmaURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid figma URL %q: %w", cfg.FigmaURL, err)
+	}
+
+	figmaClient := figma.NewClient(cfg.FigmaToken)
+
+	// Determine screenshot directory (inside the artifact run when available).
+	screenshotDir := ""
+	if runID != "" {
+		screenshotDir, err = o.arts.EnsureScreenshotsDir(runID)
+		if err != nil {
+			slog.Warn("Failed to create screenshots dir, proceeding without screenshots",
+				slog.String("error", err.Error()))
+			screenshotDir = ""
+		}
+	}
+
+	if screenshotDir == "" {
+		slog.Warn("Screenshot directory unavailable, skipping screenshot download")
+	}
+
+	slog.Info("Fetching Figma design data", slog.String("figma_url", cfg.FigmaURL))
+	design, err := o.sources.FetchFigma(ctx, figmaClient, figmaRef, screenshotDir)
+	if err != nil {
+		return nil, fmt.Errorf("fetching figma design: %w", err)
+	}
+	slog.Info("Figma design fetched",
+		slog.Int("anchors", len(design.Anchors)),
+		slog.Int("comments", len(design.Comments)),
+	)
+
+	// Persist figma artifacts.
+	if runID != "" {
+		if werr := o.arts.WriteFigmaExtraction(runID, design); werr != nil {
+			slog.Warn("Failed to write figma extraction artifact", slog.String("error", werr.Error()))
+		}
+		if werr := o.arts.WriteFigmaComments(runID, design.Comments); werr != nil {
+			slog.Warn("Failed to write figma comments artifact", slog.String("error", werr.Error()))
+		}
+	}
+
+	// Build resolved chunks (design-aware mapping).
+	resolver := &mapping.Resolver{}
+	resolvedChunks := resolver.Build(bundle.Document.GroupedSuggestions, design)
+	slog.Info("Mapping resolved", slog.Int("resolved_chunks", len(resolvedChunks)))
+
+	if runID != "" {
+		if werr := o.arts.WriteMappings(runID, resolvedChunks); werr != nil {
+			slog.Warn("Failed to write mappings artifact", slog.String("error", werr.Error()))
+		}
+	}
+
+	// Generate figma-aware prompt files.
+	suggestedURL := ""
+	if bundle.Document.Metadata != nil {
+		suggestedURL = bundle.Document.Metadata.SuggestedUrl
+	}
+
+	return engine.RenderChunksFromResolved(
+		bundle.Document.DocumentTitle,
+		suggestedURL,
+		cfg.FigmaURL,
+		resolvedChunks,
+		cfg.ChunkSize,
+		cfg.OutputDir,
+	)
+}
+
+// executeAgentChunks executes each chunk via the agent and returns outputs.
+func executeAgentChunks(ctx context.Context,
 	chunks []prompt.ChunkResult,
 	cfg *config.Config,
 	a agent.Agent,

@@ -8,9 +8,9 @@ import "bauer/internal/gdocs"
 type ResolvedChunk struct {
 	Locations       []gdocs.LocationGroupedSuggestions `json:"locations"`
 	DesignAnchors   []DesignAnchorRef                  `json:"design_anchors,omitempty"`
-	ScreenshotPaths []string                            `json:"screenshot_paths,omitempty"`
-	Comments        []DesignCommentRef                  `json:"comments,omitempty"`
-	Mapping         MappingMetadata                     `json:"mapping"`
+	ScreenshotPaths []string                           `json:"screenshot_paths,omitempty"`
+	Comments        []DesignCommentRef                 `json:"comments,omitempty"`
+	Mapping         MappingMetadata                    `json:"mapping"`
 }
 
 // DesignAnchorRef is a lightweight reference to a matched Figma node.
