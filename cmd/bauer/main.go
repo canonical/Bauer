@@ -186,7 +186,7 @@ func runOpenIssue(ctx context.Context, cfg *config.Config, orch orchestrator.Orc
 	title := fmt.Sprintf("docs: %s \u2014 documentation suggestions review", doc.DocumentTitle)
 	body := buildIssueBody(doc, cfg, result.RunID)
 
-	issueURL, err := github.CreateIssue(ctx, token, cfg.GitHubRepo, title, body)
+	issueURL, _, err := github.CreateIssue(ctx, token, cfg.GitHubRepo, title, body)
 	if err != nil {
 		return fmt.Errorf("failed to create GitHub issue: %w", err)
 	}

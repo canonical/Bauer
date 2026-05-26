@@ -287,9 +287,19 @@ _Parent: `feat/phase-3-api-foundation`_
 
 **Tasks:** T4.1, T4.2, T4.3
 
-**Summary:** _(to be filled by agent)_
+**Summary:** Added three new API endpoints to the Bauer API server. `POST /api/v1/issues` (T4.1) runs the orchestrator in dry-run mode (extraction + prompt generation only, no Copilot), builds a markdown issue body summarising the plan, and creates a GitHub issue via the REST API, returning the issue URL and number. `GET /api/v1/health/ready` (T4.2) is a K8s-compatible readiness probe registered on the public mux without authentication; it checks for a readable credentials file, a GitHub token, and the `gh` CLI in PATH, returning 503 with a `missing` map if any check fails. `POST /api/v1/webhooks/jira` (T4.3) validates an optional shared secret with a constant-time comparison, extracts a Google Doc ID from a configurable Jira custom field, and fires the full BAU workflow asynchronously, responding immediately with 202 Accepted. Updated `github.CreateIssue` to return the issue number in addition to the URL.
 
-**Files changed:** _(to be filled by agent)_
+**Files changed:**
+
+- `internal/github/issue.go` — updated `CreateIssue` signature from `(string, error)` to `(string, int, error)` to also return the issue number parsed from the GitHub API JSON response
+- `cmd/bauer/main.go` — updated `runOpenIssue` to use the new three-return-value `github.CreateIssue` (ignoring the number with `_`)
+- `cmd/app/v1/helpers.go` — new: `httpError`, `firstNonEmpty`, and `firstNonZero` helpers shared across v1 handlers
+- `cmd/app/v1/issues.go` — new: `IssuesHandler` and `formatIssueBody` implementing `POST /api/v1/issues` (T4.1)
+- `cmd/app/v1/api.go` — added `ReadinessHandler` for `GET /api/v1/health/ready` (T4.2); added imports for `os`, `os/exec`, and `bauer/internal/github`
+- `internal/jira/payload.go` — new package: `WebhookPayload` struct and `ExtractDocID` helper (T4.3)
+- `cmd/app/v1/jira.go` — new: `JiraWebhookHandler` implementing `POST /api/v1/webhooks/jira` with constant-time secret validation and async workflow execution (T4.3)
+- `cmd/app/main.go` — registered `GET /api/v1/health/ready`, `POST /api/v1/issues`, and `POST /api/v1/webhooks/jira` routes
+- `.env` — added `BAUER_JIRA_WEBHOOK_SECRET` and `BAUER_JIRA_DOC_FIELD` env var documentation
 
 ---
 
