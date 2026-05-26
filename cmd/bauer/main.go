@@ -172,9 +172,8 @@ func runOpenIssue(ctx context.Context, cfg *config.Config, orch orchestrator.Orc
 		return fmt.Errorf("--github-repo (or BAUER_GITHUB_REPO) is required for --open-issue mode")
 	}
 
-	parts := strings.SplitN(cfg.GitHubRepo, "/", 3)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		return fmt.Errorf("invalid --github-repo %q: expected \"owner/repo\" format", cfg.GitHubRepo)
+	if _, err := github.ParseGitHubRepo(cfg.GitHubRepo); err != nil {
+		return fmt.Errorf("invalid --github-repo %q: %w", cfg.GitHubRepo, err)
 	}
 
 	// Run with dry-run=true: extract + generate prompts, but skip Copilot.
@@ -366,6 +365,9 @@ func runOpenPR(ctx context.Context, cfg *config.Config, orch orchestrator.Orches
 
 	// Create the pull request.
 	prBody := buildPRBody(result, branchName)
+	// NOTE: BaseBranch is hardcoded to "main". If targeting repos with a different
+	// default branch (e.g. "master"), this should be made configurable via a flag or
+	// config field in a future iteration.
 	prURL, err := github.CreatePR(repo.Owner, repo.Name, github.CreatePROptions{
 		Title:      "docs: apply documentation suggestions from Copilot",
 		Body:       prBody,

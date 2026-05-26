@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // CreateIssue creates a GitHub issue via the REST API and returns the HTML URL.
@@ -49,7 +50,8 @@ func CreateIssue(ctx context.Context, token, repo, title, body string) (string, 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to send request to GitHub API: %w", err)
 	}
