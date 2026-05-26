@@ -51,7 +51,7 @@ tasks:
           echo "ERROR: provide FILE_KEY=your-figma-file-key"; exit 1
         fi
       - |
-        curl -sf -H "Authorization: Bearer ${BAUER_FIGMA_TOKEN:-$FIGMA_TOKEN}" \
+        curl -sf -H "Authorization: Bearer ${TOKEN}" \
           "https://api.figma.com/v1/files/{{.FILE_KEY}}/meta" \
           | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('name','?'), d.get('lastModified','?'))"
 

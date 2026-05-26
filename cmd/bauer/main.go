@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bauer/internal/agent"
 	"bauer/internal/artifacts"
 	"bauer/internal/config"
 	"bauer/internal/copilotcli"
@@ -41,6 +42,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "\tBAUER_DRY_RUN                   Override for --dry-run (true/false)\n")
 		fmt.Fprintf(os.Stderr, "\tBAUER_ARTIFACTS_DIR             Override for --artifacts-dir\n")
 		fmt.Fprintf(os.Stderr, "\tBAUER_BRANCH_PREFIX             Override for --branch-prefix\n")
+		fmt.Fprintf(os.Stderr, "\tBAUER_CHUNK_SIZE                Override for --chunk-size\n")
+		fmt.Fprintf(os.Stderr, "\tBAUER_PAGE_REFRESH              Override for --page-refresh (true/false)\n")
 		fmt.Fprintf(os.Stderr, "\n")
 	}
 
@@ -100,10 +103,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	copilotAgent, err := copilotcli.NewClient(cwd)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "ERROR: failed to create Copilot client:", err)
-		os.Exit(1)
+	// In standalone dry-run mode, skip Copilot client initialization
+	// so the CLI works on machines without the Copilot CLI installed.
+	var copilotAgent agent.Agent
+	if !(*dryRun && !*openPR && !*openIssue) {
+		var err2 error
+		copilotAgent, err2 = copilotcli.NewClient(cwd)
+		if err2 != nil {
+			fmt.Fprintln(os.Stderr, "ERROR: failed to create Copilot client:", err2)
+			os.Exit(1)
+		}
 	}
 
 	sources := source.NewManager(cfg.CredentialsPath)
