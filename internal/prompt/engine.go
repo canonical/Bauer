@@ -50,7 +50,7 @@ type PromptData struct {
 	// FigmaContextJSON is serialised figma enrichment — empty string when no Figma URL was supplied.
 	FigmaContextJSON string
 
-	// FigmaURL is the optional Figma URL for MCP guidance block.
+	// FigmaURL is the optional Figma URL, stored for metadata/artifact output (not rendered in templates).
 	FigmaURL string
 }
 

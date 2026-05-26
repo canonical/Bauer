@@ -1,6 +1,7 @@
 package mapping
 
 import (
+	"sort"
 	"strings"
 	"unicode"
 
@@ -70,19 +71,24 @@ func (r *Resolver) resolveAnchor(
 		}}, MappingMetadata{Method: "name", Confidence: conf, Status: "healthy"}
 	}
 
-	// Strategy 4: fallback to first anchor (root node)
+	// Strategy 4: fallback to first anchor (root node), sorted for determinism
 	if len(design.Anchors) > 0 {
+		sorted := make([]figma.DesignAnchor, len(design.Anchors))
+		copy(sorted, design.Anchors)
+		sort.Slice(sorted, func(i, j int) bool {
+			return sorted[i].NodeID < sorted[j].NodeID
+		})
 		return []DesignAnchorRef{{
 			FileKey:  design.FileKey,
-			NodeID:   design.Anchors[0].NodeID,
-			NodeName: design.Anchors[0].NodeName,
+			NodeID:   sorted[0].NodeID,
+			NodeName: sorted[0].NodeName,
 		}}, MappingMetadata{Method: "fallback", Confidence: 0.50, Status: "unresolved"}
 	}
 
 	return nil, MappingMetadata{Method: "none", Confidence: 0, Status: "unresolved"}
 }
 
-// matchByTextLayers uses weighted Jaccard similarity on token bags.
+// matchByTextLayers uses Jaccard similarity on token bags.
 // Returns the best matching anchor and its confidence, or nil if no match meets threshold.
 func matchByTextLayers(group gdocs.LocationGroupedSuggestions, anchors []figma.DesignAnchor) (*figma.DesignAnchor, float64) {
 	// Build token bag from gdocs suggestion group
@@ -112,7 +118,7 @@ func matchByTextLayers(group gdocs.LocationGroupedSuggestions, anchors []figma.D
 		jacc := float64(len(shared)) / float64(len(union))
 		conf := 0.50 + (jacc * 0.45)
 
-		if jacc >= 0.30 && conf > bestConf {
+		if jacc >= 0.30 && (conf > bestConf || (conf == bestConf && (best == nil || anchors[i].NodeID < best.NodeID))) {
 			bestConf = conf
 			best = &anchors[i]
 		}
@@ -145,7 +151,7 @@ func matchByFrameName(loc gdocs.SuggestionLocation, anchors []figma.DesignAnchor
 		overlap := float64(len(shared)) / float64(maxLen)
 		conf := 0.50 + (overlap * 0.35)
 
-		if overlap >= 0.50 && conf > bestConf {
+		if overlap >= 0.50 && (conf > bestConf || (conf == bestConf && (best == nil || anchors[i].NodeID < best.NodeID))) {
 			bestConf = conf
 			best = &anchors[i]
 		}
