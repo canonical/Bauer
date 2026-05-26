@@ -25,13 +25,14 @@ func JiraWebhookHandler(apiCfg *types.APIConfig) http.HandlerFunc {
 		// 1. Validate shared secret (constant-time comparison prevents timing attacks).
 		expectedSecret := os.Getenv("BAUER_JIRA_WEBHOOK_SECRET")
 		if expectedSecret != "" {
-			if !hmac.Equal([]byte(r.URL.Query().Get("secret")), []byte(expectedSecret)) {
+			if !hmac.Equal([]byte(r.Header.Get("X-Webhook-Secret")), []byte(expectedSecret)) {
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}
 		}
 
 		// 2. Parse payload.
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1MB limit
 		var payload jira.WebhookPayload
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
@@ -52,19 +53,29 @@ func JiraWebhookHandler(apiCfg *types.APIConfig) http.HandlerFunc {
 
 		// 4. Fire workflow in background so we respond fast.
 		go func() {
+			tmpDir, err := os.MkdirTemp("", "bauer-jira-*")
+			if err != nil {
+				slog.Error("failed to create temp dir", slog.String("error", err.Error()))
+				return
+			}
+
 			cfg := &config.Config{
 				DocID:           docID,
 				CredentialsPath: firstNonEmpty(os.Getenv("BAUER_CREDENTIALS_PATH"), os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")),
 				Model:           firstNonEmpty(os.Getenv("BAUER_MODEL"), apiCfg.Model, "gpt-5-mini-high"),
 				ChunkSize:       firstNonZero(1),
 				DryRun:          config.BoolPtr(false),
-				OutputDir:       os.TempDir(),
+				OutputDir:       tmpDir,
 			}
 			cfg.ApplyDefaults()
 
 			sources := source.NewManager(cfg.CredentialsPath)
 			arts := artifacts.NewManager(firstNonEmpty(os.Getenv("BAUER_ARTIFACTS_DIR"), "./bauer-artifacts"))
-			agent, _ := copilotcli.NewClient(os.TempDir())
+			agent, err := copilotcli.NewClient(tmpDir)
+			if err != nil {
+				slog.Error("failed to create copilot client", slog.String("error", err.Error()))
+				return
+			}
 			orch := orchestrator.New(agent, sources, arts)
 			if _, err := orch.Execute(context.Background(), cfg); err != nil {
 				slog.Error("Jira webhook workflow failed",

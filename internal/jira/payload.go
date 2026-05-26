@@ -21,6 +21,8 @@ func ExtractDocID(payload *WebhookPayload, fieldKey string) string {
 		return ""
 	}
 	var docID string
-	_ = json.Unmarshal(raw, &docID)
+	if err := json.Unmarshal(raw, &docID); err != nil {
+		return ""
+	}
 	return docID
 }

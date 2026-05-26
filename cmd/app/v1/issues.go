@@ -55,13 +55,19 @@ func IssuesHandler(apiCfg *types.APIConfig) http.HandlerFunc {
 			return
 		}
 
+		tmpDir, err := os.MkdirTemp("", "bauer-issues-*")
+		if err != nil {
+			httpError(w, http.StatusInternalServerError, "failed to create temp directory")
+			return
+		}
+
 		cfg := &config.Config{
 			DocID:           req.DocID,
 			CredentialsPath: credsPath,
 			Model:           firstNonEmpty(req.Model, apiCfg.Model, "gpt-5-mini-high"),
 			ChunkSize:       firstNonZero(req.ChunkSize, 1),
 			DryRun:          config.BoolPtr(true),
-			OutputDir:       os.TempDir(),
+			OutputDir:       tmpDir,
 			FigmaURL:        req.FigmaURL,
 			FigmaToken:      os.Getenv("BAUER_FIGMA_TOKEN"),
 		}
@@ -72,7 +78,7 @@ func IssuesHandler(apiCfg *types.APIConfig) http.HandlerFunc {
 
 		sources := source.NewManager(cfg.CredentialsPath)
 		arts := artifacts.NewManager(firstNonEmpty(os.Getenv("BAUER_ARTIFACTS_DIR"), "./bauer-artifacts"))
-		copilotAgent, err := copilotcli.NewClient(os.TempDir())
+		copilotAgent, err := copilotcli.NewClient(tmpDir)
 		if err != nil {
 			httpError(w, http.StatusInternalServerError, "failed to create copilot client")
 			return
@@ -85,7 +91,7 @@ func IssuesHandler(apiCfg *types.APIConfig) http.HandlerFunc {
 			return
 		}
 
-		parts := strings.SplitN(req.GitHubRepo, "/", 2)
+		parts := strings.Split(req.GitHubRepo, "/")
 		if len(parts) != 2 {
 			httpError(w, http.StatusBadRequest, "github_repo must be in owner/repo format")
 			return
