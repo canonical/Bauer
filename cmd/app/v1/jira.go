@@ -64,7 +64,11 @@ func JiraWebhookHandler(apiCfg *types.APIConfig) http.HandlerFunc {
 
 			sources := source.NewManager(cfg.CredentialsPath)
 			arts := artifacts.NewManager(firstNonEmpty(os.Getenv("BAUER_ARTIFACTS_DIR"), "./bauer-artifacts"))
-			agent, _ := copilotcli.NewClient(os.TempDir())
+			agent, err := copilotcli.NewClient(os.TempDir())
+			if err != nil {
+				slog.Error("failed to create copilot agent", "error", err)
+				return
+			}
 			orch := orchestrator.New(agent, sources, arts)
 			if _, err := orch.Execute(context.Background(), cfg); err != nil {
 				slog.Error("Jira webhook workflow failed",

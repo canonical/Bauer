@@ -67,6 +67,17 @@ func run() error {
 	protected.HandleFunc("POST /api/v1/webhooks/jira", v1.JiraWebhookHandler(cfg))
 
 	mux.Handle("/api/v1/", auth.JWTMiddleware(protected))
+
+	// Serve artifact screenshots at /static/ when BAUER_STATIC_BASE_URL is configured.
+	artsDir := os.Getenv("BAUER_ARTIFACTS_DIR")
+	if artsDir == "" {
+		artsDir = "./bauer-artifacts"
+	}
+	if baseURL := os.Getenv("BAUER_STATIC_BASE_URL"); baseURL != "" {
+		slog.Info("Serving artifact screenshots at /static/", slog.String("base_url", baseURL))
+		mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(artsDir))))
+	}
+
 	slog.Info("starting server", "address", ":8090")
 	err = http.ListenAndServe(":8090", middleware.RequestTrace(mux))
 

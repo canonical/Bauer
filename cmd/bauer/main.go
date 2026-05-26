@@ -32,6 +32,9 @@ func main() {
 	branchPrefix := fs.String("branch-prefix", "", "Prefix for created branches (default: bauer)")
 	githubRepo := fs.String("github-repo", "", "GitHub repository in owner/repo format (required for --open-pr and --open-issue)")
         figmaURL := fs.String("figma-url", "", "Figma file or design URL for design reference (requires BAUER_FIGMA_TOKEN)")
+
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s [flags]\n\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Flags:\n\n")
 		fs.PrintDefaults()
 		fmt.Fprintf(os.Stderr, "\nEnvironment variables:\n\n")
@@ -44,7 +47,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "\tBAUER_ARTIFACTS_DIR             Override for --artifacts-dir\n")
 		fmt.Fprintf(os.Stderr, "\tBAUER_BRANCH_PREFIX             Override for --branch-prefix\n")
 		fmt.Fprintf(os.Stderr, "\tBAUER_GITHUB_REPO               Override for --github-repo\n")
-                fmt.Fprintf(os.Stderr, "\tBAUER_FIGMA_TOKEN               Figma API token (required when --figma-url is supplied)\n")
+		fmt.Fprintf(os.Stderr, "\tBAUER_FIGMA_TOKEN               Figma API token (required when --figma-url is supplied)\n")
+	}
 
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		os.Exit(1)

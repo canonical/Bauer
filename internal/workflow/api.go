@@ -25,6 +25,7 @@ type APIRequest struct {
 	Model        string `json:"model,omitempty"`         // Copilot model
 	SummaryModel string `json:"summary_model,omitempty"` // Copilot summary model
 	DryRun       bool   `json:"dry_run,omitempty"`       // Dry run mode
+	FigmaURL     string `json:"figma_url,omitempty"`     // Optional Figma file URL
 }
 
 // APIResponse represents the API response from workflow execution
@@ -88,6 +89,8 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 			OutputDir:     firstNonEmpty(os.Getenv("BAUER_OUTPUT_DIR"), "bauer-output"),
 			Model:         firstNonEmpty(req.Model, os.Getenv("BAUER_MODEL"), "gpt-5-mini-high"),
 			DryRun:        req.DryRun,
+			FigmaURL:      req.FigmaURL,
+			FigmaToken:    os.Getenv("BAUER_FIGMA_TOKEN"),
 			LocalRepoPath: fmt.Sprintf("%s/%s-%d", "/tmp", "bauer-workflow", time.Now().Unix()),
 		}
 

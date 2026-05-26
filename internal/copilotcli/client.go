@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"bauer/internal/agent"
+
 	copilot "github.com/github/copilot-sdk/go"
 )
 

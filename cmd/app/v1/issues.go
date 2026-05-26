@@ -1,8 +1,10 @@
 package v1
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -93,7 +95,14 @@ func IssuesHandler(apiCfg *types.APIConfig) http.HandlerFunc {
 		repoFull := parts[0] + "/" + parts[1]
 
 		title := fmt.Sprintf("BAU: Apply suggestions from doc %s", req.DocID)
-		body := formatIssueBody(result, req.DocID)
+
+		artsDir := firstNonEmpty(os.Getenv("BAUER_ARTIFACTS_DIR"), "./bauer-artifacts")
+		host := artifacts.HostFromEnv(artsDir)
+		if _, isNop := host.(*artifacts.NopHost); isNop && req.FigmaURL != "" {
+			slog.Warn("BAUER_STATIC_BASE_URL not set; issue body will contain local screenshot paths",
+				slog.String("run_id", result.RunID))
+		}
+		body := formatIssueBodyWithHosting(r.Context(), result, req.DocID, host)
 
 		issueURL, issueNum, err := github.CreateIssue(r.Context(), token, repoFull, title, body)
 		if err != nil {
@@ -108,6 +117,17 @@ func IssuesHandler(apiCfg *types.APIConfig) http.HandlerFunc {
 			"issue_number": issueNum,
 		})
 	}
+}
+
+func formatIssueBodyWithHosting(ctx context.Context, result *orchestrator.OrchestrationResult, docID string, host artifacts.ScreenshotHost) string {
+	body := formatIssueBody(result, docID)
+	// When a real hosting backend is configured, screenshot paths embedded in the
+	// issue body can be rewritten to public URLs here. For now, the body is
+	// returned as-is; the NopHost leaves local paths unchanged, and callers
+	// are warned via slog when no hosting backend is set.
+	_ = host
+	_ = ctx
+	return body
 }
 
 func formatIssueBody(result *orchestrator.OrchestrationResult, docID string) string {
