@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"strings"
 )
 
 var figmaFilePattern = regexp.MustCompile(`figma\.com/(?:file|design)/([A-Za-z0-9_-]+)`)
@@ -20,7 +21,11 @@ type LinkRef struct {
 // Returns a clear error for non-Figma URLs.
 func ParseLink(rawURL string) (*LinkRef, error) {
 	u, err := url.Parse(rawURL)
-	if err != nil || (u.Host != "www.figma.com" && u.Host != "figma.com") {
+	if err != nil {
+		return nil, fmt.Errorf("not a valid Figma link: %q (expected figma.com/file/... or figma.com/design/...)", rawURL)
+	}
+	host := u.Hostname()
+	if !strings.EqualFold(host, "www.figma.com") && !strings.EqualFold(host, "figma.com") {
 		return nil, fmt.Errorf("not a valid Figma link: %q (expected figma.com/file/... or figma.com/design/...)", rawURL)
 	}
 

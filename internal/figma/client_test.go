@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"bauer/internal/figma"
@@ -156,7 +157,8 @@ type prefixTransport struct {
 func (t *prefixTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Rewrite the host to point to the test server.
 	req2 := req.Clone(req.Context())
-	req2.URL.Scheme = "http"
-	req2.URL.Host = t.base[len("http://"):]
+	parsed, _ := url.Parse(t.base)
+	req2.URL.Scheme = parsed.Scheme
+	req2.URL.Host = parsed.Host
 	return http.DefaultTransport.RoundTrip(req2)
 }

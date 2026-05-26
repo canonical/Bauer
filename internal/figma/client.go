@@ -128,7 +128,7 @@ func doGet[T any](ctx context.Context, c *Client, endpoint string) (*T, error) {
 	case http.StatusOK:
 		// success path; continue
 	case http.StatusUnauthorized, http.StatusForbidden:
-		return nil, fmt.Errorf("figma API authentication failed (status %d): check BAUER_FIGMA_TOKEN", resp.StatusCode)
+		return nil, fmt.Errorf("figma API authentication failed (status %d): check BAUER_FIGMA_TOKEN or FIGMA_TOKEN", resp.StatusCode)
 	case http.StatusTooManyRequests:
 		return nil, fmt.Errorf("figma API rate limit exceeded (status 429): retry after a delay")
 	case http.StatusNotFound:

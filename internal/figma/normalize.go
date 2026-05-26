@@ -1,6 +1,9 @@
 package figma
 
-import "time"
+import (
+	"sort"
+	"time"
+)
 
 // Normalize converts raw Figma API responses into a NormalizedDesign.
 //
@@ -36,8 +39,14 @@ func Normalize(
 		}
 	} else {
 		// Whole-file fetch: collect anchors from every node returned.
-		// Use a sorted iteration order if stability matters for tests.
-		for nodeID, entry := range nodes.Nodes {
+		// Sorted iteration for deterministic output.
+		sortedNodeIDs := make([]string, 0, len(nodes.Nodes))
+		for nodeID := range nodes.Nodes {
+			sortedNodeIDs = append(sortedNodeIDs, nodeID)
+		}
+		sort.Strings(sortedNodeIDs)
+		for _, nodeID := range sortedNodeIDs {
+			entry := nodes.Nodes[nodeID]
 			design.Anchors = append(design.Anchors, extractAnchors(nodeID, &entry.Document, nil)...)
 		}
 	}
@@ -57,11 +66,17 @@ func Normalize(
 	}
 
 	// Map screenshot paths to ScreenshotArtifact records.
+	// Sorted iteration for deterministic output.
 	now := time.Now().UTC().Format(time.RFC3339)
-	for nodeID, localPath := range screenshotPaths {
+	sortedScreenshotIDs := make([]string, 0, len(screenshotPaths))
+	for nodeID := range screenshotPaths {
+		sortedScreenshotIDs = append(sortedScreenshotIDs, nodeID)
+	}
+	sort.Strings(sortedScreenshotIDs)
+	for _, nodeID := range sortedScreenshotIDs {
 		design.Screenshots = append(design.Screenshots, ScreenshotArtifact{
 			NodeID:    nodeID,
-			LocalPath: localPath,
+			LocalPath: screenshotPaths[nodeID],
 			Scale:     2,
 			FetchedAt: now,
 		})

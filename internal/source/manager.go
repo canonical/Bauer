@@ -3,8 +3,9 @@ package source
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
-	"strings"
+	"regexp"
 
 	"bauer/internal/figma"
 	"bauer/internal/gdocs"
@@ -55,7 +56,7 @@ func (m *Manager) FetchFigma(ctx context.Context, client *figma.Client, ref *fig
 
 	var nodes *figma.NodesResponse
 	if len(nodeIDs) == 0 {
-		fmt.Printf("warning: whole-file Figma link — no specific node requested, skipping node fetch\n")
+		slog.Warn("whole-file Figma link — no specific node requested, skipping node fetch")
 		nodes = &figma.NodesResponse{}
 	} else {
 		nodes, err = client.GetNodes(ctx, ref.FileKey, nodeIDs)
@@ -75,15 +76,16 @@ func (m *Manager) FetchFigma(ctx context.Context, client *figma.Client, ref *fig
 		imageURLs, err := client.GetImages(ctx, ref.FileKey, nodeIDs)
 		if err != nil {
 			// Non-fatal: log and continue without screenshots
-			fmt.Printf("warning: could not fetch figma screenshots: %v\n", err)
+			slog.Warn("could not fetch figma screenshots", slog.Any("error", err))
 		} else {
 			for nodeID, imgURL := range imageURLs {
 				if imgURL == "" {
 					continue
 				}
-				destPath := filepath.Join(screenshotDir, fmt.Sprintf("shot-node-%s.png", strings.ReplaceAll(nodeID, ":", "-")))
+				safeNodeID := sanitizeNodeID(nodeID)
+				destPath := filepath.Join(screenshotDir, fmt.Sprintf("shot-node-%s.png", safeNodeID))
 				if err := client.DownloadImage(ctx, imgURL, destPath); err != nil {
-					fmt.Printf("warning: could not download screenshot for node %s: %v\n", nodeID, err)
+					slog.Warn("could not download screenshot", slog.String("node_id", nodeID), slog.Any("error", err))
 					continue
 				}
 				screenshotPaths[nodeID] = destPath
@@ -92,4 +94,11 @@ func (m *Manager) FetchFigma(ctx context.Context, client *figma.Client, ref *fig
 	}
 
 	return figma.Normalize(ref.FileKey, ref.NodeID, meta, nodes, comments, screenshotPaths), nil
+}
+
+// sanitizeNodeID removes unsafe characters from a node ID for use in filenames.
+var nodeIDSafePattern = regexp.MustCompile(`[^a-zA-Z0-9_-]`)
+
+func sanitizeNodeID(nodeID string) string {
+	return nodeIDSafePattern.ReplaceAllString(nodeID, "_")
 }
