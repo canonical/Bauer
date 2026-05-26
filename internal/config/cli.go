@@ -19,6 +19,7 @@ type CLIFlags struct {
 	TargetRepo      string
 	ArtifactsDir    string
 	BranchPrefix    string
+	FigmaURL        string
 	GitHubRepo      string
 	OpenPR          *bool
 	OpenIssue       *bool
@@ -42,6 +43,7 @@ func Load() (*Config, error) {
 	summaryModel := flag.String("summary-model", "gpt-5-mini-high", "Copilot model to use for summary session (default: gpt-5-mini-high)")
 	targetRepo := flag.String("target-repo", "", "Path to target repository where tasks should be executed (default: current directory)")
 	artifactsDir := flag.String("artifacts-dir", "", "Directory for run artifacts (default: ./bauer-artifacts)")
+	figmaURL := flag.String("figma-url", "", "Figma file or design URL for design reference (optional)")
 
 	// Custom usage message
 	flag.Usage = func() {
@@ -62,6 +64,7 @@ func Load() (*Config, error) {
 			{"--chunk-size", "<int>", "Total number of chunks to create (default: 1, or 5 if --page-refresh is set)"},
 			{"--output-dir", "<string>", "Directory for generated prompt files (default: bauer-output)"},
 			{"--artifacts-dir", "<string>", "Directory for run artifacts (default: ./bauer-artifacts)"},
+			{"--figma-url", "<string>", "Figma file or design URL for design reference (optional)"},
 			{"--model", "<string>", "Copilot model to use for sessions (default: gpt-5-mini-high)"},
 			{"--summary-model", "<string>", "Copilot model to use for summary session (default: gpt-5-mini-high)"},
 			{"--target-repo", "<string>", "Path to target repository where tasks should be executed (default: current directory)"},
@@ -97,6 +100,7 @@ func Load() (*Config, error) {
 		SummaryModel:    *summaryModel,
 		TargetRepo:      *targetRepo,
 		ArtifactsDir:    *artifactsDir,
+		FigmaURL:        *figmaURL,
 	}
 
 	if err := cfg.Validate(); err != nil {

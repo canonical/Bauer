@@ -105,6 +105,10 @@ func (c *Config) Validate() error {
 		return errors.New("chunk_size must be greater than 0")
 	}
 
+	if c.FigmaURL != "" && c.FigmaToken == "" {
+		return errors.New("BAUER_FIGMA_TOKEN or FIGMA_TOKEN must be set when --figma-url is supplied")
+	}
+
 	return ValidateCredentialsPath(c.CredentialsPath)
 }
 
