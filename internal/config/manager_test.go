@@ -1,7 +1,6 @@
 package config_test
 
 import (
-	"os"
 	"testing"
 
 	"bauer/internal/config"
@@ -37,9 +36,9 @@ func TestEnvVarSource_OverridesDefault(t *testing.T) {
 }
 
 func TestEnvVarSource_ZeroValueDoesNotOverride(t *testing.T) {
-	// Clear any env vars that might interfere
-	os.Unsetenv("BAUER_DOC_ID")
-	os.Unsetenv("BAUER_MODEL")
+	// Ensure env vars are empty so they don't override defaults
+	t.Setenv("BAUER_DOC_ID", "")
+	t.Setenv("BAUER_MODEL", "")
 
 	resolver := config.NewResolver(
 		config.NewEnvVarSource(),
@@ -136,7 +135,7 @@ func TestFlagsSource_OverridesEnvAndDefaults(t *testing.T) {
 }
 
 func TestResolver_CredentialsFallback(t *testing.T) {
-	os.Unsetenv("BAUER_CREDENTIALS_PATH")
+	t.Setenv("BAUER_CREDENTIALS_PATH", "")
 	t.Setenv("GOOGLE_APPLICATION_CREDENTIALS", "/gac/creds.json")
 
 	src := config.NewEnvVarSource()

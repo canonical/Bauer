@@ -46,23 +46,32 @@ func NewManager(base string) *Manager {
 	if base == "" {
 		base = "./bauer-artifacts"
 	}
+	if abs, err := filepath.Abs(base); err == nil {
+		base = abs
+	}
 	return &Manager{base: base}
 }
 
 // NewRunID generates a unique run ID in the format YYYY-MM-DDTHH-MM-SSZ-{8hex}.
-func NewRunID() string {
+func NewRunID() (string, error) {
 	now := time.Now().UTC()
 	ts := now.Format("2006-01-02T15-04-05Z")
 	b := make([]byte, 4)
-	rand.Read(b)
-	return fmt.Sprintf("%s-%s", ts, hex.EncodeToString(b))
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("generate run ID: %w", err)
+	}
+	return fmt.Sprintf("%s-%s", ts, hex.EncodeToString(b)), nil
 }
 
 // StartRun creates the run directory structure and writes metadata.json with status "in_progress".
 // Returns the runID for use in all subsequent calls.
 func (m *Manager) StartRun(meta RunMetadata) (string, error) {
 	if meta.RunID == "" {
-		meta.RunID = NewRunID()
+		id, err := NewRunID()
+		if err != nil {
+			return "", err
+		}
+		meta.RunID = id
 	}
 	meta.Status = "in_progress"
 	if meta.StartedAt == "" {
@@ -135,8 +144,10 @@ func (m *Manager) CompleteRun(runID string, status string, chunkCount int) error
 		return fmt.Errorf("open runs.jsonl: %w", err)
 	}
 	defer f.Close()
-	_, err = fmt.Fprintf(f, "%s\n", line)
-	return err
+	if _, err = fmt.Fprintf(f, "%s\n", line); err != nil {
+		return fmt.Errorf("write run index: %w", err)
+	}
+	return nil
 }
 
 // WriteGDocsExtraction writes the gdocs extraction result to extraction/gdocs.json.

@@ -65,7 +65,7 @@ func CreatePR(owner, repo string, opts CreatePROptions) (string, error) {
 	}
 
 	cmd := exec.Command("gh", args...)
-	
+
 	// Log token availability for debugging
 	logger := slog.Default()
 	ghToken := os.Getenv("GH_TOKEN")
@@ -77,7 +77,7 @@ func CreatePR(owner, repo string, opts CreatePROptions) (string, error) {
 	} else {
 		logger.Debug("GH_TOKEN is set for PR creation", "token_prefix", ghToken[:10])
 	}
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("failed to create PR: %w, output: %s", err, output)

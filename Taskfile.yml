@@ -26,7 +26,7 @@ tasks:
       - ./bauer-api --credentials ${BAUER_CREDENTIALS_PATH}
 
   verify-figma:
-    desc: Verify Figma token is set and reachable
+    desc: Verify Figma token is set
     cmds:
       - |
         if [ -z "$BAUER_FIGMA_TOKEN" ] && [ -z "$FIGMA_TOKEN" ]; then

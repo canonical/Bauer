@@ -11,7 +11,10 @@ import (
 )
 
 func TestNewRunID_Format(t *testing.T) {
-	id := artifacts.NewRunID()
+	id, err := artifacts.NewRunID()
+	if err != nil {
+		t.Fatalf("NewRunID() error = %v", err)
+	}
 	// Format: YYYY-MM-DDTHH-MM-SSZ-{8hex}
 	re := regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z-[0-9a-f]{8}$`)
 	if !re.MatchString(id) {
@@ -22,7 +25,10 @@ func TestNewRunID_Format(t *testing.T) {
 func TestNewRunID_Unique(t *testing.T) {
 	ids := make(map[string]bool)
 	for i := 0; i < 10; i++ {
-		id := artifacts.NewRunID()
+		id, err := artifacts.NewRunID()
+		if err != nil {
+			t.Fatalf("NewRunID() error = %v", err)
+		}
 		if ids[id] {
 			t.Errorf("NewRunID() produced duplicate ID: %q", id)
 		}
