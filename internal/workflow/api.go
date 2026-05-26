@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"bauer/internal/github"
@@ -72,7 +73,7 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 		}
 		credentials := firstNonEmpty(os.Getenv("BAUER_CREDENTIALS_PATH"), os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"))
 		if credentials == "" {
-			writeError(w, http.StatusInternalServerError, "no credentials configured: set BAUER_CREDENTIALS_PATH")
+			writeError(w, http.StatusInternalServerError, "no credentials configured: set BAUER_CREDENTIALS_PATH or GOOGLE_APPLICATION_CREDENTIALS")
 			return
 		}
 
@@ -83,10 +84,11 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 			BranchPrefix:  firstNonEmpty(req.BranchPrefix, os.Getenv("BAUER_BRANCH_PREFIX"), "bauer"),
 			DocID:         req.DocID,
 			Credentials:   credentials,
-			ChunkSize:     firstNonZero(req.ChunkSize, 1),
-			PageRefresh:   req.PageRefresh,
+			ChunkSize:     firstNonZero(req.ChunkSize, envInt("BAUER_CHUNK_SIZE"), 1),
+			PageRefresh:   req.PageRefresh || envBool("BAUER_PAGE_REFRESH"),
 			OutputDir:     firstNonEmpty(os.Getenv("BAUER_OUTPUT_DIR"), "bauer-output"),
 			Model:         firstNonEmpty(req.Model, os.Getenv("BAUER_MODEL"), "gpt-5-mini-high"),
+			SummaryModel:  firstNonEmpty(req.SummaryModel, os.Getenv("BAUER_SUMMARY_MODEL"), "gpt-5-mini-high"),
 			DryRun:        req.DryRun,
 			LocalRepoPath: fmt.Sprintf("%s/%s-%d", "/tmp", "bauer-workflow", time.Now().Unix()),
 		}
@@ -189,4 +191,14 @@ func firstNonZero(vals ...int) int {
 		}
 	}
 	return 0
+}
+
+func envInt(key string) int {
+	v, _ := strconv.Atoi(os.Getenv(key))
+	return v
+}
+
+func envBool(key string) bool {
+	v, _ := strconv.ParseBool(os.Getenv(key))
+	return v
 }

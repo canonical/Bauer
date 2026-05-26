@@ -26,8 +26,9 @@ type WorkflowInput struct {
 	ChunkSize   int
 	PageRefresh bool
 	OutputDir   string
-	Model       string
-	DryRun      bool
+	Model        string
+	SummaryModel string
+	DryRun       bool
 
 	// Local repository path
 	LocalRepoPath string
@@ -167,6 +168,7 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 		PageRefresh:     config.BoolPtr(input.PageRefresh),
 		OutputDir:       input.OutputDir,
 		Model:           input.Model,
+		SummaryModel:    input.SummaryModel,
 		TargetRepo:      ".", // Current directory is the cloned repo
 	}
 
