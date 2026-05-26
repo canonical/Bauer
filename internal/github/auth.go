@@ -1,21 +1,44 @@
 package github
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
-// GetGitHubToken retrieves a GitHub token from environment variables or gh CLI
+// GetGitHubToken retrieves a GitHub token from environment variables or gh CLI.
+// Resolution order:
+//  1. GitHub App (if GITHUB_APP_ID is set)
+//  2. PAT env vars (BAUER_GITHUB_TOKEN, GITHUB_TOKEN, GH_TOKEN)
+//  3. gh auth token CLI
 func GetGitHubToken() (string, error) {
+	// 1. Try GitHub App installation token
+	if os.Getenv("GITHUB_APP_ID") != "" {
+		token, err := generateAppInstallationToken()
+		if err != nil {
+			return "", fmt.Errorf("GitHub App auth failed: %w", err)
+		}
+		return token, nil
+	}
+
+	// 2. PAT env vars
 	for _, env := range []string{"BAUER_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"} {
 		if v := os.Getenv(env); v != "" {
 			return v, nil
 		}
 	}
 
-	// Get token from gh CLI config
+	// 3. Get token from gh CLI config
 	cmd := exec.Command("gh", "auth", "token")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -30,15 +53,116 @@ func GetGitHubToken() (string, error) {
 	return token, nil
 }
 
-// ValidateGitHubAuth checks if GitHub authentication is configured
+// generateAppInstallationToken generates a GitHub App installation access token
+// using a signed JWT exchanged for an installation token via the GitHub REST API.
+func generateAppInstallationToken() (string, error) {
+	appIDStr := os.Getenv("GITHUB_APP_ID")
+	appID, err := strconv.ParseInt(appIDStr, 10, 64)
+	if err != nil {
+		return "", fmt.Errorf("invalid GITHUB_APP_ID: %w", err)
+	}
+
+	installIDStr := os.Getenv("GITHUB_APP_INSTALLATION_ID")
+	installID, err := strconv.ParseInt(installIDStr, 10, 64)
+	if err != nil {
+		return "", fmt.Errorf("invalid GITHUB_APP_INSTALLATION_ID: %w", err)
+	}
+
+	// Load private key from env or file
+	var pemData []byte
+	if keyPath := os.Getenv("GITHUB_APP_PRIVATE_KEY_PATH"); keyPath != "" {
+		pemData, err = os.ReadFile(keyPath)
+		if err != nil {
+			return "", fmt.Errorf("reading GITHUB_APP_PRIVATE_KEY_PATH: %w", err)
+		}
+	} else if keyContent := os.Getenv("GITHUB_APP_PRIVATE_KEY"); keyContent != "" {
+		// Replace literal \n with newlines (common in env var storage)
+		pemData = []byte(strings.ReplaceAll(keyContent, `\n`, "\n"))
+	} else {
+		return "", fmt.Errorf("set GITHUB_APP_PRIVATE_KEY or GITHUB_APP_PRIVATE_KEY_PATH")
+	}
+
+	// Parse RSA private key (try PKCS#1 first, then PKCS#8)
+	block, _ := pem.Decode(pemData)
+	if block == nil {
+		return "", fmt.Errorf("failed to decode PEM block from GitHub App private key")
+	}
+	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		parsedKey, pkcs8Err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if pkcs8Err != nil {
+			return "", fmt.Errorf("parsing GitHub App private key (tried PKCS#1 and PKCS#8): %w", err)
+		}
+		rsaKey, ok := parsedKey.(*rsa.PrivateKey)
+		if !ok {
+			return "", fmt.Errorf("PKCS#8 key is not an RSA private key")
+		}
+		privateKey = rsaKey
+	}
+
+	// Create JWT (signed with RS256, valid 10 min)
+	now := time.Now()
+	claims := jwt.RegisteredClaims{
+		IssuedAt:  jwt.NewNumericDate(now.Add(-60 * time.Second)), // 60s in the past to handle clock skew
+		ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
+		Issuer:    strconv.FormatInt(appID, 10),
+	}
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	jwtStr, err := jwtToken.SignedString(privateKey)
+	if err != nil {
+		return "", fmt.Errorf("signing GitHub App JWT: %w", err)
+	}
+
+	// Exchange JWT for installation access token
+	url := fmt.Sprintf("https://api.github.com/app/installations/%d/access_tokens", installID)
+	req, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		return "", fmt.Errorf("creating installation token request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+jwtStr)
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+
+	httpClient := &http.Client{Timeout: 30 * time.Second}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("exchanging JWT for installation token: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		return "", fmt.Errorf("installation token exchange failed (status %d)", resp.StatusCode)
+	}
+
+	var result struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("parsing installation token response: %w", err)
+	}
+	if result.Token == "" {
+		return "", fmt.Errorf("empty installation token in response")
+	}
+	return result.Token, nil
+}
+
+// ValidateGitHubAuth checks if GitHub authentication is configured.
+// If a token is available via App auth or env vars, gh CLI is not required.
 func ValidateGitHubAuth() error {
-	// Get token
 	_, err := GetGitHubToken()
 	if err != nil {
 		return fmt.Errorf("GitHub authentication not configured: %w", err)
 	}
 
-	// Authenticate token
+	// If we have a token from App auth or env vars, we don't need gh CLI
+	if os.Getenv("GITHUB_APP_ID") != "" ||
+		os.Getenv("BAUER_GITHUB_TOKEN") != "" ||
+		os.Getenv("GITHUB_TOKEN") != "" ||
+		os.Getenv("GH_TOKEN") != "" {
+		return nil
+	}
+
+	// Token came from gh CLI — verify it's still valid
 	cmd := exec.Command("gh", "auth", "status")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
