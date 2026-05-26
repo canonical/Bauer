@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 // CreateIssue creates a GitHub issue via the REST API and returns the HTML URL.
@@ -18,6 +19,10 @@ func CreateIssue(ctx context.Context, token, repo, title, body string) (string, 
 	}
 	if repo == "" {
 		return "", fmt.Errorf("repo is required (owner/name format)")
+	}
+	parts := strings.SplitN(repo, "/", 3)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", fmt.Errorf("repo must be in \"owner/name\" format, got %q", repo)
 	}
 	if title == "" {
 		return "", fmt.Errorf("issue title is required")

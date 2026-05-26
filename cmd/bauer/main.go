@@ -134,7 +134,7 @@ func main() {
 	}
 }
 
-// validateFlags checks mutual exclusion and other flag constraints.
+// validateFlags validates mutual exclusion of --open-pr and --open-issue.
 // Called immediately after flag parsing, before any I/O or env resolution.
 func validateFlags(openPR, openIssue bool) error {
 	if openPR && openIssue {
@@ -170,6 +170,11 @@ func runOpenIssue(ctx context.Context, cfg *config.Config, orch orchestrator.Orc
 
 	if cfg.GitHubRepo == "" {
 		return fmt.Errorf("--github-repo (or BAUER_GITHUB_REPO) is required for --open-issue mode")
+	}
+
+	parts := strings.SplitN(cfg.GitHubRepo, "/", 3)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return fmt.Errorf("invalid --github-repo %q: expected \"owner/repo\" format", cfg.GitHubRepo)
 	}
 
 	// Run with dry-run=true: extract + generate prompts, but skip Copilot.
@@ -222,13 +227,13 @@ func buildIssueBody(doc *gdocs.ProcessingResult, cfg *config.Config, runID strin
 		}
 		for _, s := range loc.Suggestions {
 			brief := s.Change.NewText
-			if len(brief) > 100 {
-				brief = brief[:97] + "..."
+			if len([]rune(brief)) > 100 {
+				brief = string([]rune(brief)[:97]) + "..."
 			}
 			if brief == "" {
 				brief = s.Change.OriginalText
-				if len(brief) > 100 {
-					brief = brief[:97] + "..."
+				if len([]rune(brief)) > 100 {
+					brief = string([]rune(brief)[:97]) + "..."
 				}
 			}
 			entry := suggEntry{Section: section, Brief: brief, ChangeType: s.Change.Type}
@@ -346,6 +351,12 @@ func runOpenPR(ctx context.Context, cfg *config.Config, orch orchestrator.Orches
 			return nil
 		}
 		return fmt.Errorf("failed to commit: %w", err)
+	}
+
+	// In dry-run mode, skip push and PR creation.
+	if cfg.DryRun != nil && *cfg.DryRun {
+		fmt.Printf("Dry-run: changes committed locally on branch %q (push and PR creation skipped)\n", branchName)
+		return nil
 	}
 
 	// Push the branch.

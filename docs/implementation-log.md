@@ -172,7 +172,6 @@ _Parent: `feat/phase-1-cli-restore`_
 
 **Files changed:**
 - `cmd/bauer/main.go` — full rewrite: adds `--github-repo` flag; `validateFlags` replaces inline mutual-exclusion guard; implements `runOpenIssue`, `buildIssueBody`, `runOpenPR`, `buildPRBody`, `countAllSuggestions`; `runOpenPR` signature gains `repoDir string`
-- `cmd/bauer/main_test.go` — replaces `checkMutualExclusion`/stub tests with `TestValidateFlags_*` suite (T2.3) and `TestRunOpenIssue/PR_ProceedsToWorkflow` (verifies stubs replaced)
 - `internal/orchestrator/orchestrator.go` — `OrchestrationResult` gains `RunID string`; both return paths populate it from `runID`
 - `internal/config/cli.go` — `CLIFlags` gains `GitHubRepo string`
 - `internal/config/manager.go` — `FlagsSource.Load()` maps `GitHubRepo`
