@@ -144,7 +144,8 @@ func (m *Manager) CompleteRun(runID string, status string, chunkCount int) error
 		return fmt.Errorf("open runs.jsonl: %w", err)
 	}
 	defer f.Close()
-	if _, err = fmt.Fprintf(f, "%s\n", line); err != nil {
+	line = append(line, '\n')
+	if _, err = f.Write(line); err != nil {
 		return fmt.Errorf("write run index: %w", err)
 	}
 	return nil

@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 	"time"
 )
 
@@ -59,7 +58,7 @@ func New(a agent.Agent, sources *source.Manager, arts *artifacts.Manager) *Defau
 }
 
 // Execute runs the full pipeline: extraction, prompt generation, and optional agent execution.
-func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (*OrchestrationResult, error) {
+func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (result *OrchestrationResult, err error) {
 	startTime := time.Now()
 
 	// Determine run mode
@@ -69,25 +68,30 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 	}
 
 	// Start artifact run
-	runID, err := o.arts.StartRun(artifacts.RunMetadata{
+	runID, startErr := o.arts.StartRun(artifacts.RunMetadata{
 		DocID:    cfg.DocID,
 		FigmaURL: cfg.FigmaURL,
 		Mode:     mode,
 	})
-	if err != nil {
-		slog.Warn("Failed to start artifact run", slog.String("error", err.Error()))
+	if startErr != nil {
+		slog.Warn("Failed to start artifact run", slog.String("error", startErr.Error()))
 		// Non-fatal: continue without artifacts
 		runID = ""
 	}
 
-	completeRun := func(status string, chunkCount int) {
+	var finalChunkCount int
+	defer func() {
 		if runID == "" {
 			return
 		}
-		if err := o.arts.CompleteRun(runID, status, chunkCount); err != nil {
-			slog.Warn("Failed to complete artifact run", slog.String("error", err.Error()))
+		status := "success"
+		if err != nil {
+			status = "failed"
 		}
-	}
+		if completeErr := o.arts.CompleteRun(runID, status, finalChunkCount); completeErr != nil {
+			slog.Warn("Failed to complete artifact run", slog.String("error", completeErr.Error()))
+		}
+	}()
 
 	// 1. Fetch from source (Google Docs)
 	extractionStart := time.Now()
@@ -97,7 +101,6 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 			slog.String("error", err.Error()),
 			slog.String("doc_id", cfg.DocID),
 		)
-		completeRun("failed", 0)
 		return nil, fmt.Errorf("failed to fetch from source: %w", err)
 	}
 	extractionDuration := time.Since(extractionStart)
@@ -119,13 +122,11 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 	engine, err := prompt.NewEngine(config.BoolVal(cfg.PageRefresh, false))
 	if err != nil {
 		slog.Error("Failed to initialize prompt engine", slog.String("error", err.Error()))
-		completeRun("failed", 0)
 		return nil, fmt.Errorf("failed to initialize prompt engine: %w", err)
 	}
 
 	// 4. Generate Prompts from Chunks
 	if bundle.Document == nil {
-		completeRun("failed", 0)
 		return nil, fmt.Errorf("no document available: DocID may be empty")
 	}
 
@@ -141,20 +142,17 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 	)
 	if err != nil {
 		slog.Error("Failed to generate prompts", slog.String("error", err.Error()))
-		completeRun("failed", 0)
 		return nil, fmt.Errorf("failed to generate prompts: %w", err)
 	}
 
 	planDuration := time.Since(planStart)
+	finalChunkCount = len(chunks)
 
 	// Write prompts to artifact store
 	if runID != "" {
 		for _, chunk := range chunks {
-			// Read the generated prompt file and archive it
-			if data, readErr := os.ReadFile(chunk.Filename); readErr == nil {
-				if writeErr := o.arts.WritePrompt(runID, chunk.ChunkNumber, len(chunks), string(data)); writeErr != nil {
-					slog.Warn("Failed to write prompt artifact", slog.String("error", writeErr.Error()))
-				}
+			if writeErr := o.arts.WritePrompt(runID, chunk.ChunkNumber, len(chunks), chunk.Content); writeErr != nil {
+				slog.Warn("Failed to write prompt artifact", slog.String("error", writeErr.Error()))
 			}
 		}
 	}
@@ -170,7 +168,6 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 	// If dry run, return early
 	if config.BoolVal(cfg.DryRun, false) {
 		totalDuration := time.Since(startTime)
-		completeRun("success", len(chunks))
 		return &OrchestrationResult{
 			ExtractionBundle:   bundle,
 			ExtractionDuration: extractionDuration,
@@ -203,7 +200,6 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 	chunkOutputs, copilotDuration, err := executeAgentChunks(ctx, chunks, cfg, o.agent)
 	if err != nil {
 		slog.Error("Agent execution failed", slog.String("error", err.Error()))
-		completeRun("failed", len(chunks))
 		return nil, fmt.Errorf("agent execution failed: %w", err)
 	}
 
@@ -251,7 +247,6 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 	}
 
 	totalDuration := time.Since(startTime)
-	completeRun("success", len(chunks))
 
 	return &OrchestrationResult{
 		ExtractionBundle:   bundle,
