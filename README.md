@@ -5,43 +5,40 @@
 
 A proof-of-concept Go application that extracts document content, suggestions (proposed edits), and comments from Google Docs using the Google Docs API and Google Drive API.
 
-## Installation
+## Local development
 
-### [Snap](https://snapcraft.io/bauer)
+### Prerequisites
 
-```
-sudo snap install bauer
-```
+1. Install [`go`](https://golang.org/dl/)
+2. Install [`task`](https://taskfile.dev/docs/installation)
 
-### Homebrew
-
-First time installation
+### Steps
+1. Build the project
 
 ```
-brew install britneywwc/bauer/bauer
+task build
+```
+2. Modify the [Taskfile](./Taskfile.yml) with your document ID and credentials path for convenience
+3. Run the project
+
+```
+./bauer --doc-id <doc-id> \
+  --credentials <path-to-creds> \
+  --parse-only
 ```
 
-Upgrade to a newer version or later
-
-```
-brew update
-brew upgrade bauer
-```
-
-N.B. You need to install [Copilot CLI](https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli) which is used by Bauer.
 
 ## Configuration
 
-1. Install [Copilot CLI](https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli)
-2. Create `credentials.json` file and copy the structure from the [default file](https://github.com/muhammadbassiony/Bauer/blob/main/credentials.json)
-3. Get credentials from Google Cloud service or Bitwarden (internally)
-4. Fill up `credentials.json` with Google Cloud credentials (see [Generating Google Cloud credentials](https://developers.google.com/workspace/guides/create-credentials)).
-5. Share copy document with service account
+1. Create `credentials.json` file and copy the structure from the [default file](https://github.com/muhammadbassiony/Bauer/blob/main/credentials.json)
+2. Get credentials from Google Cloud service or Bitwarden (internally)
+3. Fill up `credentials.json` with Google Cloud credentials (see [Generating Google Cloud credentials](https://developers.google.com/workspace/guides/create-credentials)).
+4. Share copy document with service account
 
 ## Usage
 
-1. Install bauer using the instructions above
-2. Check that `copilot` and `bauer` are installed
+1.  Build Bauer locally using the Local development steps above (`task build`)
+2. If running with GitHub integration (no `--parse-only`), ensure `copilot` is installed and authenticated
 3. Get document ID from Google Document & share the document with the service account
 4. Run Bauer
 
@@ -49,17 +46,20 @@ N.B. You need to install [Copilot CLI](https://docs.github.com/en/copilot/how-to
 bauer --doc-id <your-document-id> --credentials ./credentials.json
 ```
 
-6. Optional parameters
+5. Optional parameters
 
-| Flag             | Type   | Default           | Description                                                                  |
-| ---------------- | ------ | ----------------- | ---------------------------------------------------------------------------- |
-| `--chunk-size`   | int    | `1`               | Total number of chunks to create (default: 1, or 5 if --page-refresh is set) |
-| `--dry-run`      | bool   | `false`           | Run extraction and planning only; skip Copilot execution and PR creation     |
-| `--output-dir`   | string | `bauer-output`    | Output directory for generated files                                         |
-| `--model`        | string | `gpt-5-mini-high` | Copilot model to use for code generation                                     |
-| `--page-refresh` | bool   | `false`           | Whether this is a page refresh, or the default copy update                   |
-| `--target-repo`  | string | current directory | Path to target repository where tasks should be executed                     |
-### Examples
+| Flag               | Type   | Default              | Description                                                                     | Requires Copilot |
+| ------------------ | ------ | -------------------- | ------------------------------------------------------------------------------- | ---------------- |
+| `--github-repo`    | string | (required if not parse-only) | GitHub repository (owner/repo or HTTPS URL)                              | Yes*             |
+| `--credentials`    | string | `bau-test-creds.json` | Path to service account credentials JSON                                       | No               |
+| `--local-repo-path` | string | `/tmp/ubuntu.com`    | Local path for cloned repository                                               | No               |
+| `--dry-run`        | bool   | `false`              | Perform a dry run without creating PR                                          | Yes*             |
+| `--output-dir`     | string | `bauer-output`       | Output directory for Bauer results                                             | No               |
+| `--branch-prefix`  | string | `bauer`              | Branch naming prefix                                                            | No               |
+| `--parse-only`     | bool   | `false`              | Parse document and output machine-readable JSON (skip GitHub integration) | No               |
+
+*These flags require Copilot integration to be configured when performing GitHub operations (not needed for `--parse-only`)
+<!-- ### Examples
 
 #### Basic run
 
@@ -105,7 +105,7 @@ bauer --doc-id <your-document-id> \
 bauer --doc-id <your-document-id> \
         --credentials ./credentials.json \
         --page-refresh
-```
+``` -->
 
 ## API usage
 
@@ -164,28 +164,12 @@ Example:
 curl http://localhost:8090/api/v1/health
 ```
 
-## Local development
-
-### Prerequisites
-
-1. Install [`go`](https://golang.org/dl/)
-2. Install [`task`](https://taskfile.dev/docs/installation)
-3. Install [Copilot CLI](https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli)
-
-## Steps
-
-1. Modify the [Taskfile](./Taskfile.yml) with your document ID and credentials path for convenience
-2. Run the project with task
-
-```
-task run
-```
 
 ## Documentation
 
 For more information refer to [`ARCHITECTURE.md`](/docs/ARCHITECTURE.md)
 
-## Future improvements
+<!-- ## Future improvements
 
 ### Short term
 
@@ -205,3 +189,27 @@ On the long term, BAUer should evolve into a full-fledged API service, with the 
         - spinning up ephemeral Copilot CLI instances
         - self-hosted LLMs (can use open source models such as Llama, openAI OSS, deepseek, etc)
 - Automatic PR creations and reviewer assignments
+
+
+## Installation (WIP)
+
+### [Snap](https://snapcraft.io/bauer)
+
+```
+sudo snap install bauer
+```
+
+### Homebrew
+
+First time installation
+
+```
+brew install britneywwc/bauer/bauer
+```
+
+Upgrade to a newer version or later
+
+```
+brew update
+brew upgrade bauer
+``` -->

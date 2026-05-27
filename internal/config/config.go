@@ -18,6 +18,9 @@ type Config struct {
 	// DryRun indicates if the tool should skip side-effect operations (Copilot CLI, PR creation).
 	DryRun bool `json:"dry_run"`
 
+	// ParseOnly indicates Phase 1 mode - parse document only, skip Copilot execution and GitHub integration
+	ParseOnly bool `json:"parse_only"`
+
 	// ChunkSize is the total number of chunks to create from all locations.
 	// Default is 1 if not specified, or 5 if PageRefresh is true.
 	ChunkSize int `json:"chunk_size"`
