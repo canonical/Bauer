@@ -107,7 +107,7 @@ bauer --doc-id <your-document-id> \
         --page-refresh
 ``` -->
 
-## API usage
+<!-- ## API usage
 
 The API server exposes a small HTTP surface for submitting jobs and checking health. Jobs run asynchronously and write outputs to `base-output-dir/<request-id>`.
 
@@ -162,7 +162,7 @@ Example:
 
 ```bash
 curl http://localhost:8090/api/v1/health
-```
+``` -->
 
 
 ## Documentation
