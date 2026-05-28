@@ -61,7 +61,7 @@ func TestExtractSuggestions(t *testing.T) {
 		},
 	}
 
-	suggestions := ExtractSuggestions(doc)
+	suggestions := ExtractSuggestions(doc, "")
 
 	if len(suggestions) != 3 {
 		t.Fatalf("Expected 3 suggestions, got %d", len(suggestions))

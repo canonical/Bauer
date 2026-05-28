@@ -26,7 +26,7 @@ func TestFullExtractionIntegration(t *testing.T) {
 	// 2. Run the extraction pipeline (mimicking ProcessDocument without network calls)
 
 	// Step A: Extract Suggestions
-	suggestions := ExtractSuggestions(&doc)
+	suggestions := ExtractSuggestions(&doc, "")
 
 	// Step B: Extract Metadata
 	metadata := ExtractMetadataTable(&doc)
@@ -132,7 +132,7 @@ func TestMetadataSuggestionsSurviveProcessingFlow(t *testing.T) {
 
 	doc := buildMetadataFlowTestDocument(metadataSuggestionID, bodySuggestionID)
 
-	suggestions := ExtractSuggestions(doc)
+	suggestions := ExtractSuggestions(doc, "")
 	if len(suggestions) < 2 {
 		t.Fatalf("Expected at least 2 suggestions, got %d", len(suggestions))
 	}

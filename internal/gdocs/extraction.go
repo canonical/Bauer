@@ -9,11 +9,39 @@ import (
 	"google.golang.org/api/docs/v1"
 )
 
+// ParseDocIDAndTab extracts the document ID and tab ID from a docID parameter.
+// Supports formats:
+//   - "docID" → returns (docID, "")
+//   - "docID?tab=tabID" → returns (docID, tabID)
+//   - "docID/edit?tab=tabID" → returns (docID, tabID)
+//   - "docID/edit" → returns (docID, "")
+func ParseDocIDAndTab(docID string) (string, string) {
+	tabID := ""
+
+	// Extract tab ID if present
+	if idx := strings.Index(docID, "?tab="); idx != -1 {
+		tabID = docID[idx+5:]
+		docID = docID[:idx]
+	}
+
+	// Remove "/edit" suffix if present
+	docID = strings.TrimSuffix(docID, "/edit")
+
+	return docID, tabID
+}
+
 // FetchDocument fetches the document with suggestions inline.
+// Supports docID parameter with optional tab ID (e.g., "docID?tab=tabID")
+// Sets includeTabsContent=true to fetch all tabs in the document.
 func (c *Client) FetchDocument(ctx context.Context, docID string) (*docs.Document, error) {
+	// Parse out the actual doc ID (in case tab ID is included)
+	actualDocID, _ := ParseDocIDAndTab(docID)
+
 	// Use SUGGESTIONS_INLINE to see suggestions marked in the content
-	doc, err := c.Docs.Documents.Get(docID).
+	// Use IncludeTabsContent(true) to fetch ALL tabs (not just the first one)
+	doc, err := c.Docs.Documents.Get(actualDocID).
 		SuggestionsViewMode("SUGGESTIONS_INLINE").
+		IncludeTabsContent(true).
 		Context(ctx).
 		Do()
 	if err != nil {
@@ -23,34 +51,74 @@ func (c *Client) FetchDocument(ctx context.Context, docID string) (*docs.Documen
 }
 
 // ExtractSuggestions walks through the document content and extracts all suggestions.
+// If tabID is provided, filters suggestions to only those in that tab.
+// When includeTabsContent=true is used, iterates through document.tabs.
 // TODO this and all sub functions can be made concurrent for speed
 // TODO add recursion depth control on this and sub functions
-func ExtractSuggestions(doc *docs.Document) []Suggestion {
+func ExtractSuggestions(doc *docs.Document, tabID string) []Suggestion {
 	var suggestions []Suggestion
 
-	if doc.Body != nil {
-		for _, elem := range doc.Body.Content {
-			processStructuralElement(elem, &suggestions)
-		}
-	}
+	// Check if tabs are populated (when includeTabsContent=true)
+	if len(doc.Tabs) > 0 {
+		// New API behavior: document has tabs
+		for _, tab := range doc.Tabs {
+			// If tabID is specified, skip tabs that don't match
+			if tabID != "" && tab.TabProperties.TabId != tabID {
+				continue
+			}
 
-	for _, header := range doc.Headers {
-		if header.Content != nil {
-			for _, elem := range header.Content {
-				processStructuralElement(elem, &suggestions)
+			currentTabID := tab.TabProperties.TabId
+			if tab.DocumentTab != nil {
+				extractFromDocumentTab(tab.DocumentTab, currentTabID, &suggestions)
 			}
 		}
+	} else {
+		// Fallback for documents without tabs (old behavior)
+		// When includeTabsContent is not set, document.body contains first tab content only
+		extractFromDocumentTab(&docs.DocumentTab{
+			Body:    doc.Body,
+			Headers: doc.Headers,
+			Footers: doc.Footers,
+		}, tabID, &suggestions)
 	}
 
-	for _, footer := range doc.Footers {
-		if footer.Content != nil {
-			for _, elem := range footer.Content {
-				processStructuralElement(elem, &suggestions)
-			}
+	// Set TabID for all suggestions if specified
+	if tabID != "" {
+		for i := range suggestions {
+			suggestions[i].TabID = tabID
 		}
 	}
 
 	return suggestions
+}
+
+// extractFromDocumentTab extracts suggestions from a DocumentTab (which can be a tab or the document body)
+func extractFromDocumentTab(docTab *docs.DocumentTab, tabID string, suggestions *[]Suggestion) {
+	if docTab.Body != nil {
+		for _, elem := range docTab.Body.Content {
+			processStructuralElement(elem, suggestions)
+		}
+	}
+
+	if docTab.Headers != nil {
+		for _, header := range docTab.Headers {
+			if header.Content != nil {
+				for _, elem := range header.Content {
+					processStructuralElement(elem, suggestions)
+				}
+			}
+		}
+	}
+
+	if docTab.Footers != nil {
+		for _, footer := range docTab.Footers {
+			if footer.Content != nil {
+				for _, elem := range footer.Content {
+					processStructuralElement(elem, suggestions)
+				}
+			}
+		}
+	}
 }
 
 // BuildDocumentStructure builds a comprehensive structure of the document.
@@ -64,8 +132,32 @@ func BuildDocumentStructure(doc *docs.Document) *DocumentStructure {
 
 	var fullTextBuilder strings.Builder
 
-	if doc.Body == nil || doc.Body.Content == nil {
-		return structure
+	// Check if tabs are populated (when includeTabsContent=true)
+	if len(doc.Tabs) > 0 {
+		// New API behavior: document has tabs - process all tabs
+		for _, tab := range doc.Tabs {
+			if tab.DocumentTab != nil {
+				buildStructureFromDocumentTab(tab.DocumentTab, structure, &fullTextBuilder)
+			}
+		}
+	} else {
+		// Fallback for documents without tabs (old behavior)
+		buildStructureFromDocumentTab(&docs.DocumentTab{
+			Body:    doc.Body,
+			Headers: doc.Headers,
+			Footers: doc.Footers,
+		}, structure, &fullTextBuilder)
+	}
+
+	structure.FullText = fullTextBuilder.String()
+	return structure
+}
+
+// buildStructureFromDocumentTab builds document structure from a DocumentTab
+// and appends results to the provided structure
+func buildStructureFromDocumentTab(docTab *docs.DocumentTab, structure *DocumentStructure, fullTextBuilder *strings.Builder) {
+	if docTab.Body == nil || docTab.Body.Content == nil {
+		return
 	}
 
 	var lastParagraphText string
@@ -73,7 +165,7 @@ func BuildDocumentStructure(doc *docs.Document) *DocumentStructure {
 	var tableCounter int
 	var headingCounter int
 
-	for _, elem := range doc.Body.Content {
+	for _, elem := range docTab.Body.Content {
 		// Extract headings
 		if heading := extractHeading(elem, headingCounter+1); heading != nil {
 			headingCounter++
@@ -166,9 +258,6 @@ func BuildDocumentStructure(doc *docs.Document) *DocumentStructure {
 			lastParagraphText = ""
 		}
 	}
-
-	structure.FullText = fullTextBuilder.String()
-	return structure
 }
 
 // BuildActionableSuggestions converts raw suggestions into actionable suggestions with full context.

@@ -6,6 +6,7 @@ type Suggestion struct {
 	Content    string `json:"content"`
 	StartIndex int64  `json:"start_index"`
 	EndIndex   int64  `json:"end_index"`
+	TabID      string `json:"tab_id,omitempty"` // Tab ID if suggestion belongs to a specific tab
 }
 
 // DocumentHeading represents a heading in the document with its position.
