@@ -24,7 +24,8 @@ type APIConfig struct {
 
 	// TargetRepo is the path (relative or absolute) to the target repository
 	// where tasks should be executed. If not specified, uses the current directory.
-	TargetRepo string `json:"target_repo"`}
+	TargetRepo string `json:"target_repo"`
+}
 
 func LoadConfig() (*APIConfig, error) {
 	credentialsPath := flag.String("credentials", "", "Path to service account JSON (required)")
@@ -60,7 +61,7 @@ func LoadConfig() (*APIConfig, error) {
 		BaseOutputDir:   *baseOutputDir,
 		Model:           *model,
 		SummaryModel:    *summaryModel,
-		TargetRepo: 	 *targetRepo,
+		TargetRepo:      *targetRepo,
 	}
 
 	if err := cfg.Validate(); err != nil {

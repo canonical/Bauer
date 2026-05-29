@@ -1,0 +1,31 @@
+name: PR checks with taskfile
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Taskfile
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.40.0
+
+      - name: Build with Taskfile
+        run: task build
+    
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Taskfile
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.40.0
+
+      - name: Lint with Taskfile
+        run: task lint

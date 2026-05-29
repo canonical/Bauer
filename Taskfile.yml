@@ -12,10 +12,16 @@ tasks:
     cmds:
       - go test --cover ./...
 
-  lint:
+  fmt:
     desc: Format code using gofmt
     cmds:
       - gofmt -w .
+  
+  lint:
+    desc: Check code formatting and vet
+    cmds:
+      - gofmt -l .
+      - go vet ./...
 
   run-server:
     desc: Run the API server locally
