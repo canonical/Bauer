@@ -44,10 +44,6 @@ type Config struct {
 	// TargetRepo is the path (relative or absolute) to the target repository
 	// where tasks should be executed. If not specified, uses the current directory.
 	TargetRepo string `json:"target_repo"`
-
-	// TabID is the optional ID of a specific tab to parse suggestions from.
-	// Usually for copy doc 2.0 template
-	TabID string `json:"tab_id"`
 }
 
 // Apply default config values

@@ -208,7 +208,7 @@ func TestExtractMetadataTable(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ExtractMetadataTable(tt.doc)
+			got := ExtractMetadataTable(tt.doc, "")
 			if tt.wantNil {
 				if got != nil {
 					t.Error("Expected nil metadata, got struct")
@@ -287,7 +287,7 @@ func TestBuildDocumentStructure(t *testing.T) {
 		},
 	}
 
-	structure := BuildDocumentStructure(doc)
+	structure := BuildDocumentStructure(doc, "")
 
 	// Verify Headings
 	if len(structure.Headings) != 1 {

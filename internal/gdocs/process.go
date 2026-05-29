@@ -50,13 +50,13 @@ func (c *Client) ProcessDocument(ctx context.Context, docID string) (*Processing
 	}
 
 	// Extract Metadata
-	metadata := ExtractMetadataTable(doc)
+	metadata := ExtractMetadataTable(doc, tabID)
 	if metadata != nil {
 		slog.Info("Metadata table extracted", slog.Int("field_count", len(metadata.Raw)))
 	}
 
 	// Build Document Structure
-	docStructure := BuildDocumentStructure(doc)
+	docStructure := BuildDocumentStructure(doc, tabID)
 	slog.Info("Document structure built",
 		slog.Int("headings", len(docStructure.Headings)),
 		slog.Int("tables", len(docStructure.Tables)),
