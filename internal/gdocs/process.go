@@ -10,6 +10,7 @@ import (
 type ProcessingResult struct {
 	DocumentTitle         string                       `json:"document_title"`
 	DocumentID            string                       `json:"document_id"`
+	TabID                 string                       `json:"tab_id,omitempty"`
 	Metadata              *MetadataTable               `json:"metadata,omitempty"`
 	ActionableSuggestions []ActionableSuggestion       `json:"actionable_suggestions"`
 	GroupedSuggestions    []LocationGroupedSuggestions `json:"grouped_suggestions"`
@@ -73,6 +74,7 @@ func (c *Client) ProcessDocument(ctx context.Context, docID string) (*Processing
 	return &ProcessingResult{
 		DocumentTitle:         doc.Title,
 		DocumentID:            doc.DocumentId,
+		TabID:                 tabID,
 		Metadata:              metadata,
 		ActionableSuggestions: actionableSuggestions,
 		GroupedSuggestions:    groupedSuggestions,

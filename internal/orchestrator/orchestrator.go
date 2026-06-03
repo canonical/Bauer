@@ -100,7 +100,8 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 		parseResult := &ParseResult{
 			Metadata: ParseResultMetadata{
 				DocumentTitle:      result.DocumentTitle,
-				DocumentID:         cfg.DocID,
+				DocumentID:         result.DocumentID,
+				TabID:              result.TabID,
 				ExtractionTime:     time.Now(),
 				ExtractionDuration: extractionDuration,
 				ProcessingDuration: totalDuration,
