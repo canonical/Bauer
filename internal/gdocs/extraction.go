@@ -336,6 +336,15 @@ func ExtractMetadataTable(doc *docs.Document) *MetadataTable {
 
 // Helper functions
 
+// linkURL safely extracts the external link URL from a text style.
+// Returns "" when the style, its link, or the URL is absent.
+func linkURL(style *docs.TextStyle) string {
+	if style == nil || style.Link == nil {
+		return ""
+	}
+	return style.Link.Url
+}
+
 // processStructuralElement recursively processes a structural element (paragraph, table, TOC)
 // to find and extract suggestions.
 func processStructuralElement(elem *docs.StructuralElement, suggestions *[]Suggestion) {
@@ -394,6 +403,7 @@ func processParagraphElement(paraElem *docs.ParagraphElement, suggestions *[]Sug
 					Content:    tr.Content,
 					StartIndex: paraElem.StartIndex,
 					EndIndex:   paraElem.EndIndex,
+					NewURL:     linkURL(tr.TextStyle),
 				})
 			}
 		}
@@ -411,14 +421,28 @@ func processParagraphElement(paraElem *docs.ParagraphElement, suggestions *[]Sug
 		}
 
 		if tr.SuggestedTextStyleChanges != nil {
-			for suggID := range tr.SuggestedTextStyleChanges {
-				*suggestions = append(*suggestions, Suggestion{
-					ID:         suggID,
-					Type:       "text_style_change",
-					Content:    tr.Content,
-					StartIndex: paraElem.StartIndex,
-					EndIndex:   paraElem.EndIndex,
-				})
+			for suggID, suggestedStyle := range tr.SuggestedTextStyleChanges {
+				isLink := suggestedStyle.TextStyleSuggestionState != nil &&
+					suggestedStyle.TextStyleSuggestionState.LinkSuggested
+				if isLink {
+					*suggestions = append(*suggestions, Suggestion{
+						ID:         suggID,
+						Type:       "link",
+						Content:    tr.Content,
+						StartIndex: paraElem.StartIndex,
+						EndIndex:   paraElem.EndIndex,
+						OldURL:     linkURL(tr.TextStyle),
+						NewURL:     linkURL(suggestedStyle.TextStyle),
+					})
+				} else {
+					*suggestions = append(*suggestions, Suggestion{
+						ID:         suggID,
+						Type:       "text_style_change",
+						Content:    tr.Content,
+						StartIndex: paraElem.StartIndex,
+						EndIndex:   paraElem.EndIndex,
+					})
+				}
 			}
 		}
 	}

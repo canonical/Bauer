@@ -678,3 +678,109 @@ func TestGetTextAround(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractSuggestions_LinkChanges(t *testing.T) {
+	doc := &docs.Document{
+		Body: &docs.Body{
+			Content: []*docs.StructuralElement{
+				{
+					StartIndex: 1,
+					EndIndex:   60,
+					Paragraph: &docs.Paragraph{
+						Elements: []*docs.ParagraphElement{
+							// Add link: no current link, suggested new URL.
+							{
+								StartIndex: 1,
+								EndIndex:   11,
+								TextRun: &docs.TextRun{
+									Content: "Contact us",
+									SuggestedTextStyleChanges: map[string]docs.SuggestedTextStyle{
+										"link-add": {
+											TextStyle:                &docs.TextStyle{Link: &docs.Link{Url: "/contact"}},
+											TextStyleSuggestionState: &docs.TextStyleSuggestionState{LinkSuggested: true},
+										},
+									},
+								},
+							},
+							// Change link: current URL -> new URL.
+							{
+								StartIndex: 11,
+								EndIndex:   21,
+								TextRun: &docs.TextRun{
+									Content:   "Learn more",
+									TextStyle: &docs.TextStyle{Link: &docs.Link{Url: "/old"}},
+									SuggestedTextStyleChanges: map[string]docs.SuggestedTextStyle{
+										"link-change": {
+											TextStyle:                &docs.TextStyle{Link: &docs.Link{Url: "/new"}},
+											TextStyleSuggestionState: &docs.TextStyleSuggestionState{LinkSuggested: true},
+										},
+									},
+								},
+							},
+							// Remove link: current URL, suggested empty link.
+							{
+								StartIndex: 21,
+								EndIndex:   31,
+								TextRun: &docs.TextRun{
+									Content:   "Click here",
+									TextStyle: &docs.TextStyle{Link: &docs.Link{Url: "/gone"}},
+									SuggestedTextStyleChanges: map[string]docs.SuggestedTextStyle{
+										"link-remove": {
+											TextStyle:                &docs.TextStyle{Link: &docs.Link{Url: ""}},
+											TextStyleSuggestionState: &docs.TextStyleSuggestionState{LinkSuggested: true},
+										},
+									},
+								},
+							},
+							// Pure formatting (bold): must stay text_style_change, no URLs.
+							{
+								StartIndex: 31,
+								EndIndex:   41,
+								TextRun: &docs.TextRun{
+									Content: "bold text!",
+									SuggestedTextStyleChanges: map[string]docs.SuggestedTextStyle{
+										"bold-1": {
+											TextStyle:                &docs.TextStyle{Bold: true},
+											TextStyleSuggestionState: &docs.TextStyleSuggestionState{BoldSuggested: true},
+										},
+									},
+								},
+							},
+							// Inserted text that is itself a link.
+							{
+								StartIndex: 41,
+								EndIndex:   51,
+								TextRun: &docs.TextRun{
+									Content:               "new linked",
+									TextStyle:             &docs.TextStyle{Link: &docs.Link{Url: "/inserted"}},
+									SuggestedInsertionIds: []string{"ins-link"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	got := map[string]Suggestion{}
+	for _, s := range ExtractSuggestions(doc) {
+		got[s.ID] = s
+	}
+
+	if s := got["link-add"]; s.Type != "link" || s.OldURL != "" || s.NewURL != "/contact" {
+		t.Errorf("link-add: type=%q old=%q new=%q", s.Type, s.OldURL, s.NewURL)
+	}
+	if s := got["link-change"]; s.Type != "link" || s.OldURL != "/old" || s.NewURL != "/new" {
+		t.Errorf("link-change: type=%q old=%q new=%q", s.Type, s.OldURL, s.NewURL)
+	}
+	if s := got["link-remove"]; s.Type != "link" || s.OldURL != "/gone" || s.NewURL != "" {
+		t.Errorf("link-remove: type=%q old=%q new=%q", s.Type, s.OldURL, s.NewURL)
+	}
+	if s := got["bold-1"]; s.Type != "text_style_change" || s.OldURL != "" || s.NewURL != "" {
+		t.Errorf("bold-1 should stay text_style_change: type=%q old=%q new=%q", s.Type, s.OldURL, s.NewURL)
+	}
+	if s := got["ins-link"]; s.Type != "insertion" || s.NewURL != "/inserted" {
+		t.Errorf("ins-link: type=%q new=%q", s.Type, s.NewURL)
+	}
+}
