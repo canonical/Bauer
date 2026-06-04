@@ -233,6 +233,7 @@ func BuildActionableSuggestions(suggestions []Suggestion, structure *DocumentStr
 				Type:         "insert",
 				OriginalText: "",
 				NewText:      sugg.Content,
+				NewURL:       sugg.NewURL, // empty unless the inserted run is a link
 			}
 			as.Verification = SuggestionVerification{
 				TextBeforeChange: precedingText + followingText,
@@ -248,6 +249,26 @@ func BuildActionableSuggestions(suggestions []Suggestion, structure *DocumentStr
 			as.Verification = SuggestionVerification{
 				TextBeforeChange: precedingText + sugg.Content + followingText,
 				TextAfterChange:  precedingText + followingText,
+			}
+
+		case "link":
+			linkType := deriveLinkChangeType(sugg.OldURL, sugg.NewURL)
+			if linkType == "" {
+				slog.Warn("Link change with no URL; skipping",
+					slog.String("id", sugg.ID),
+				)
+				continue
+			}
+			as.Change = SuggestionChange{
+				Type:     linkType,
+				LinkText: sugg.Content,
+				OldURL:   sugg.OldURL,
+				NewURL:   sugg.NewURL,
+			}
+			// A link change does not alter the visible text, so before/after match.
+			as.Verification = SuggestionVerification{
+				TextBeforeChange: precedingText + sugg.Content + followingText,
+				TextAfterChange:  precedingText + sugg.Content + followingText,
 			}
 
 		default:
@@ -343,6 +364,21 @@ func linkURL(style *docs.TextStyle) string {
 		return ""
 	}
 	return style.Link.Url
+}
+
+// deriveLinkChangeType maps the presence of old/new URLs to a link operation.
+// Returns "" when both are empty (a no-op, e.g. bookmark/heading links).
+func deriveLinkChangeType(oldURL, newURL string) string {
+	switch {
+	case oldURL == "" && newURL != "":
+		return "link_add"
+	case oldURL != "" && newURL != "":
+		return "link_change"
+	case oldURL != "" && newURL == "":
+		return "link_remove"
+	default:
+		return ""
+	}
 }
 
 // processStructuralElement recursively processes a structural element (paragraph, table, TOC)

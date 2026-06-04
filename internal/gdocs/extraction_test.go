@@ -784,3 +784,48 @@ func TestExtractSuggestions_LinkChanges(t *testing.T) {
 		t.Errorf("ins-link: type=%q new=%q", s.Type, s.NewURL)
 	}
 }
+
+func TestBuildActionableSuggestions_LinkChanges(t *testing.T) {
+	structure := &DocumentStructure{
+		TextElements: []TextElementWithPosition{
+			{ID: "text-1", Text: "Before ", StartIndex: 0, EndIndex: 7},
+			{ID: "text-2", Text: "Contact us", StartIndex: 7, EndIndex: 17},
+			{ID: "text-3", Text: " after", StartIndex: 17, EndIndex: 23},
+		},
+	}
+
+	suggestions := []Suggestion{
+		{ID: "add", Type: "link", Content: "Contact us", StartIndex: 7, EndIndex: 17, OldURL: "", NewURL: "/contact"},
+		{ID: "change", Type: "link", Content: "Contact us", StartIndex: 7, EndIndex: 17, OldURL: "/old", NewURL: "/new"},
+		{ID: "remove", Type: "link", Content: "Contact us", StartIndex: 7, EndIndex: 17, OldURL: "/gone", NewURL: ""},
+		{ID: "noop", Type: "link", Content: "Contact us", StartIndex: 7, EndIndex: 17, OldURL: "", NewURL: ""},
+		{ID: "bold", Type: "text_style_change", Content: "Contact us", StartIndex: 7, EndIndex: 17},
+		{ID: "ins", Type: "insertion", Content: "linked", StartIndex: 7, EndIndex: 7, NewURL: "/inserted"},
+	}
+
+	got := map[string]ActionableSuggestion{}
+	for _, as := range BuildActionableSuggestions(suggestions, structure, nil) {
+		got[as.ID] = as
+	}
+
+	if _, ok := got["noop"]; ok {
+		t.Error("link change with no URLs should be skipped")
+	}
+	if _, ok := got["bold"]; ok {
+		t.Error("non-link style change should be skipped")
+	}
+
+	if c := got["add"].Change; c.Type != "link_add" || c.LinkText != "Contact us" || c.OldURL != "" || c.NewURL != "/contact" {
+		t.Errorf("add: %+v", c)
+	}
+	if c := got["change"].Change; c.Type != "link_change" || c.OldURL != "/old" || c.NewURL != "/new" {
+		t.Errorf("change: %+v", c)
+	}
+	if c := got["remove"].Change; c.Type != "link_remove" || c.OldURL != "/gone" || c.NewURL != "" {
+		t.Errorf("remove: %+v", c)
+	}
+	// Insertion-with-link: insert type, NewURL set, but NO LinkText (text is in NewText).
+	if c := got["ins"].Change; c.Type != "insert" || c.NewText != "linked" || c.NewURL != "/inserted" || c.LinkText != "" {
+		t.Errorf("ins: %+v", c)
+	}
+}
