@@ -2,10 +2,15 @@ package gdocs
 
 type Suggestion struct {
 	ID         string `json:"id"`
-	Type       string `json:"type"` // "insertion", "deletion", or "text_style_change"
+	Type       string `json:"type"` // "insertion", "deletion", "text_style_change", or "link"
 	Content    string `json:"content"`
 	StartIndex int64  `json:"start_index"`
 	EndIndex   int64  `json:"end_index"`
+
+	// Link URLs, populated for Type "link" and for insertions carrying a link.
+	// Not serialized; they feed BuildActionableSuggestions.
+	OldURL string `json:"-"` // current link URL, empty if not previously linked
+	NewURL string `json:"-"` // suggested link URL, empty if link removed
 }
 
 // DocumentHeading represents a heading in the document with its position.
@@ -57,7 +62,8 @@ type SuggestionAnchor struct {
 
 // SuggestionChange describes exactly what text change should be made.
 type SuggestionChange struct {
-	// Type is the operation: "insert", "delete", or "replace"
+	// Type is the operation: "insert", "delete", "replace",
+	// "link_add", "link_change", or "link_remove".
 	Type string `json:"type"`
 
 	// OriginalText is the text currently in the document (empty for pure insertions)
@@ -65,6 +71,17 @@ type SuggestionChange struct {
 
 	// NewText is the text that should replace/be inserted (empty for pure deletions)
 	NewText string `json:"new_text,omitempty"`
+
+	// LinkText is the visible text a link wraps (link_* operations only).
+	// Named link_text, not anchor_text, to avoid overloading "anchor" (which
+	// already means the preceding/following locator text in SuggestionAnchor).
+	LinkText string `json:"link_text,omitempty"`
+
+	// OldURL is the previous link target (empty for link_add).
+	OldURL string `json:"old_url,omitempty"`
+
+	// NewURL is the new link target (empty for link_remove).
+	NewURL string `json:"new_url,omitempty"`
 }
 
 // SuggestionVerification shows the before/after state for validation.
