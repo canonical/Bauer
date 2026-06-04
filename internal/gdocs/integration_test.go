@@ -26,13 +26,13 @@ func TestFullExtractionIntegration(t *testing.T) {
 	// 2. Run the extraction pipeline (mimicking ProcessDocument without network calls)
 
 	// Step A: Extract Suggestions
-	suggestions := ExtractSuggestions(&doc)
+	suggestions := ExtractSuggestions(&doc, "")
 
 	// Step B: Extract Metadata
-	metadata := ExtractMetadataTable(&doc)
+	metadata := ExtractMetadataTable(&doc, "")
 
 	// Step C: Build Document Structure
-	docStructure := BuildDocumentStructure(&doc)
+	docStructure := BuildDocumentStructure(&doc, "")
 
 	// Step D: Build Actionable Suggestions
 	actionableSuggestions := BuildActionableSuggestions(suggestions, docStructure, metadata)
@@ -132,17 +132,17 @@ func TestMetadataSuggestionsSurviveProcessingFlow(t *testing.T) {
 
 	doc := buildMetadataFlowTestDocument(metadataSuggestionID, bodySuggestionID)
 
-	suggestions := ExtractSuggestions(doc)
+	suggestions := ExtractSuggestions(doc, "")
 	if len(suggestions) < 2 {
 		t.Fatalf("Expected at least 2 suggestions, got %d", len(suggestions))
 	}
 
-	metadata := ExtractMetadataTable(doc)
+	metadata := ExtractMetadataTable(doc, "")
 	if metadata == nil {
 		t.Fatal("Expected metadata to be extracted, got nil")
 	}
 
-	docStructure := BuildDocumentStructure(doc)
+	docStructure := BuildDocumentStructure(doc, "")
 	actionableSuggestions := BuildActionableSuggestions(suggestions, docStructure, metadata)
 	groupedSuggestions := GroupActionableSuggestions(actionableSuggestions, docStructure)
 

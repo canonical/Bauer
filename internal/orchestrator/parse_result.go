@@ -9,6 +9,7 @@ import (
 type ParseResultMetadata struct {
 	DocumentTitle      string        `json:"document_title"`
 	DocumentID         string        `json:"document_id"`
+	TabID              string        `json:"tab_id,omitempty"`
 	ExtractionTime     time.Time     `json:"extraction_time"`
 	ExtractionDuration time.Duration `json:"extraction_duration"`
 	ProcessingDuration time.Duration `json:"processing_duration"`

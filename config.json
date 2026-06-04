@@ -1,6 +1,6 @@
 {
   "doc_id": "1WJ-N_Xkkx4r_6knxW7h200oIDyi4mVMzgh1xYt5xaU0",
-  "credentials": "bau-test-creds.json",
+  "credentials": "credentials.json",
   "chunk_size": 1,
   "page_refresh": false,
   "output_dir": "bauer-output",
