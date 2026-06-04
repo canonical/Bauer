@@ -69,9 +69,12 @@ Each suggestion in the JSON array is a **LocationGroupedSuggestions** object wit
         "following_text": "exact text after"
       },
       "change": {
-        "type": "insert|delete|replace",
+        "type": "insert|delete|replace|link_add|link_change|link_remove",
         "original_text": "text to remove/replace",  // Empty for inserts
-        "new_text": "text to add/replace with"      // Empty for deletes
+        "new_text": "text to add/replace with",      // Empty for deletes
+        "link_text": "visible text the link wraps",  // Link changes only
+        "old_url": "previous link URL",               // link_change, link_remove
+        "new_url": "new link URL"                     // link_add, link_change
       },
       "verification": {
         "text_before_change": "combined before state",
@@ -133,9 +136,12 @@ For each suggestion:
    - The anchor texts are exact strings from the document
 
 2. **Apply the change** based on type:
-   - **insert**: Add `new_text` between `preceding_text` and `following_text`
+   - **insert**: Add `new_text` between `preceding_text` and `following_text`. If the change also has a `new_url`, wrap the inserted text: `<a href="{new_url}">{new_text}</a>`.
    - **delete**: Remove `original_text`, keeping anchors intact
    - **replace**: Substitute `original_text` with `new_text`
+   - **link_add**: Wrap `link_text` in `<a href="{new_url}">{link_text}</a>`. Preserve any Vanilla link classes/attributes already used on nearby links.
+   - **link_change**: Find the existing `<a>` whose visible text is `link_text` and whose href is `old_url`, then update its href to `new_url`. Do not change the link text.
+   - **link_remove**: Unwrap the `<a>` around `link_text` (href `old_url`), keeping the visible text in place.
 
 3. **Verify**:
    - Confirm the resulting text matches `text_after_change`
@@ -148,7 +154,7 @@ For each suggestion:
 - **Order matters**: Process suggestions in the order provided
 - **Pattern awareness**: If `table_title` indicates a Vanilla pattern, consult the patterns reference below
 - **Metadata tags**: For `in_metadata` suggestions, update the matching tag in the target repo instead of searching for anchors
-- **Style changes**: Some suggestions may be style-only changes (e.g., making text bold, adding emphasis). Use appropriate Vanilla Framework classes and HTML to apply these changes.
+- **Link changes**: `link_add`/`link_change`/`link_remove` update hyperlinks (see the apply list above). Other style-only changes (bold, italic, emphasis) are currently skipped by the extractor and will not appear in the suggestions.
 - **Section deletions**: It is expected that some suggestions involve removing entire sections, this is acceptable behavior, ensure proper HTML structure and semantics are maintained. 
 
 ## Vanilla Framework Patterns
