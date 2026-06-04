@@ -233,6 +233,7 @@ func mergeChanges(suggestions []ActionableSuggestion) SuggestionChange {
 	var newParts []string
 	hasInsertions := false
 	hasDeletions := false
+	var linkMeta *SuggestionChange // preserved if any atom carries link info
 
 	// Process each atomic change in order
 	for _, sugg := range suggestions {
@@ -240,6 +241,10 @@ func mergeChanges(suggestions []ActionableSuggestion) SuggestionChange {
 		case "insert":
 			hasInsertions = true
 			newParts = append(newParts, sugg.Change.NewText)
+			if sugg.Change.NewURL != "" {
+				c := sugg.Change
+				linkMeta = &c
+			}
 		case "delete":
 			hasDeletions = true
 			originalParts = append(originalParts, sugg.Change.OriginalText)
@@ -250,6 +255,9 @@ func mergeChanges(suggestions []ActionableSuggestion) SuggestionChange {
 				originalParts = append(originalParts, sugg.Change.OriginalText)
 				newParts = append(newParts, sugg.Change.OriginalText)
 			}
+		case "link_add", "link_change", "link_remove":
+			c := sugg.Change
+			linkMeta = &c
 		}
 	}
 
@@ -266,9 +274,22 @@ func mergeChanges(suggestions []ActionableSuggestion) SuggestionChange {
 		changeType = "style"
 	}
 
-	return SuggestionChange{
+	merged := SuggestionChange{
 		Type:         changeType,
 		OriginalText: originalText,
 		NewText:      newText,
 	}
+
+	// Preserve link metadata if any atomic change carried it.
+	if linkMeta != nil {
+		merged.LinkText = linkMeta.LinkText
+		merged.OldURL = linkMeta.OldURL
+		merged.NewURL = linkMeta.NewURL
+		// With no text insert/delete, this is a pure link operation.
+		if !hasInsertions && !hasDeletions {
+			merged.Type = linkMeta.Type
+		}
+	}
+
+	return merged
 }

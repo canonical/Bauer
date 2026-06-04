@@ -1386,3 +1386,36 @@ func TestMergeChanges(t *testing.T) {
 func containsText(text, substr string) bool {
 	return len(text) > 0 && len(substr) > 0 && (text == substr || strings.Contains(text, substr))
 }
+
+func TestGroupActionableSuggestions_LinkChange(t *testing.T) {
+	structure := &DocumentStructure{
+		TextElements: []TextElementWithPosition{
+			{ID: "text-1", Text: "Contact us", StartIndex: 7, EndIndex: 17},
+		},
+	}
+
+	suggestions := []ActionableSuggestion{
+		{
+			ID: "link-1",
+			Change: SuggestionChange{
+				Type:     "link_change",
+				LinkText: "Contact us",
+				OldURL:   "/old",
+				NewURL:   "/new",
+			},
+			Position: struct {
+				StartIndex int64 `json:"start_index"`
+				EndIndex   int64 `json:"end_index"`
+			}{StartIndex: 7, EndIndex: 17},
+		},
+	}
+
+	groups := GroupActionableSuggestions(suggestions, structure)
+	if len(groups) != 1 || len(groups[0].Suggestions) != 1 {
+		t.Fatalf("expected 1 group with 1 suggestion, got %#v", groups)
+	}
+	c := groups[0].Suggestions[0].Change
+	if c.Type != "link_change" || c.LinkText != "Contact us" || c.OldURL != "/old" || c.NewURL != "/new" {
+		t.Errorf("link fields not preserved through grouping: %+v", c)
+	}
+}
