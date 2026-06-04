@@ -1387,6 +1387,30 @@ func containsText(text, substr string) bool {
 	return len(text) > 0 && len(substr) > 0 && (text == substr || strings.Contains(text, substr))
 }
 
+func TestMergeChanges_PreservesLinkOnInsert(t *testing.T) {
+	// A replace built from delete + a linked insert (same ID) must keep new_url.
+	suggestions := []ActionableSuggestion{
+		{ID: "x", Change: SuggestionChange{Type: "delete", OriginalText: "old"}},
+		{ID: "x", Change: SuggestionChange{Type: "insert", NewText: "new", NewURL: "/u"}},
+	}
+	got := mergeChanges(suggestions)
+	if got.Type != "replace" || got.OriginalText != "old" || got.NewText != "new" || got.NewURL != "/u" {
+		t.Errorf("merge dropped text/link metadata: %+v", got)
+	}
+}
+
+func TestMergeChanges_PureLinkKeepsType(t *testing.T) {
+	// Two link atoms with no text change: merged result keeps the link type+fields.
+	suggestions := []ActionableSuggestion{
+		{ID: "x", Change: SuggestionChange{Type: "link_change", LinkText: "t", OldURL: "/a", NewURL: "/b"}},
+		{ID: "x", Change: SuggestionChange{Type: "link_change", LinkText: "t", OldURL: "/a", NewURL: "/b"}},
+	}
+	got := mergeChanges(suggestions)
+	if got.Type != "link_change" || got.LinkText != "t" || got.OldURL != "/a" || got.NewURL != "/b" {
+		t.Errorf("pure-link merge wrong: %+v", got)
+	}
+}
+
 func TestGroupActionableSuggestions_LinkChange(t *testing.T) {
 	structure := &DocumentStructure{
 		TextElements: []TextElementWithPosition{
