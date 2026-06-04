@@ -53,13 +53,19 @@ type SuggestionSummaryByFile struct {
 	Insertions   int `json:"insertions"`
 	Deletions    int `json:"deletions"`
 	Replacements int `json:"replacements"`
+	LinkAdds     int `json:"link_adds"`
+	LinkChanges  int `json:"link_changes"`
+	LinkRemoves  int `json:"link_removes"`
 }
 
 // SuggestionSummaryByType shows statistics by operation type
 type SuggestionSummaryByType struct {
-	Insert  int `json:"insert"`
-	Delete  int `json:"delete"`
-	Replace int `json:"replace"`
+	Insert     int `json:"insert"`
+	Delete     int `json:"delete"`
+	Replace    int `json:"replace"`
+	LinkAdd    int `json:"link_add"`
+	LinkChange int `json:"link_change"`
+	LinkRemove int `json:"link_remove"`
 }
 
 // ParseResultSummary provides an at-a-glance overview for agents
