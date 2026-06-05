@@ -11,6 +11,7 @@ type Suggestion struct {
 	// Not serialized; they feed BuildActionableSuggestions.
 	OldURL string `json:"-"` // current link URL, empty if not previously linked
 	NewURL string `json:"-"` // suggested link URL, empty if link removed
+	TabID      string `json:"tab_id,omitempty"` // Tab ID if suggestion belongs to a specific tab
 }
 
 // DocumentHeading represents a heading in the document with its position.

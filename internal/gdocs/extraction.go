@@ -9,11 +9,46 @@ import (
 	"google.golang.org/api/docs/v1"
 )
 
+// ParseDocIDAndTab extracts the document ID and tab ID from a docID parameter.
+// Supports formats:
+//   - "docID" → returns (docID, "")
+//   - "docID?tab=tabID" → returns (docID, tabID)
+//   - "docID/edit?tab=tabID" → returns (docID, tabID)
+//   - "docID/edit" → returns (docID, "")
+//   - "docID?tab=tabID&usp=sharing" → returns (docID, tabID)  (extra params stripped)
+//   - "docID?tab=tabID#heading" → returns (docID, tabID)      (fragment stripped)
+func ParseDocIDAndTab(docID string) (string, string) {
+	tabID := ""
+
+	// Extract tab ID if present, then trim any trailing query parameters or
+	// fragment that may follow the tab value (e.g. "&usp=sharing", "#heading").
+	if idx := strings.Index(docID, "?tab="); idx != -1 {
+		tabID = docID[idx+5:]
+		docID = docID[:idx]
+		// Trim at the first '&' or '#' so extra parameters don't corrupt the ID.
+		if i := strings.IndexAny(tabID, "&#"); i != -1 {
+			tabID = tabID[:i]
+		}
+	}
+
+	// Remove "/edit" suffix if present
+	docID = strings.TrimSuffix(docID, "/edit")
+
+	return docID, tabID
+}
+
 // FetchDocument fetches the document with suggestions inline.
+// Supports docID parameter with optional tab ID (e.g., "docID?tab=tabID")
+// Sets includeTabsContent=true to fetch all tabs in the document.
 func (c *Client) FetchDocument(ctx context.Context, docID string) (*docs.Document, error) {
+	// Parse out the actual doc ID (in case tab ID is included)
+	actualDocID, _ := ParseDocIDAndTab(docID)
+
 	// Use SUGGESTIONS_INLINE to see suggestions marked in the content
-	doc, err := c.Docs.Documents.Get(docID).
+	// Use IncludeTabsContent(true) to fetch ALL tabs (not just the first one)
+	doc, err := c.Docs.Documents.Get(actualDocID).
 		SuggestionsViewMode("SUGGESTIONS_INLINE").
+		IncludeTabsContent(true).
 		Context(ctx).
 		Do()
 	if err != nil {
@@ -23,39 +58,75 @@ func (c *Client) FetchDocument(ctx context.Context, docID string) (*docs.Documen
 }
 
 // ExtractSuggestions walks through the document content and extracts all suggestions.
+// If tabID is provided, filters suggestions to only those in that tab.
+// When includeTabsContent=true is used, iterates through document.tabs.
 // TODO this and all sub functions can be made concurrent for speed
-// TODO add recursion depth control on this and sub functions
-func ExtractSuggestions(doc *docs.Document) []Suggestion {
+func ExtractSuggestions(doc *docs.Document, tabID string) []Suggestion {
 	var suggestions []Suggestion
 
-	if doc.Body != nil {
-		for _, elem := range doc.Body.Content {
-			processStructuralElement(elem, &suggestions)
-		}
+	// Check if tabs are populated (when includeTabsContent=true)
+	if len(doc.Tabs) > 0 {
+		// New API behavior: document has tabs (may be nested via ChildTabs)
+		walkTabs(doc.Tabs, tabID, func(currentTabID string, docTab *docs.DocumentTab) {
+			start := len(suggestions)
+			extractFromDocumentTab(docTab, currentTabID, &suggestions)
+			for i := start; i < len(suggestions); i++ {
+				suggestions[i].TabID = currentTabID
+			}
+		})
+	} else {
+		// Fallback for documents without tabs (old behavior)
+		// When includeTabsContent is not set, document.body contains first tab content only
+		extractFromDocumentTab(&docs.DocumentTab{
+			Body:    doc.Body,
+			Headers: doc.Headers,
+			Footers: doc.Footers,
+		}, tabID, &suggestions)
 	}
 
-	for _, header := range doc.Headers {
-		if header.Content != nil {
-			for _, elem := range header.Content {
-				processStructuralElement(elem, &suggestions)
-			}
-		}
-	}
-
-	for _, footer := range doc.Footers {
-		if footer.Content != nil {
-			for _, elem := range footer.Content {
-				processStructuralElement(elem, &suggestions)
-			}
+	// Set TabID for all suggestions if specified
+	if tabID != "" {
+		for i := range suggestions {
+			suggestions[i].TabID = tabID
 		}
 	}
 
 	return suggestions
 }
 
+// extractFromDocumentTab extracts suggestions from a DocumentTab (which can be a tab or the document body)
+func extractFromDocumentTab(docTab *docs.DocumentTab, tabID string, suggestions *[]Suggestion) {
+	if docTab.Body != nil {
+		for _, elem := range docTab.Body.Content {
+			processStructuralElement(elem, suggestions)
+		}
+	}
+
+	if docTab.Headers != nil {
+		for _, header := range docTab.Headers {
+			if header.Content != nil {
+				for _, elem := range header.Content {
+					processStructuralElement(elem, suggestions)
+				}
+			}
+		}
+	}
+
+	if docTab.Footers != nil {
+		for _, footer := range docTab.Footers {
+			if footer.Content != nil {
+				for _, elem := range footer.Content {
+					processStructuralElement(elem, suggestions)
+				}
+			}
+		}
+	}
+}
+
 // BuildDocumentStructure builds a comprehensive structure of the document.
+// If tabID is provided, only processes that specific tab; otherwise processes all tabs.
 // TODO this should be combined with ExtractSuggestions to avoid multiple traversals of the same document
-func BuildDocumentStructure(doc *docs.Document) *DocumentStructure {
+func BuildDocumentStructure(doc *docs.Document, tabID string) *DocumentStructure {
 	structure := &DocumentStructure{
 		Headings:     []DocumentHeading{},
 		Tables:       []TableRange{},
@@ -64,19 +135,45 @@ func BuildDocumentStructure(doc *docs.Document) *DocumentStructure {
 
 	var fullTextBuilder strings.Builder
 
-	if doc.Body == nil || doc.Body.Content == nil {
-		return structure
+	// Counters are declared here so they stay monotonically increasing across
+	// all tabs processed into the same DocumentStructure, preventing duplicate
+	// IDs (e.g. two tabs each emitting "text-1", "table-1", "heading-1").
+	var textElementCounter, tableCounter, headingCounter int
+
+	// Check if tabs are populated (when includeTabsContent=true)
+	if len(doc.Tabs) > 0 {
+		// New API behavior: document has tabs (may be nested via ChildTabs)
+		walkTabs(doc.Tabs, tabID, func(_ string, docTab *docs.DocumentTab) {
+			buildStructureFromDocumentTab(docTab, structure, &fullTextBuilder, &textElementCounter, &tableCounter, &headingCounter)
+		})
+	} else {
+		// Fallback for documents without tabs (old behavior)
+		buildStructureFromDocumentTab(&docs.DocumentTab{
+			Body:    doc.Body,
+			Headers: doc.Headers,
+			Footers: doc.Footers,
+		}, structure, &fullTextBuilder, &textElementCounter, &tableCounter, &headingCounter)
+	}
+
+	structure.FullText = fullTextBuilder.String()
+	return structure
+}
+
+// buildStructureFromDocumentTab builds document structure from a DocumentTab
+// and appends results to the provided structure.
+// textElementCounter, tableCounter, and headingCounter must be passed in from
+// the caller so that IDs remain unique across multiple tabs in one DocumentStructure.
+func buildStructureFromDocumentTab(docTab *docs.DocumentTab, structure *DocumentStructure, fullTextBuilder *strings.Builder, textElementCounter, tableCounter, headingCounter *int) {
+	if docTab.Body == nil || docTab.Body.Content == nil {
+		return
 	}
 
 	var lastParagraphText string
-	var textElementCounter int
-	var tableCounter int
-	var headingCounter int
 
-	for _, elem := range doc.Body.Content {
+	for _, elem := range docTab.Body.Content {
 		// Extract headings
-		if heading := extractHeading(elem, headingCounter+1); heading != nil {
-			headingCounter++
+		if heading := extractHeading(elem, *headingCounter+1); heading != nil {
+			*headingCounter++
 			structure.Headings = append(structure.Headings, *heading)
 		}
 
@@ -85,9 +182,9 @@ func BuildDocumentStructure(doc *docs.Document) *DocumentStructure {
 			var paraText strings.Builder
 			for _, paraElem := range elem.Paragraph.Elements {
 				if paraElem.TextRun != nil {
-					textElementCounter++
+					*textElementCounter++
 					structure.TextElements = append(structure.TextElements, TextElementWithPosition{
-						ID:         fmt.Sprintf("text-%d", textElementCounter),
+						ID:         fmt.Sprintf("text-%d", *textElementCounter),
 						Text:       paraElem.TextRun.Content,
 						StartIndex: paraElem.StartIndex,
 						EndIndex:   paraElem.EndIndex,
@@ -101,9 +198,9 @@ func BuildDocumentStructure(doc *docs.Document) *DocumentStructure {
 
 		// Extract table structure
 		if elem.Table != nil {
-			tableCounter++
+			*tableCounter++
 			tableRange := TableRange{
-				ID:            fmt.Sprintf("table-%d", tableCounter),
+				ID:            fmt.Sprintf("table-%d", *tableCounter),
 				Title:         lastParagraphText,
 				StartIndex:    elem.StartIndex,
 				EndIndex:      elem.EndIndex,
@@ -144,9 +241,9 @@ func BuildDocumentStructure(doc *docs.Document) *DocumentStructure {
 						if cellContent.Paragraph != nil {
 							for _, paraElem := range cellContent.Paragraph.Elements {
 								if paraElem.TextRun != nil {
-									textElementCounter++
+									*textElementCounter++
 									structure.TextElements = append(structure.TextElements, TextElementWithPosition{
-										ID:         fmt.Sprintf("text-%d", textElementCounter),
+										ID:         fmt.Sprintf("text-%d", *textElementCounter),
 										Text:       paraElem.TextRun.Content,
 										StartIndex: paraElem.StartIndex,
 										EndIndex:   paraElem.EndIndex,
@@ -166,9 +263,6 @@ func BuildDocumentStructure(doc *docs.Document) *DocumentStructure {
 			lastParagraphText = ""
 		}
 	}
-
-	structure.FullText = fullTextBuilder.String()
-	return structure
 }
 
 // BuildActionableSuggestions converts raw suggestions into actionable suggestions with full context.
@@ -286,16 +380,63 @@ func BuildActionableSuggestions(suggestions []Suggestion, structure *DocumentStr
 	return actionable
 }
 
+// walkTabs calls fn for every tab in the tree rooted at tabs.
+// If tabID is non-empty, fn is only called for the tab whose TabId matches;
+// child tabs of a non-matching parent are still traversed so that a child tab
+// can match even when its parent does not.
+func walkTabs(tabs []*docs.Tab, tabID string, fn func(currentTabID string, docTab *docs.DocumentTab)) {
+	for _, tab := range tabs {
+		currentTabID := ""
+		if tab.TabProperties != nil {
+			currentTabID = tab.TabProperties.TabId
+		}
+		if tabID == "" || currentTabID == tabID {
+			if tab.DocumentTab != nil {
+				fn(currentTabID, tab.DocumentTab)
+			}
+		}
+		// Always recurse into child tabs regardless of whether the parent matched.
+		if len(tab.ChildTabs) > 0 {
+			walkTabs(tab.ChildTabs, tabID, fn)
+		}
+	}
+}
+
 // ExtractMetadataTable extracts the metadata table from the beginning of the document.
-func ExtractMetadataTable(doc *docs.Document) *MetadataTable {
-	if doc.Body == nil || doc.Body.Content == nil {
+// Supports both tabbed documents (when includeTabsContent=true) and single-tab documents.
+// If tabID is provided, only processes that specific tab; otherwise processes all tabs.
+func ExtractMetadataTable(doc *docs.Document, tabID string) *MetadataTable {
+	// Check if tabs are populated (when includeTabsContent=true)
+	if len(doc.Tabs) > 0 {
+		// New API behavior: document has tabs (may be nested via ChildTabs)
+		var found *MetadataTable
+		walkTabs(doc.Tabs, tabID, func(_ string, docTab *docs.DocumentTab) {
+			if found != nil {
+				return // already found in an earlier tab
+			}
+			found = extractMetadataFromDocumentTab(docTab)
+		})
+		return found
+	} else {
+		// Fallback for documents without tabs (old behavior)
+		return extractMetadataFromDocumentTab(&docs.DocumentTab{
+			Body:    doc.Body,
+			Headers: doc.Headers,
+			Footers: doc.Footers,
+		})
+	}
+}
+
+// extractMetadataFromDocumentTab extracts metadata from a specific DocumentTab.
+func extractMetadataFromDocumentTab(docTab *docs.DocumentTab) *MetadataTable {
+	if docTab.Body == nil || docTab.Body.Content == nil {
 		return nil
 	}
 
 	var firstTable *docs.Table
 	var tableStartIndex, tableEndIndex int64
 
-	for _, elem := range doc.Body.Content {
+	for _, elem := range docTab.Body.Content {
 		if elem.Table != nil {
 			firstTable = elem.Table
 			tableStartIndex = elem.StartIndex

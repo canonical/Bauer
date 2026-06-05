@@ -18,8 +18,7 @@ A proof-of-concept Go application that extracts document content, suggestions (p
 ```
 task build
 ```
-2. Modify the [Taskfile](./Taskfile.yml) with your document ID and credentials path for convenience
-3. Run the project
+2. Run the project
 
 ```
 ./bauer --doc-id <doc-id> \
@@ -29,8 +28,10 @@ task build
 
 
 ## Configuration
-
-1. Create `credentials.json` file and copy the structure from the [default file](https://github.com/muhammadbassiony/Bauer/blob/main/credentials.json)
+1. Create a credentials file by copying the example
+```
+cp credentials.example.json credentials.json
+```
 2. Get credentials from Google Cloud service or Bitwarden (internally)
 3. Fill up `credentials.json` with Google Cloud credentials (see [Generating Google Cloud credentials](https://developers.google.com/workspace/guides/create-credentials)).
 4. Share copy document with service account
@@ -43,7 +44,7 @@ task build
 4. Run Bauer
 
 ```bash
-bauer --doc-id <your-document-id> --credentials ./credentials.json
+./bauer --doc-id <your-document-id> --credentials ./credentials.json
 ```
 
 5. Optional parameters
@@ -107,7 +108,7 @@ bauer --doc-id <your-document-id> \
         --page-refresh
 ``` -->
 
-## API usage
+<!-- ## API usage
 
 The API server exposes a small HTTP surface for submitting jobs and checking health. Jobs run asynchronously and write outputs to `base-output-dir/<request-id>`.
 
@@ -162,7 +163,7 @@ Example:
 
 ```bash
 curl http://localhost:8090/api/v1/health
-```
+``` -->
 
 
 ## Documentation
