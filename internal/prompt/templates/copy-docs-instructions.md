@@ -154,7 +154,7 @@ For each suggestion:
 - **Order matters**: Process suggestions in the order provided
 - **Pattern awareness**: If `table_title` indicates a Vanilla pattern, consult the patterns reference below
 - **Metadata tags**: For `in_metadata` suggestions, update the matching tag in the target repo instead of searching for anchors
-- **Link changes**: `link_add`/`link_change`/`link_remove` update hyperlinks (see the apply list above). Other style-only changes (bold, italic, emphasis) are currently skipped by the extractor and will not appear in the suggestions.
+- **Other style changes**: Style-only changes such as bold, italic, or emphasis are currently skipped by the extractor and will not appear in the suggestions. (Hyperlink changes are supported — see `link_add`/`link_change`/`link_remove` above.)
 - **Section deletions**: It is expected that some suggestions involve removing entire sections, this is acceptable behavior, ensure proper HTML structure and semantics are maintained. 
 
 ## Vanilla Framework Patterns
