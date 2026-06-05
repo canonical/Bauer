@@ -764,7 +764,7 @@ func TestExtractSuggestions_LinkChanges(t *testing.T) {
 	}
 
 	got := map[string]Suggestion{}
-	for _, s := range ExtractSuggestions(doc) {
+	for _, s := range ExtractSuggestions(doc, "") {
 		got[s.ID] = s
 	}
 
