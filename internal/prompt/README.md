@@ -82,18 +82,26 @@ type ChunkResult struct {
 
 ## Templates
 
-Three embedded templates in `templates/`:
+Templates in `templates/`:
 
-1. **`instructions.md`**: Main instructions for Copilot
+1. **`copy-docs-instructions.md`**: Main instructions for copy-doc updates
    - Project context (Vanilla Framework, Jinja2)
    - File path resolution rules
    - How to apply changes (insert/delete/replace)
    - JSON schema documentation
    - Error handling guidance
 
-2. **`vanilla-patterns.md`**: Pattern reference
+2. **`page-refresh-instructions.md`**: Main instructions for page-refresh updates
+    - Same schema-driven workflow with page-refresh-specific execution notes
+
+3. **`vanilla-patterns.md`**: Pattern reference
    - Hero, Equal Heights, Text Spotlight, etc.
    - Usage examples and parameters
+
+4. **`pr-description.md`**: PR body template
+    - References instruction/pattern templates
+    - Lists generated chunk files
+    - Includes suggestion and change-type summary for Copilot execution
 
 
 ## String Replacement
