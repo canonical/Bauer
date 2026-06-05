@@ -190,13 +190,19 @@ func mergeSuggestions(id string, suggestions []ActionableSuggestion, structure *
 
 	// Build verification texts
 	var originalText, newText string
-	if mergedChange.Type == "insert" {
+	switch mergedChange.Type {
+	case "insert":
 		originalText = ""
 		newText = mergedChange.NewText
-	} else if mergedChange.Type == "delete" {
+	case "delete":
 		originalText = mergedChange.OriginalText
 		newText = ""
-	} else { // "replace"
+	case "link_add", "link_change", "link_remove":
+		// A pure link change does not alter the visible text, so both sides
+		// carry the linked text unchanged.
+		originalText = mergedChange.LinkText
+		newText = mergedChange.LinkText
+	default: // "replace"
 		originalText = mergedChange.OriginalText
 		newText = mergedChange.NewText
 	}
@@ -234,6 +240,7 @@ func mergeChanges(suggestions []ActionableSuggestion) SuggestionChange {
 	hasInsertions := false
 	hasDeletions := false
 	var linkMeta *SuggestionChange // preserved if any atom carries link info
+	var linkTextParts []string     // link_text accumulated across link atoms
 
 	// Process each atomic change in order
 	for _, sugg := range suggestions {
@@ -256,8 +263,12 @@ func mergeChanges(suggestions []ActionableSuggestion) SuggestionChange {
 				newParts = append(newParts, sugg.Change.OriginalText)
 			}
 		case "link_add", "link_change", "link_remove":
+			// A link can span multiple text runs that share one suggestion ID.
+			// Accumulate the link_text across them instead of overwriting, so the
+			// merged change covers the whole anchor, not just the last segment.
 			c := sugg.Change
 			linkMeta = &c
+			linkTextParts = append(linkTextParts, sugg.Change.LinkText)
 		}
 	}
 
@@ -282,9 +293,16 @@ func mergeChanges(suggestions []ActionableSuggestion) SuggestionChange {
 
 	// Preserve link metadata if any atomic change carried it.
 	if linkMeta != nil {
-		merged.LinkText = linkMeta.LinkText
 		merged.OldURL = linkMeta.OldURL
 		merged.NewURL = linkMeta.NewURL
+		// Prefer the link_text accumulated across link atoms (multi-run links);
+		// fall back to the carrier's link_text (e.g. an insert with a NewURL,
+		// which keeps its text in NewText and has no link_text).
+		if len(linkTextParts) > 0 {
+			merged.LinkText = strings.Join(linkTextParts, "")
+		} else {
+			merged.LinkText = linkMeta.LinkText
+		}
 		// With no text insert/delete, this is a pure link operation.
 		if !hasInsertions && !hasDeletions {
 			merged.Type = linkMeta.Type

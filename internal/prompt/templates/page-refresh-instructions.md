@@ -138,7 +138,7 @@ For each suggestion:
 2. **Apply the change** based on type:
    - **insert**: Add `new_text` between `preceding_text` and `following_text`. If the change also has a `new_url`, wrap the inserted text: `<a href="{new_url}">{new_text}</a>`.
    - **delete**: Remove `original_text`, keeping anchors intact
-   - **replace**: Substitute `original_text` with `new_text`
+   - **replace**: Substitute `original_text` with `new_text`. If the change also has a `new_url`, wrap the new text in `<a href="{new_url}">{new_text}</a>` (same as insert).
    - **link_add**: Wrap `link_text` in `<a href="{new_url}">{link_text}</a>`. Preserve any Vanilla link classes/attributes already used on nearby links.
    - **link_change**: Find the existing `<a>` whose visible text is `link_text` and whose href is `old_url`, then update its href to `new_url`. Do not change the link text.
    - **link_remove**: Unwrap the `<a>` around `link_text` (href `old_url`), keeping the visible text in place.
