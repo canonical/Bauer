@@ -162,7 +162,7 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	bauerCfg := &config.Config{
 		DocID:           input.DocID,
 		CredentialsPath: credentialsPath, // Use absolute path
-		DryRun:          input.DryRun,
+		DryRun:          config.BoolPtr(input.DryRun),
 		ChunkSize:       input.ChunkSize,
 		PageRefresh:     input.PageRefresh,
 		OutputDir:       input.OutputDir,
@@ -185,11 +185,11 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	if bauerResult != nil {
 		output.BauerResult.ExtractionDuration = bauerResult.ExtractionDuration
 		output.BauerResult.PlanDuration = bauerResult.PlanDuration
-		output.BauerResult.CopilotDuration = bauerResult.CopilotDuration
+		output.BauerResult.CopilotDuration = bauerResult.AgentDuration
 		if len(bauerResult.Chunks) > 0 {
 			output.BauerResult.ChunkCount = len(bauerResult.Chunks)
 		}
-		if bauerResult.ExtractionResult != nil {
+		if bauerResult.ExtractionBundle != nil && bauerResult.ExtractionBundle.Document != nil {
 			// Count total suggestions from extraction result
 			output.BauerResult.TotalSuggestions = 0 // TODO: adjust based on actual field
 		}
@@ -201,8 +201,8 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 		"copilot_duration", output.BauerResult.CopilotDuration,
 		"chunk_count", output.BauerResult.ChunkCount,
 		"total_suggestions", output.BauerResult.TotalSuggestions,
+		"total_duration", time.Since(bauerStartTime),
 	)
-	output.BauerResult.CopilotDuration = time.Since(bauerStartTime)
 	logger.Info("workflow success: Bauer processing finished")
 
 	// GitHub finalization

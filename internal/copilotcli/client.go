@@ -9,8 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"bauer/internal/agent"
 	copilot "github.com/github/copilot-sdk/go"
 )
+
+// Compile-time check: Client implements agent.Agent.
+var _ agent.Agent = (*Client)(nil)
 
 // ANSI color codes for terminal output
 const (
@@ -80,7 +84,7 @@ func NewClient(cwd string) (*Client, error) {
 }
 
 // Start starts the Copilot CLI server
-func (c *Client) Start() error {
+func (c *Client) Start(_ context.Context) error {
 	slog.Info("Starting Copilot client...")
 	if err := c.client.Start(); err != nil {
 		return fmt.Errorf("failed to start Copilot client: %w", err)
@@ -258,8 +262,8 @@ type ChunkOutput struct {
 	Duration    time.Duration
 }
 
-// GenerateSummary creates a summary session with all chunk outputs
-func (c *Client) GenerateSummary(ctx context.Context, outputs []ChunkOutput, model string) error {
+// GenerateSummary creates a summary session with all chunk outputs and returns the summary text.
+func (c *Client) GenerateSummary(ctx context.Context, outputs []string, model string) (string, error) {
 	slog.Info("Creating summary session", slog.String("model", model))
 
 	// Create a session with streaming enabled
@@ -268,7 +272,7 @@ func (c *Client) GenerateSummary(ctx context.Context, outputs []ChunkOutput, mod
 		Streaming: true,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to create summary session: %w", err)
+		return "", fmt.Errorf("failed to create summary session: %w", err)
 	}
 	defer func() {
 		if err := session.Destroy(); err != nil {
@@ -278,22 +282,26 @@ func (c *Client) GenerateSummary(ctx context.Context, outputs []ChunkOutput, mod
 
 	// Set up event handler
 	done := make(chan error, 1)
+	var fullOutput string
 
 	session.On(func(event copilot.SessionEvent) {
 		switch event.Type {
 		case "assistant.message_delta":
 			if event.Data.DeltaContent != nil {
 				fmt.Print(formatSummaryOutput(*event.Data.DeltaContent))
+				fullOutput += *event.Data.DeltaContent
 			}
 
 		case "assistant.reasoning_delta":
 			if event.Data.DeltaContent != nil {
 				fmt.Print(formatCopilotDim(*event.Data.DeltaContent))
+				fullOutput += *event.Data.DeltaContent
 			}
 
 		case "assistant.message":
 			// Print final message in yellow for summary
 			if event.Data.Content != nil {
+				fullOutput += *event.Data.Content
 				fmt.Println(formatSummaryOutput(*event.Data.Content))
 				slog.Debug("Summary response", slog.String("content", *event.Data.Content))
 			}
@@ -301,6 +309,7 @@ func (c *Client) GenerateSummary(ctx context.Context, outputs []ChunkOutput, mod
 		case "assistant.reasoning":
 			// Print reasoning in dimmed style
 			if event.Data.Content != nil {
+				fullOutput += *event.Data.Content
 				fmt.Println(formatCopilotDim(*event.Data.Content))
 				slog.Debug("Summary reasoning", slog.String("content", *event.Data.Content))
 			}
@@ -328,28 +337,28 @@ func (c *Client) GenerateSummary(ctx context.Context, outputs []ChunkOutput, mod
 		Prompt: summaryPrompt,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to send summary message: %w", err)
+		return "", fmt.Errorf("failed to send summary message: %w", err)
 	}
 
 	// Wait for completion
 	select {
 	case err := <-done:
 		if err != nil {
-			return err
+			return "", err
 		}
 		fmt.Println() // Add newline after streaming output
-		return nil
+		return fullOutput, nil
 
 	case <-time.After(10 * time.Minute):
-		return fmt.Errorf("summary session timed out after 10 minutes")
+		return "", fmt.Errorf("summary session timed out after 10 minutes")
 
 	case <-ctx.Done():
-		return fmt.Errorf("summary session cancelled: %w", ctx.Err())
+		return "", fmt.Errorf("summary session cancelled: %w", ctx.Err())
 	}
 }
 
 // buildSummaryPrompt creates the prompt for the summary session
-func buildSummaryPrompt(outputs []ChunkOutput) string {
+func buildSummaryPrompt(outputs []string) string {
 	var prompt strings.Builder
 
 	prompt.WriteString("# Summary Task\n\n")
@@ -368,11 +377,10 @@ func buildSummaryPrompt(outputs []ChunkOutput) string {
 
 	prompt.WriteString("## Chunks Processed\n\n")
 
-	for _, output := range outputs {
-		fmt.Fprintf(&prompt, "### Chunk %d\n\n", output.ChunkNumber)
-		fmt.Fprintf(&prompt, "**Duration**: %s\n\n", output.Duration.Round(time.Millisecond))
+	for i, output := range outputs {
+		fmt.Fprintf(&prompt, "### Chunk %d\n\n", i+1)
 		prompt.WriteString("**Output**:\n```\n")
-		prompt.WriteString(output.Output)
+		prompt.WriteString(output)
 		prompt.WriteString("\n```\n\n")
 	}
 
