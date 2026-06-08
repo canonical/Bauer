@@ -82,14 +82,14 @@ func NewClient(cwd string) (*Client, error) {
 // Start starts the Copilot CLI server
 func (c *Client) Start() error {
 	slog.Info("Starting Copilot client...")
-	if err := c.client.Start(); err != nil {
+	if err := c.client.Start(context.Background()); err != nil {
 		return fmt.Errorf("failed to start Copilot client: %w", err)
 	}
 
 	// Verify connectivity with ping
-	_, err := c.client.Ping("health-check")
+	_, err := c.client.Ping(context.Background(), "health-check")
 	if err != nil {
-		c.client.Stop()
+		_ = c.client.Stop()
 		return fmt.Errorf("Copilot client ping failed: %w", err)
 	}
 
@@ -100,12 +100,9 @@ func (c *Client) Start() error {
 // Stop gracefully stops the Copilot CLI server
 func (c *Client) Stop() error {
 	slog.Info("Stopping Copilot client...")
-	errs := c.client.Stop()
-	if len(errs) > 0 {
-		for _, err := range errs {
-			slog.Error("Error during Copilot client shutdown", slog.String("error", err.Error()))
-		}
-		return fmt.Errorf("encountered %d errors during shutdown", len(errs))
+	if err := c.client.Stop(); err != nil {
+		slog.Error("Error during Copilot client shutdown", slog.String("error", err.Error()))
+		return fmt.Errorf("error during Copilot client shutdown: %w", err)
 	}
 	slog.Info("Copilot client stopped successfully")
 	return nil
@@ -119,16 +116,17 @@ func (c *Client) ExecuteChunk(ctx context.Context, chunkPath string, chunkNumber
 	)
 
 	// Create a session with streaming enabled
-	session, err := c.client.CreateSession(&copilot.SessionConfig{
-		Model:     model,
-		Streaming: true,
+	session, err := c.client.CreateSession(ctx, &copilot.SessionConfig{
+		Model:               model,
+		Streaming:           true,
+		OnPermissionRequest: copilot.PermissionHandler.ApproveAll,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to create session for chunk %d: %w", chunkNumber, err)
 	}
 	defer func() {
-		if err := session.Destroy(); err != nil {
-			slog.Error("Failed to destroy session",
+		if err := session.Disconnect(); err != nil {
+			slog.Error("Failed to disconnect session",
 				slog.Int("chunk", chunkNumber),
 				slog.String("error", err.Error()),
 			)
@@ -220,13 +218,13 @@ func (c *Client) ExecuteChunk(ctx context.Context, chunkPath string, chunkNumber
 		slog.String("file", absChunkPath),
 	)
 
-	_, err = session.Send(copilot.MessageOptions{
+	_, err = session.Send(ctx, copilot.MessageOptions{
 		Prompt: fmt.Sprintf("Implement the changes described in @%s. Follow all instructions carefully and apply changes in order.", filepath.Base(chunkPath)),
 		Attachments: []copilot.Attachment{
 			{
-				Type:        copilot.File,
-				Path:        absChunkPath,
-				DisplayName: fmt.Sprintf("chunk-%d.md", chunkNumber),
+				Type:        copilot.AttachmentTypeFile,
+				Path:        copilot.String(absChunkPath),
+				DisplayName: copilot.String(fmt.Sprintf("chunk-%d.md", chunkNumber)),
 			},
 		},
 	})
@@ -263,16 +261,17 @@ func (c *Client) GenerateSummary(ctx context.Context, outputs []ChunkOutput, mod
 	slog.Info("Creating summary session", slog.String("model", model))
 
 	// Create a session with streaming enabled
-	session, err := c.client.CreateSession(&copilot.SessionConfig{
-		Model:     model,
-		Streaming: true,
+	session, err := c.client.CreateSession(ctx, &copilot.SessionConfig{
+		Model:               model,
+		Streaming:           true,
+		OnPermissionRequest: copilot.PermissionHandler.ApproveAll,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create summary session: %w", err)
 	}
 	defer func() {
-		if err := session.Destroy(); err != nil {
-			slog.Error("Failed to destroy summary session", slog.String("error", err.Error()))
+		if err := session.Disconnect(); err != nil {
+			slog.Error("Failed to disconnect summary session", slog.String("error", err.Error()))
 		}
 	}()
 
@@ -324,7 +323,7 @@ func (c *Client) GenerateSummary(ctx context.Context, outputs []ChunkOutput, mod
 
 	slog.Info("Sending summary prompt to Copilot")
 
-	_, err = session.Send(copilot.MessageOptions{
+	_, err = session.Send(ctx, copilot.MessageOptions{
 		Prompt: summaryPrompt,
 	})
 	if err != nil {
