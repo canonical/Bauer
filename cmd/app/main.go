@@ -4,7 +4,9 @@ import (
 	"bauer/cmd/app/core/middleware"
 	"bauer/cmd/app/types"
 	v1 "bauer/cmd/app/v1"
+	"bauer/internal/copilotcli"
 	"bauer/internal/orchestrator"
+	"bauer/internal/source"
 	"bauer/internal/workflow"
 	"fmt"
 	"log/slog"
@@ -20,22 +22,36 @@ func run() error {
 	slog.Info("startup", "status", "initializing API")
 	defer slog.Info("shutdown complete")
 
-	orchestrator := orchestrator.NewOrchestrator()
 	cfg, err := types.LoadConfig()
 	if err != nil {
 		slog.Error("failed to load config", "error", err.Error())
 		return err
 	}
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		slog.Error("failed to get working directory", "error", err.Error())
+		return err
+	}
+
+	copilotAgent, err := copilotcli.NewClient(cwd)
+	if err != nil {
+		slog.Error("failed to create Copilot client", "error", err.Error())
+		return err
+	}
+
+	sources := source.NewManager(cfg.CredentialsPath)
+	orch := orchestrator.New(copilotAgent, sources)
+
 	rc := types.RouteConfig{
 		APIConfig:    *cfg,
-		Orchestrator: orchestrator,
+		Orchestrator: orch,
 	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/job", v1.JobPost(rc))
 	mux.HandleFunc("/api/v1/health", v1.GetHealth)
-	mux.HandleFunc("/api/v1/workflow", workflow.ExecuteWorkflowHandler(orchestrator))
+	mux.HandleFunc("/api/v1/workflow", workflow.ExecuteWorkflowHandler(orch))
 	slog.Info("starting server", "address", ":8090")
 	err = http.ListenAndServe(":8090", middleware.RequestTrace(mux))
 
@@ -53,3 +69,4 @@ func main() {
 		os.Exit(1)
 	}
 }
+

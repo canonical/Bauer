@@ -7,10 +7,12 @@ import (
 )
 
 func TestConfig_Validate(t *testing.T) {
-	// Create a temporary file to act as a valid credentials file
+	// Create a temporary file to act as a valid credentials file.
+	// The file must satisfy gdocs.ValidateCredentialsFile requirements.
+	validCredsJSON := `{"type":"service_account","project_id":"test-project","private_key":"fake-key","client_email":"test@test-project.iam.gserviceaccount.com","token_uri":"https://oauth2.googleapis.com/token"}`
 	tmpDir := t.TempDir()
 	validCredsFile := filepath.Join(tmpDir, "creds.json")
-	if err := os.WriteFile(validCredsFile, []byte("{}"), 0644); err != nil {
+	if err := os.WriteFile(validCredsFile, []byte(validCredsJSON), 0644); err != nil {
 		t.Fatalf("Failed to create temp creds file: %v", err)
 	}
 
@@ -123,10 +125,11 @@ func TestConfig_Validate(t *testing.T) {
 }
 
 func TestChunkSizeDefaults(t *testing.T) {
-	// Create a temporary file to act as a valid credentials file
+	// Create a temporary file to act as a valid credentials file.
+	validCredsJSON := `{"type":"service_account","project_id":"test-project","private_key":"fake-key","client_email":"test@test-project.iam.gserviceaccount.com","token_uri":"https://oauth2.googleapis.com/token"}`
 	tmpDir := t.TempDir()
 	validCredsFile := filepath.Join(tmpDir, "creds.json")
-	if err := os.WriteFile(validCredsFile, []byte("{}"), 0644); err != nil {
+	if err := os.WriteFile(validCredsFile, []byte(validCredsJSON), 0644); err != nil {
 		t.Fatalf("Failed to create temp creds file: %v", err)
 	}
 
