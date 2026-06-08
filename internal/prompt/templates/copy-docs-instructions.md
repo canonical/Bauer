@@ -99,6 +99,23 @@ Process the suggestions **one location at a time, in order**. For each location:
 3. **Apply each change** following the process below
 4. **Verify** before moving to the next suggestion
 
+### Document Structure to Implementation Mapping
+
+Use the location object as the primary guide for where and how to apply each change:
+
+- `location.section`: Start from the matching page section in the target template (Body/Header/Footer context)
+- `location.parent_heading` + `heading_level`: Narrow the search to the nearest matching heading block
+- `location.in_table`: Treat suggestions as pattern/component-level edits instead of flat text replacement
+- `location.table.table_title`: Map to the expected Vanilla pattern and preserve macro structure
+- `location.table.row_header` / `column_header`: Use as semantic labels when matching metadata or structured content
+
+Pattern usage rules:
+
+1. Keep the existing Vanilla macro and layout intact.
+2. Prefer copy/content updates over structural rewrites.
+3. Only add or remove sections when explicitly required by grouped suggestions.
+4. If a grouped suggestion removes a whole section, do not separately apply nested copy edits inside that deleted section.
+
 ### Metadata Table Suggestions
 
 If `location.in_metadata` is true, the change came from the document metadata table and likely
