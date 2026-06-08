@@ -327,6 +327,7 @@ func BuildActionableSuggestions(suggestions []Suggestion, structure *DocumentStr
 				Type:         "insert",
 				OriginalText: "",
 				NewText:      sugg.Content,
+				NewURL:       sugg.NewURL, // empty unless the inserted run is a link
 			}
 			as.Verification = SuggestionVerification{
 				TextBeforeChange: precedingText + followingText,
@@ -342,6 +343,26 @@ func BuildActionableSuggestions(suggestions []Suggestion, structure *DocumentStr
 			as.Verification = SuggestionVerification{
 				TextBeforeChange: precedingText + sugg.Content + followingText,
 				TextAfterChange:  precedingText + followingText,
+			}
+
+		case "link":
+			linkType := deriveLinkChangeType(sugg.OldURL, sugg.NewURL)
+			if linkType == "" {
+				slog.Warn("Link change with no URL; skipping",
+					slog.String("id", sugg.ID),
+				)
+				continue
+			}
+			as.Change = SuggestionChange{
+				Type:     linkType,
+				LinkText: sugg.Content,
+				OldURL:   sugg.OldURL,
+				NewURL:   sugg.NewURL,
+			}
+			// A link change does not alter the visible text, so before/after match.
+			as.Verification = SuggestionVerification{
+				TextBeforeChange: precedingText + sugg.Content + followingText,
+				TextAfterChange:  precedingText + sugg.Content + followingText,
 			}
 
 		default:
@@ -477,6 +498,30 @@ func extractMetadataFromDocumentTab(docTab *docs.DocumentTab) *MetadataTable {
 
 // Helper functions
 
+// linkURL safely extracts the external link URL from a text style.
+// Returns "" when the style, its link, or the URL is absent.
+func linkURL(style *docs.TextStyle) string {
+	if style == nil || style.Link == nil {
+		return ""
+	}
+	return style.Link.Url
+}
+
+// deriveLinkChangeType maps the presence of old/new URLs to a link operation.
+// Returns "" when both are empty (a no-op, e.g. bookmark/heading links).
+func deriveLinkChangeType(oldURL, newURL string) string {
+	switch {
+	case oldURL == "" && newURL != "":
+		return "link_add"
+	case oldURL != "" && newURL != "":
+		return "link_change"
+	case oldURL != "" && newURL == "":
+		return "link_remove"
+	default:
+		return ""
+	}
+}
+
 // processStructuralElement recursively processes a structural element (paragraph, table, TOC)
 // to find and extract suggestions.
 func processStructuralElement(elem *docs.StructuralElement, suggestions *[]Suggestion) {
@@ -535,6 +580,7 @@ func processParagraphElement(paraElem *docs.ParagraphElement, suggestions *[]Sug
 					Content:    tr.Content,
 					StartIndex: paraElem.StartIndex,
 					EndIndex:   paraElem.EndIndex,
+					NewURL:     linkURL(tr.TextStyle),
 				})
 			}
 		}
@@ -552,14 +598,28 @@ func processParagraphElement(paraElem *docs.ParagraphElement, suggestions *[]Sug
 		}
 
 		if tr.SuggestedTextStyleChanges != nil {
-			for suggID := range tr.SuggestedTextStyleChanges {
-				*suggestions = append(*suggestions, Suggestion{
-					ID:         suggID,
-					Type:       "text_style_change",
-					Content:    tr.Content,
-					StartIndex: paraElem.StartIndex,
-					EndIndex:   paraElem.EndIndex,
-				})
+			for suggID, suggestedStyle := range tr.SuggestedTextStyleChanges {
+				isLink := suggestedStyle.TextStyleSuggestionState != nil &&
+					suggestedStyle.TextStyleSuggestionState.LinkSuggested
+				if isLink {
+					*suggestions = append(*suggestions, Suggestion{
+						ID:         suggID,
+						Type:       "link",
+						Content:    tr.Content,
+						StartIndex: paraElem.StartIndex,
+						EndIndex:   paraElem.EndIndex,
+						OldURL:     linkURL(tr.TextStyle),
+						NewURL:     linkURL(suggestedStyle.TextStyle),
+					})
+				} else {
+					*suggestions = append(*suggestions, Suggestion{
+						ID:         suggID,
+						Type:       "text_style_change",
+						Content:    tr.Content,
+						StartIndex: paraElem.StartIndex,
+						EndIndex:   paraElem.EndIndex,
+					})
+				}
 			}
 		}
 	}

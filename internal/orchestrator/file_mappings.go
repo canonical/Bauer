@@ -85,6 +85,12 @@ func buildParseResultSummary(suggestions []SimplifiedActionableSuggestion, fileM
 			summary.ByType.Delete++
 		case "replace":
 			summary.ByType.Replace++
+		case "link_add":
+			summary.ByType.LinkAdd++
+		case "link_change":
+			summary.ByType.LinkChange++
+		case "link_remove":
+			summary.ByType.LinkRemove++
 		}
 
 		// Count by file
@@ -100,6 +106,12 @@ func buildParseResultSummary(suggestions []SimplifiedActionableSuggestion, fileM
 			fileStats.Deletions++
 		case "replace":
 			fileStats.Replacements++
+		case "link_add":
+			fileStats.LinkAdds++
+		case "link_change":
+			fileStats.LinkChanges++
+		case "link_remove":
+			fileStats.LinkRemoves++
 		}
 		summary.ByFile[suggestion.File] = fileStats
 	}

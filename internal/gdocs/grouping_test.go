@@ -1386,3 +1386,112 @@ func TestMergeChanges(t *testing.T) {
 func containsText(text, substr string) bool {
 	return len(text) > 0 && len(substr) > 0 && (text == substr || strings.Contains(text, substr))
 }
+
+func TestMergeChanges_PreservesLinkOnInsert(t *testing.T) {
+	// A replace built from delete + a linked insert (same ID) must keep new_url.
+	suggestions := []ActionableSuggestion{
+		{ID: "x", Change: SuggestionChange{Type: "delete", OriginalText: "old"}},
+		{ID: "x", Change: SuggestionChange{Type: "insert", NewText: "new", NewURL: "/u"}},
+	}
+	got := mergeChanges(suggestions)
+	if got.Type != "replace" || got.OriginalText != "old" || got.NewText != "new" || got.NewURL != "/u" {
+		t.Errorf("merge dropped text/link metadata: %+v", got)
+	}
+}
+
+func TestMergeChanges_PureLinkKeepsType(t *testing.T) {
+	// Two link atoms (a link spanning two runs) with no text change: merged result
+	// keeps the link type+URLs and concatenates link_text across the segments.
+	suggestions := []ActionableSuggestion{
+		{ID: "x", Change: SuggestionChange{Type: "link_change", LinkText: "Con", OldURL: "/a", NewURL: "/b"}},
+		{ID: "x", Change: SuggestionChange{Type: "link_change", LinkText: "tact", OldURL: "/a", NewURL: "/b"}},
+	}
+	got := mergeChanges(suggestions)
+	if got.Type != "link_change" || got.LinkText != "Contact" || got.OldURL != "/a" || got.NewURL != "/b" {
+		t.Errorf("pure-link merge wrong: %+v", got)
+	}
+}
+
+func TestGroupActionableSuggestions_LinkChange(t *testing.T) {
+	structure := &DocumentStructure{
+		TextElements: []TextElementWithPosition{
+			{ID: "text-1", Text: "Contact us", StartIndex: 7, EndIndex: 17},
+		},
+	}
+
+	suggestions := []ActionableSuggestion{
+		{
+			ID: "link-1",
+			Change: SuggestionChange{
+				Type:     "link_change",
+				LinkText: "Contact us",
+				OldURL:   "/old",
+				NewURL:   "/new",
+			},
+			Position: struct {
+				StartIndex int64 `json:"start_index"`
+				EndIndex   int64 `json:"end_index"`
+			}{StartIndex: 7, EndIndex: 17},
+		},
+	}
+
+	groups := GroupActionableSuggestions(suggestions, structure)
+	if len(groups) != 1 || len(groups[0].Suggestions) != 1 {
+		t.Fatalf("expected 1 group with 1 suggestion, got %#v", groups)
+	}
+	c := groups[0].Suggestions[0].Change
+	if c.Type != "link_change" || c.LinkText != "Contact us" || c.OldURL != "/old" || c.NewURL != "/new" {
+		t.Errorf("link fields not preserved through grouping: %+v", c)
+	}
+}
+
+func TestGroupActionableSuggestions_MultiRunLink(t *testing.T) {
+	// A single link suggestion spanning two text runs produces two link atoms with
+	// the same ID at contiguous positions, so they get merged. The merged link_text
+	// must be the full text (not just the last segment), and the verification strings
+	// must include the linked text (a link change does not alter visible text).
+	structure := &DocumentStructure{
+		TextElements: []TextElementWithPosition{
+			{ID: "text-1", Text: "Before ", StartIndex: 0, EndIndex: 7},
+			{ID: "text-2", Text: "Con", StartIndex: 7, EndIndex: 10},
+			{ID: "text-3", Text: "tact us", StartIndex: 10, EndIndex: 17},
+			{ID: "text-4", Text: " after", StartIndex: 17, EndIndex: 23},
+		},
+	}
+
+	suggestions := []ActionableSuggestion{
+		{
+			ID:     "link-1",
+			Change: SuggestionChange{Type: "link_change", LinkText: "Con", OldURL: "/old", NewURL: "/new"},
+			Position: struct {
+				StartIndex int64 `json:"start_index"`
+				EndIndex   int64 `json:"end_index"`
+			}{StartIndex: 7, EndIndex: 10},
+		},
+		{
+			ID:     "link-1",
+			Change: SuggestionChange{Type: "link_change", LinkText: "tact us", OldURL: "/old", NewURL: "/new"},
+			Position: struct {
+				StartIndex int64 `json:"start_index"`
+				EndIndex   int64 `json:"end_index"`
+			}{StartIndex: 10, EndIndex: 17},
+		},
+	}
+
+	groups := GroupActionableSuggestions(suggestions, structure)
+	if len(groups) != 1 || len(groups[0].Suggestions) != 1 {
+		t.Fatalf("expected 1 group with 1 merged suggestion, got %#v", groups)
+	}
+	g := groups[0].Suggestions[0]
+	if g.Change.Type != "link_change" || g.Change.LinkText != "Contact us" {
+		t.Errorf("merged link_text wrong: %+v", g.Change)
+	}
+	if g.Change.OldURL != "/old" || g.Change.NewURL != "/new" {
+		t.Errorf("merged URLs wrong: %+v", g.Change)
+	}
+	if !strings.Contains(g.Verification.TextBeforeChange, "Contact us") ||
+		!strings.Contains(g.Verification.TextAfterChange, "Contact us") {
+		t.Errorf("verification omits linked text: before=%q after=%q",
+			g.Verification.TextBeforeChange, g.Verification.TextAfterChange)
+	}
+}
