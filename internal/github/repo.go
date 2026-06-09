@@ -199,6 +199,50 @@ func CommitChanges(localPath, message string) error {
 	return nil
 }
 
+// CommitFiles stages only the provided files and commits them with a message.
+func CommitFiles(localPath, message string, files []string) error {
+	if len(files) == 0 {
+		return fmt.Errorf("no files provided to commit")
+	}
+
+	args := []string{"add", "--"}
+	args = append(args, files...)
+	cmd := exec.Command("git", args...)
+	cmd.Dir = localPath
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to stage files: %w, output: %s", err, output)
+	}
+
+	cmd = exec.Command("git", "diff", "--cached", "--name-only")
+	cmd.Dir = localPath
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to inspect staged files: %w, output: %s", err, output)
+	}
+	if strings.TrimSpace(string(output)) == "" {
+		return fmt.Errorf("no staged changes to commit")
+	}
+
+	cmd = exec.Command("git", "commit", "-m", message)
+	cmd.Dir = localPath
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to commit files: %w, output: %s", err, output)
+	}
+
+	return nil
+}
+
+// GetHeadCommitSHA returns the SHA of HEAD in the given repository.
+func GetHeadCommitSHA(localPath string) (string, error) {
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = localPath
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("failed to read HEAD commit SHA: %w, output: %s", err, output)
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
 // PushBranch pushes the specified branch to remote
 func PushBranch(localPath, branchName string) error {
 	cmd := exec.Command("git", "push", "origin", branchName)
