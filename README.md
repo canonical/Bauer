@@ -39,7 +39,7 @@ cp credentials.example.json credentials.json
 ## Usage
 
 1.  Build Bauer locally using the Local development steps above (`task build`)
-2. If running with GitHub integration (no `--parse-only`), ensure `copilot` is installed and authenticated
+2. If running with GitHub issue creation (no `--parse-only`), ensure GitHub CLI auth is available
 3. Get document ID from Google Document & share the document with the service account
 4. Run Bauer
 
@@ -49,17 +49,29 @@ cp credentials.example.json credentials.json
 
 5. Optional parameters
 
-| Flag               | Type   | Default              | Description                                                                     | Requires Copilot |
-| ------------------ | ------ | -------------------- | ------------------------------------------------------------------------------- | ---------------- |
+| Flag               | Type   | Default              | Description                                                                     | Requires GitHub Auth |
+| ------------------ | ------ | -------------------- | ------------------------------------------------------------------------------- | -------------------- |
 | `--github-repo`    | string | (required if not parse-only) | GitHub repository (owner/repo or HTTPS URL)                              | Yes*             |
 | `--credentials`    | string | `bau-test-creds.json` | Path to service account credentials JSON                                       | No               |
 | `--local-repo-path` | string | `/tmp/ubuntu.com`    | Local path for cloned repository                                               | No               |
-| `--dry-run`        | bool   | `false`              | Perform a dry run without creating PR                                          | Yes*             |
 | `--output-dir`     | string | `bauer-output`       | Output directory for Bauer results                                             | No               |
 | `--branch-prefix`  | string | `bauer`              | Branch naming prefix                                                            | No               |
-| `--parse-only`     | bool   | `false`              | Parse document and output machine-readable JSON (skip GitHub integration) | No               |
+| `--parse-only`     | bool   | `false`              | Parse document and output machine-readable JSON only                           | No               |
 
-*These flags require Copilot integration to be configured when performing GitHub operations (not needed for `--parse-only`)
+Current execution modes:
+
+1. Parse-only mode (`--parse-only`)
+- Creates `bauer-output/bauer-parse-result.json`
+- Does not push branches
+- Does not create issues
+
+2. Parse-and-issue mode (without `--parse-only`)
+- Creates `bauer-output/bauer-parse-result.json`
+- Creates a branch and pushes the parse file into that branch
+- Opens a GitHub issue assigned to Copilot (with fallbacks) and includes branch/pinned/raw links to the prompt file
+
+*GitHub auth is only required when using parse-and-issue mode.
+
 <!-- ### Examples
 
 #### Basic run
@@ -68,12 +80,20 @@ cp credentials.example.json credentials.json
 bauer --doc-id <your-document-id> --credentials ./credentials.json
 ```
 
-#### Dry run (test without executing changes)
+#### Parse only
 
 ```bash
 bauer --doc-id <your-document-id> \
         --credentials ./credentials.json \
-        --dry-run
+        --parse-only
+```
+
+#### Parse and create issue
+
+```bash
+bauer --doc-id <your-document-id> \
+        --credentials ./credentials.json \
+        --github-repo owner/repo
 ```
 
 #### Custom chunk size and output directory
