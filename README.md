@@ -22,8 +22,7 @@ task build
 
 ```
 ./bauer --doc-id <doc-id> \
-  --credentials <path-to-creds> \
-  --parse-only
+  --credentials <path-to-creds>
 ```
 
 
@@ -42,6 +41,22 @@ cp credentials.example.json credentials.json
 2. If running with GitHub issue creation (no `--parse-only`), ensure GitHub CLI auth is available
 3. Get document ID from Google Document & share the document with the service account
 4. Run Bauer
+
+### GitHub CLI authentication
+
+Run these once before using parse-and-issue mode:
+
+```bash
+gh auth login
+gh auth status
+```
+
+If you prefer token auth in non-interactive environments:
+
+```bash
+export GH_TOKEN=<your_token>
+gh auth status
+```
 
 ```bash
 ./bauer --doc-id <your-document-id> --credentials ./credentials.json
