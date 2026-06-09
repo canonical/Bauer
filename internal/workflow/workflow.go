@@ -12,6 +12,7 @@ import (
 	"bauer/internal/config"
 	"bauer/internal/github"
 	"bauer/internal/orchestrator"
+	"bauer/internal/prompt"
 )
 
 // WorkflowInput represents the input for a complete workflow execution
@@ -28,8 +29,7 @@ type WorkflowInput struct {
 	PageRefresh bool
 	OutputDir   string
 	Model       string
-	DryRun      bool
-	ParseOnly   bool // Phase 1: Parse document only, skip GitHub integration
+	ParseOnly   bool // Parse document to JSON only.
 
 	// Local repository path
 	LocalRepoPath string
@@ -60,7 +60,11 @@ type WorkflowOutput struct {
 	FinalizationInfo struct {
 		CommitMessage string
 		BranchPushed  bool
-		PullRequest   struct {
+		Issue         struct {
+			URL   string
+			Title string
+		}
+		PullRequest struct {
 			URL    string
 			Number int
 			Title  string
@@ -79,12 +83,9 @@ type WorkflowOutput struct {
 	Warnings      []string      `json:"warnings"`
 }
 
-// ExecuteWorkflow orchestrates the complete flow:
-// 1. GitHub Setup (clone, create branch)
-// 2. Bauer Processing (extract, chunk, apply changes)
-// 3. GitHub Finalization (commit, push, create PR)
-//
-// If ParseOnly is true, skips steps 1 and 3, outputs parsed data to JSON
+// ExecuteWorkflow orchestrates a parse-first flow:
+// 1. Parse Google Doc and write bauer-parse-result.json
+// 2. If ParseOnly is false, push the JSON to a branch and create a Copilot issue
 func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator.Orchestrator) (*WorkflowOutput, error) {
 	output := &WorkflowOutput{
 		Status:    "pending",
@@ -111,266 +112,280 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 		logger.Info("workflow: resolved credentials path", "path", credentialsPath)
 	}
 
-	// PHASE 1: Parse-only mode - extract and output JSON without GitHub integration
-	if input.ParseOnly {
-		logger.Info("workflow: Phase 1 - Parse-only mode")
+	logger.Info("workflow: parse phase")
 
-		// Create Bauer config for parsing
-		bauerCfg := &config.Config{
-			DocID:           input.DocID,
-			CredentialsPath: credentialsPath,
-			DryRun:          true, // Always dry-run in parse-only mode
-			ChunkSize:       input.ChunkSize,
-			PageRefresh:     input.PageRefresh,
-			OutputDir:       input.OutputDir,
-			Model:           input.Model,
-			TargetRepo:      ".", // Current directory (doesn't matter for parse-only)
-			ParseOnly:       true,
-		}
-
-		bauerCfg.ApplyDefaults()
-		input.OutputDir = bauerCfg.OutputDir
-		input.Model = bauerCfg.Model
-
-		logger.Info("workflow: Executing parse-only orchestration")
-
-		// Execute parse-only orchestration
-		bauerResult, err := orch.Execute(ctx, bauerCfg)
-		if err != nil {
-			output.Status = "failed"
-			output.Errors = append(output.Errors, fmt.Sprintf("Bauer parsing error: %v", err))
-			output.EndTime = time.Now()
-			output.TotalDuration = output.EndTime.Sub(output.StartTime)
-			return output, err
-		}
-
-		// Store results from orchestrator
-		if bauerResult != nil {
-			output.BauerResult.ExtractionDuration = bauerResult.ExtractionDuration
-			output.BauerResult.PlanDuration = 0    // No prompt generation in parse-only mode
-			output.BauerResult.CopilotDuration = 0 // No Copilot execution in parse-only mode
-			if bauerResult.ParseResult != nil {
-				output.BauerResult.TotalSuggestions = len(bauerResult.ParseResult.ActionableSuggestions)
-			}
-		}
-
-		// Write the simplified ParseResult to JSON file
-		absOutputDir, err := filepath.Abs(input.OutputDir)
-		if err != nil {
-			output.Status = "failed"
-			output.Errors = append(output.Errors, fmt.Sprintf("failed to resolve output directory path: %v", err))
-			output.EndTime = time.Now()
-			output.TotalDuration = output.EndTime.Sub(output.StartTime)
-			return output, err
-		}
-
-		if err := os.MkdirAll(absOutputDir, 0755); err != nil {
-			output.Status = "failed"
-			output.Errors = append(output.Errors, fmt.Sprintf("failed to create output directory: %v", err))
-			output.EndTime = time.Now()
-			output.TotalDuration = output.EndTime.Sub(output.StartTime)
-			return output, err
-		}
-
-		outputPath := filepath.Join(absOutputDir, "bauer-parse-result.json")
-		if bauerResult != nil && bauerResult.ParseResult != nil {
-			parseResultJSON, err := json.MarshalIndent(bauerResult.ParseResult, "", "  ")
-			if err != nil {
-				output.Status = "failed"
-				output.Errors = append(output.Errors, fmt.Sprintf("failed to marshal parse result: %v", err))
-				output.EndTime = time.Now()
-				output.TotalDuration = output.EndTime.Sub(output.StartTime)
-				return output, err
-			}
-
-			if err := os.WriteFile(outputPath, parseResultJSON, 0644); err != nil {
-				output.Status = "failed"
-				output.Errors = append(output.Errors, fmt.Sprintf("failed to write parse result file: %v", err))
-				output.EndTime = time.Now()
-				output.TotalDuration = output.EndTime.Sub(output.StartTime)
-				return output, err
-			}
-		}
-
-		// Verify the file actually exists
-		if _, err := os.Stat(outputPath); err != nil {
-			output.Status = "failed"
-			output.Errors = append(output.Errors, fmt.Sprintf("parse result file was not created at expected location: %s: %v", outputPath, err))
-			output.EndTime = time.Now()
-			output.TotalDuration = output.EndTime.Sub(output.StartTime)
-			return output, err
-		}
-
-		output.EndTime = time.Now()
-		output.TotalDuration = output.EndTime.Sub(output.StartTime)
-		output.Status = "success"
-		output.OutputFile = outputPath
-
-		// Safely compute totalFiles with nil checks
-		totalFiles := 0
-		if bauerResult != nil && bauerResult.ParseResult != nil {
-			totalFiles = len(bauerResult.ParseResult.FileMappings)
-		}
-
-		logger.Info("workflow: Parse-only mode complete",
-			"output_file", output.OutputFile,
-			"extraction_duration", output.BauerResult.ExtractionDuration,
-			"total_suggestions", output.BauerResult.TotalSuggestions,
-			"total_files", totalFiles,
-		)
-
-		return output, nil
-	}
-
-	// PHASES 2-4: Full workflow with GitHub integration
-	logger.Info("workflow: Setting up GitHub")
-
-	githubSetupInput := github.GitHubSetupInput{
-		GitHubRepo:    input.GitHubRepo,
-		GitHubToken:   input.GitHubToken,
-		BranchPrefix:  input.BranchPrefix,
-		LocalRepoPath: input.LocalRepoPath,
-	}
-
-	githubSetupOutput, err := github.SetupGitHubPhase(githubSetupInput)
-	if err != nil {
-		output.Status = "failed"
-		output.Errors = append(output.Errors, err.Error())
-		output.EndTime = time.Now()
-		output.TotalDuration = output.EndTime.Sub(output.StartTime)
-		return output, err
-	}
-	// Store GH setup results
-	output.RepositoryInfo.Owner = githubSetupOutput.Repo.Owner
-	output.RepositoryInfo.Repo = githubSetupOutput.Repo.Name
-	output.RepositoryInfo.LocalPath = githubSetupOutput.LocalPath
-	output.RepositoryInfo.BranchName = githubSetupOutput.BranchName
-	output.RepositoryInfo.DefaultBranch = githubSetupOutput.DefaultBranch
-	output.RepositoryInfo.CurrentBranch = githubSetupOutput.CurrentBranch
-
-	logger.Info("workflow success: GitHub setup successful")
-
-	// Change to target repository directory
-	// Save original directory to restore later
-	originalDir, err := os.Getwd()
-	if err != nil {
-		output.Status = "failed"
-		output.Errors = append(output.Errors, fmt.Sprintf("failed to get current directory: %v", err))
-		output.EndTime = time.Now()
-		output.TotalDuration = output.EndTime.Sub(output.StartTime)
-		return output, err
-	}
-
-	if err := os.Chdir(input.LocalRepoPath); err != nil {
-		output.Status = "failed"
-		output.Errors = append(output.Errors, fmt.Sprintf("failed to change to cloned repository: %v", err))
-		output.EndTime = time.Now()
-		output.TotalDuration = output.EndTime.Sub(output.StartTime)
-		return output, err
-	}
-	logger.Info("workflow: changed to cloned repository", "path", input.LocalRepoPath)
-	defer os.Chdir(originalDir)
-
-	// Bauer processing
-	logger.Info("workflow: starting phase 2 - Bauer processing")
-
-	// Create Bauer config with target repo (now current directory)
 	bauerCfg := &config.Config{
 		DocID:           input.DocID,
-		CredentialsPath: credentialsPath, // Use absolute path
-		DryRun:          input.DryRun,
+		CredentialsPath: credentialsPath,
+		DryRun:          true,
 		ChunkSize:       input.ChunkSize,
 		PageRefresh:     input.PageRefresh,
 		OutputDir:       input.OutputDir,
 		Model:           input.Model,
-		TargetRepo:      ".", // Current directory is the cloned repo
+		TargetRepo:      ".",
+		ParseOnly:       true,
 	}
 
-	logger.Info("workflow: Bauer target repository set at", "path", bauerCfg.TargetRepo)
+	bauerCfg.ApplyDefaults()
+	input.OutputDir = bauerCfg.OutputDir
+	input.Model = bauerCfg.Model
 
-	// Execute Bauer orchestration
 	bauerResult, err := orch.Execute(ctx, bauerCfg)
 	if err != nil {
-		output.Status = "partial"
-		output.Errors = append(output.Errors, fmt.Sprintf("Bauer processing error: %v", err))
-		logger.Warn("workflow: Bauer processing returned error", "error", err)
-		// Continue anyway - we can still commit what we have
+		output.Status = "failed"
+		output.Errors = append(output.Errors, fmt.Sprintf("Bauer parsing error: %v", err))
+		output.EndTime = time.Now()
+		output.TotalDuration = output.EndTime.Sub(output.StartTime)
+		return output, err
 	}
 
-	// Store Bauer results
 	if bauerResult != nil {
 		output.BauerResult.ExtractionDuration = bauerResult.ExtractionDuration
-		output.BauerResult.PlanDuration = bauerResult.PlanDuration
-		output.BauerResult.CopilotDuration = bauerResult.CopilotDuration
-		if len(bauerResult.Chunks) > 0 {
-			output.BauerResult.ChunkCount = len(bauerResult.Chunks)
-		}
-		if bauerResult.ExtractionResult != nil {
-			// Count total suggestions from extraction result
-			output.BauerResult.TotalSuggestions = 0 // TODO: adjust based on actual field
+		output.BauerResult.PlanDuration = 0
+		output.BauerResult.CopilotDuration = 0
+		if bauerResult.ParseResult != nil {
+			output.BauerResult.TotalSuggestions = len(bauerResult.ParseResult.ActionableSuggestions)
 		}
 	}
 
-	logger.Info("Bauer results",
-		"extraction_duration", output.BauerResult.ExtractionDuration,
-		"plan_duration", output.BauerResult.PlanDuration,
-		"copilot_duration", output.BauerResult.CopilotDuration,
-		"chunk_count", output.BauerResult.ChunkCount,
-		"total_suggestions", output.BauerResult.TotalSuggestions,
-	)
-	logger.Info("workflow success: Bauer processing finished")
+	absOutputDir, err := filepath.Abs(input.OutputDir)
+	if err != nil {
+		output.Status = "failed"
+		output.Errors = append(output.Errors, fmt.Sprintf("failed to resolve output directory path: %v", err))
+		output.EndTime = time.Now()
+		output.TotalDuration = output.EndTime.Sub(output.StartTime)
+		return output, err
+	}
 
-	// GitHub finalization
-	logger.Info("workflow: GitHub finalization")
+	if err := os.MkdirAll(absOutputDir, 0755); err != nil {
+		output.Status = "failed"
+		output.Errors = append(output.Errors, fmt.Sprintf("failed to create output directory: %v", err))
+		output.EndTime = time.Now()
+		output.TotalDuration = output.EndTime.Sub(output.StartTime)
+		return output, err
+	}
 
-	commitMessage := fmt.Sprintf("Apply BAU suggestions from doc %s", input.DocID)
-	prTitle := fmt.Sprintf("Apply BAU suggestions to %s", githubSetupOutput.Repo.Name)
-	prBody := fmt.Sprintf("Automated copy update changes from Bauer\n\nGDoc ID: %s", input.DocID)
+	outputPath := filepath.Join(absOutputDir, "bauer-parse-result.json")
+	if bauerResult != nil && bauerResult.ParseResult != nil {
+		parseResultJSON, err := json.MarshalIndent(bauerResult.ParseResult, "", "  ")
+		if err != nil {
+			output.Status = "failed"
+			output.Errors = append(output.Errors, fmt.Sprintf("failed to marshal parse result: %v", err))
+			output.EndTime = time.Now()
+			output.TotalDuration = output.EndTime.Sub(output.StartTime)
+			return output, err
+		}
 
-	finalizationInput := github.GitHubFinalizationInput{
+		if err := os.WriteFile(outputPath, parseResultJSON, 0644); err != nil {
+			output.Status = "failed"
+			output.Errors = append(output.Errors, fmt.Sprintf("failed to write parse result file: %v", err))
+			output.EndTime = time.Now()
+			output.TotalDuration = output.EndTime.Sub(output.StartTime)
+			return output, err
+		}
+	}
+
+	if _, err := os.Stat(outputPath); err != nil {
+		output.Status = "failed"
+		output.Errors = append(output.Errors, fmt.Sprintf("parse result file was not created at expected location: %s: %v", outputPath, err))
+		output.EndTime = time.Now()
+		output.TotalDuration = output.EndTime.Sub(output.StartTime)
+		return output, err
+	}
+
+	output.OutputFile = outputPath
+
+	if input.ParseOnly {
+		output.EndTime = time.Now()
+		output.TotalDuration = output.EndTime.Sub(output.StartTime)
+		output.Status = "success"
+		logger.Info("workflow: parse-only mode complete", "output_file", output.OutputFile)
+		return output, nil
+	}
+
+	repo, err := github.ParseGitHubRepo(input.GitHubRepo)
+	if err != nil {
+		output.Status = "failed"
+		output.Errors = append(output.Errors, fmt.Sprintf("invalid github repo: %v", err))
+		output.EndTime = time.Now()
+		output.TotalDuration = output.EndTime.Sub(output.StartTime)
+		return output, err
+	}
+
+	token := input.GitHubToken
+	if token == "" {
+		token, err = github.GetGitHubToken()
+		if err != nil {
+			output.Status = "failed"
+			output.Errors = append(output.Errors, fmt.Sprintf("failed to get github token: %v", err))
+			output.EndTime = time.Now()
+			output.TotalDuration = output.EndTime.Sub(output.StartTime)
+			return output, err
+		}
+	}
+
+	if err := github.SetupGitHubAuth(token); err != nil {
+		output.Status = "failed"
+		output.Errors = append(output.Errors, fmt.Sprintf("failed to setup github auth: %v", err))
+		output.EndTime = time.Now()
+		output.TotalDuration = output.EndTime.Sub(output.StartTime)
+		return output, err
+	}
+
+	parseFileContent, err := os.ReadFile(outputPath)
+	if err != nil {
+		output.Status = "failed"
+		output.Errors = append(output.Errors, fmt.Sprintf("failed to read parse result for issue: %v", err))
+		output.EndTime = time.Now()
+		output.TotalDuration = output.EndTime.Sub(output.StartTime)
+		return output, err
+	}
+
+	setupInput := github.GitHubSetupInput{
+		GitHubRepo:    input.GitHubRepo,
+		GitHubToken:   token,
+		BranchPrefix:  input.BranchPrefix,
 		LocalRepoPath: input.LocalRepoPath,
-		BranchName:    githubSetupOutput.BranchName,
-		DefaultBranch: githubSetupOutput.DefaultBranch,
-		Owner:         githubSetupOutput.Repo.Owner,
-		Repo:          githubSetupOutput.Repo.Name,
-		CommitMessage: commitMessage,
-		DryRun:        input.DryRun,
-		PRTitle:       prTitle,
-		PRBody:        prBody,
-		Labels:        []string{},
+	}
+	setupOutput, err := github.SetupGitHubPhase(setupInput)
+	if err != nil {
+		output.Status = "failed"
+		output.Errors = append(output.Errors, fmt.Sprintf("failed to prepare branch-backed prompt file: %v", err))
+		output.EndTime = time.Now()
+		output.TotalDuration = output.EndTime.Sub(output.StartTime)
+		return output, err
 	}
 
-	finalizationOutput, _ := github.FinalizeGitHubPhase(finalizationInput)
+	output.RepositoryInfo.Owner = setupOutput.Repo.Owner
+	output.RepositoryInfo.Repo = setupOutput.Repo.Name
+	output.RepositoryInfo.LocalPath = setupOutput.LocalPath
+	output.RepositoryInfo.BranchName = setupOutput.BranchName
+	output.RepositoryInfo.DefaultBranch = setupOutput.DefaultBranch
+	output.RepositoryInfo.CurrentBranch = setupOutput.CurrentBranch
 
-	// Store GH PR results
-	output.FinalizationInfo.CommitMessage = finalizationOutput.CommitMessage
-	output.FinalizationInfo.BranchPushed = finalizationOutput.BranchPushed
-	output.FinalizationInfo.PullRequest.URL = finalizationOutput.PullRequest.URL
-	output.FinalizationInfo.PullRequest.Title = finalizationOutput.PullRequest.Title
+	repoPromptPath := filepath.ToSlash(filepath.Join("bauer-output", filepath.Base(outputPath)))
+	targetPromptPath := filepath.Join(setupOutput.LocalPath, filepath.FromSlash(repoPromptPath))
+	if err := os.MkdirAll(filepath.Dir(targetPromptPath), 0755); err != nil {
+		output.Status = "failed"
+		output.Errors = append(output.Errors, fmt.Sprintf("failed to create prompt file directory in repo: %v", err))
+		output.EndTime = time.Now()
+		output.TotalDuration = output.EndTime.Sub(output.StartTime)
+		return output, err
+	}
+	if err := os.WriteFile(targetPromptPath, parseFileContent, 0644); err != nil {
+		output.Status = "failed"
+		output.Errors = append(output.Errors, fmt.Sprintf("failed to write prompt file in repo branch: %v", err))
+		output.EndTime = time.Now()
+		output.TotalDuration = output.EndTime.Sub(output.StartTime)
+		return output, err
+	}
 
-	// Merge warnings and errors from finalization
-	output.Warnings = append(output.Warnings, finalizationOutput.Warnings...)
-	output.Errors = append(output.Errors, finalizationOutput.Errors...)
+	commitMessage := fmt.Sprintf("Add Bauer parse output for doc %s", input.DocID)
+	if err := github.CommitFiles(setupOutput.LocalPath, commitMessage, []string{repoPromptPath}); err != nil {
+		output.Status = "failed"
+		output.Errors = append(output.Errors, fmt.Sprintf("failed to commit branch prompt file: %v", err))
+		output.EndTime = time.Now()
+		output.TotalDuration = output.EndTime.Sub(output.StartTime)
+		return output, err
+	}
+	if err := github.PushBranch(setupOutput.LocalPath, setupOutput.BranchName); err != nil {
+		output.Status = "failed"
+		output.Errors = append(output.Errors, fmt.Sprintf("failed to push branch prompt file: %v", err))
+		output.EndTime = time.Now()
+		output.TotalDuration = output.EndTime.Sub(output.StartTime)
+		return output, err
+	}
 
-	logger.Info("workflow: phase 3 complete - GitHub finalization finished")
+	output.FinalizationInfo.CommitMessage = commitMessage
+	output.FinalizationInfo.BranchPushed = true
+
+	pinnedRef := setupOutput.BranchName
+	if sha, shaErr := github.GetHeadCommitSHA(setupOutput.LocalPath); shaErr == nil && sha != "" {
+		pinnedRef = sha
+	} else if shaErr != nil {
+		output.Warnings = append(output.Warnings, fmt.Sprintf("could not resolve HEAD SHA for pinned prompt link; falling back to branch ref: %v", shaErr))
+	}
+
+	branchBlobURL := fmt.Sprintf("https://github.com/%s/%s/blob/%s/%s", setupOutput.Repo.Owner, setupOutput.Repo.Name, setupOutput.BranchName, repoPromptPath)
+	pinnedBlobURL := fmt.Sprintf("https://github.com/%s/%s/blob/%s/%s", setupOutput.Repo.Owner, setupOutput.Repo.Name, pinnedRef, repoPromptPath)
+	rawURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/%s", setupOutput.Repo.Owner, setupOutput.Repo.Name, pinnedRef, repoPromptPath)
+
+	issueTitle := fmt.Sprintf("@copilot Apply Bauer parse result to %s", repo.Name)
+	issueBody := fmt.Sprintf("@copilot\n\nAutomated parse result from Bauer\n\nGDoc ID: %s", input.DocID)
+	if bauerResult != nil && bauerResult.ExtractionResult != nil {
+		issueBody = prompt.BuildIssueDescription(
+			bauerResult.ExtractionResult,
+			bauerResult.Chunks,
+			input.PageRefresh,
+		)
+	}
+	issueBody = issueBody + "\n\n## Prompt Source\n\n" +
+		"Use this branch-backed prompt file as the machine-readable input, together with this issue description.\n\n" +
+		fmt.Sprintf("- Branch file: %s\n", branchBlobURL) +
+		fmt.Sprintf("- Pinned file (commit SHA): %s\n", pinnedBlobURL) +
+		fmt.Sprintf("- Raw JSON: %s\n", rawURL)
+
+	issueURL, issueWarning, err := createIssueWithFallback(repo.Owner, repo.Name, issueTitle, issueBody)
+	if err != nil {
+		output.Status = "failed"
+		output.Errors = append(output.Errors, fmt.Sprintf("failed to create issue: %v", err))
+		output.EndTime = time.Now()
+		output.TotalDuration = output.EndTime.Sub(output.StartTime)
+		return output, err
+	}
+	if issueWarning != "" {
+		output.Warnings = append(output.Warnings, issueWarning)
+	}
+
+	output.FinalizationInfo.Issue.URL = issueURL
+	output.FinalizationInfo.Issue.Title = issueTitle
 
 	output.EndTime = time.Now()
 	output.TotalDuration = output.EndTime.Sub(output.StartTime)
-
 	if len(output.Errors) == 0 {
 		output.Status = "success"
-	} else if output.FinalizationInfo.BranchPushed {
-		output.Status = "partial"
 	} else {
-		output.Status = "failed"
+		output.Status = "partial"
 	}
 
-	logger.Info("workflow: complete",
-		"status", output.Status,
-		"duration", output.TotalDuration,
-		"errors", len(output.Errors),
-		"warnings", len(output.Warnings),
+	logger.Info("workflow: parse + issue mode complete",
+		"output_file", output.OutputFile,
+		"issue_url", output.FinalizationInfo.Issue.URL,
+		"branch", output.RepositoryInfo.BranchName,
 	)
 
 	return output, nil
+}
+
+func createIssueWithFallback(owner, repo, title, body string) (issueURL, warning string, err error) {
+	issueURL, err = github.CreateIssue(owner, repo, github.CreateIssueOptions{
+		Title:     title,
+		Body:      body,
+		Assignees: []string{"copilot"},
+		Labels:    []string{"copilot", "bauer"},
+	})
+	if err == nil {
+		return issueURL, "", nil
+	}
+
+	// Fallback 1: some repos/orgs cannot resolve/assign the "copilot" login.
+	issueURL, err = github.CreateIssue(owner, repo, github.CreateIssueOptions{
+		Title:  title,
+		Body:   body,
+		Labels: []string{"copilot", "bauer"},
+	})
+	if err == nil {
+		return issueURL, "could not assign issue to 'copilot'; created issue without assignee and kept @copilot mention in body", nil
+	}
+
+	// Fallback 2: some repos don't have one or both labels.
+	issueURL, err = github.CreateIssue(owner, repo, github.CreateIssueOptions{
+		Title: title,
+		Body:  body,
+	})
+	if err == nil {
+		return issueURL, "could not assign issue to 'copilot' and one or more labels were unavailable; created issue without assignee/labels and kept @copilot mention in body", nil
+	}
+
+	return "", "", err
 }
