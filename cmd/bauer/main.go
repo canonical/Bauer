@@ -17,8 +17,7 @@ func main() {
 	docID := flag.String("doc-id", "", "Google Doc ID")
 	credentialsPath := flag.String("credentials", "bau-test-creds.json", "Path to service account credentials JSON")
 	localRepoPath := flag.String("local-repo-path", "/tmp/ubuntu.com", "Local path for cloned repository")
-	dryRun := flag.Bool("dry-run", false, "Perform a dry run without creating PR")
-	parseOnly := flag.Bool("parse-only", false, "Phase 1: Parse document and output machine-readable JSON (skip GitHub integration)")
+	parseOnly := flag.Bool("parse-only", false, "Parse document and output machine-readable JSON only")
 	outputDir := flag.String("output-dir", "bauer-output", "Output directory for Bauer results")
 	branchPrefix := flag.String("branch-prefix", "bauer", "Branch naming prefix")
 
@@ -43,7 +42,7 @@ func main() {
 
 	// Create workflow input from CLI flags/config
 	ghToken := ""
-	if !*parseOnly {
+	if *githubRepo != "" {
 		var err error
 		ghToken, err = github.GetGitHubToken()
 		if err != nil {
@@ -58,7 +57,6 @@ func main() {
 		DocID:         *docID,
 		Credentials:   *credentialsPath,
 		LocalRepoPath: *localRepoPath,
-		DryRun:        *dryRun,
 		ParseOnly:     *parseOnly,
 		OutputDir:     *outputDir,
 	}
@@ -78,7 +76,8 @@ func main() {
 		fmt.Printf("Output file: %s\n", result.OutputFile)
 	} else {
 		fmt.Printf("Status: %s\n", result.Status)
+		fmt.Printf("Output file: %s\n", result.OutputFile)
 		fmt.Printf("Branch: %s\n", result.RepositoryInfo.BranchName)
-		fmt.Printf("PR: %s\n", result.FinalizationInfo.PullRequest.URL)
+		fmt.Printf("Issue: %s\n", result.FinalizationInfo.Issue.URL)
 	}
 }

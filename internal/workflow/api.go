@@ -24,7 +24,7 @@ type APIRequest struct {
 	PageRefresh bool   `json:"page_refresh" default:"false"`      // Page refresh mode
 	OutputDir   string `json:"output_dir" default:"bauer-output"` // Output directory
 	Model       string `json:"model" default:"gpt-5-mini-high"`   // Copilot model
-	DryRun      bool   `json:"dry_run" default:"false"`           // Dry run mode
+	ParseOnly   bool   `json:"parse_only" default:"false"`        // Parse-only mode
 
 	// Local repository path
 	LocalRepoPath string `json:"local_repo_path" default:"/tmp"` // Where to clone (optional)
@@ -58,11 +58,11 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 		}
 
 		// Validate request
-		if req.GitHubRepo == "" {
+		if !req.ParseOnly && req.GitHubRepo == "" {
 			writeError(w, http.StatusBadRequest, "github_repo is required")
 			return
 		}
-		if req.GitHubToken == "" {
+		if req.GitHubRepo != "" && req.GitHubToken == "" {
 			writeError(w, http.StatusBadRequest, "github_token is required")
 			return
 		}
@@ -74,7 +74,6 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 			writeError(w, http.StatusBadRequest, "credentials is required")
 			return
 		}
-
 		// Set defaults
 		if req.BranchPrefix == "" {
 			req.BranchPrefix = "bauer"
@@ -103,14 +102,15 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 			PageRefresh:   req.PageRefresh,
 			OutputDir:     req.OutputDir,
 			Model:         req.Model,
-			DryRun:        req.DryRun,
+			ParseOnly:     req.ParseOnly,
 			LocalRepoPath: fmt.Sprintf("%s/%s-%d", req.LocalRepoPath, "bauer-workflow", time.Now().Unix()),
 		}
 
 		logger.Info("workflow API request",
 			"github_repo", req.GitHubRepo,
 			"doc_id", req.DocID,
-			"dry_run", req.DryRun,
+			"parse_only", req.ParseOnly,
+			"mode", map[bool]string{true: "parse-only", false: "parse-and-issue"}[req.ParseOnly],
 		)
 
 		// Execute workflow
@@ -128,10 +128,17 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 
 			switch workflowOutput.Status {
 			case "success":
-				response.Message = fmt.Sprintf(
-					"Workflow completed successfully. PR: %s",
-					workflowOutput.FinalizationInfo.PullRequest.URL,
-				)
+				if workflowOutput.FinalizationInfo.Issue.URL != "" {
+					response.Message = fmt.Sprintf(
+						"Workflow completed successfully. Issue: %s",
+						workflowOutput.FinalizationInfo.Issue.URL,
+					)
+				} else {
+					response.Message = fmt.Sprintf(
+						"Workflow completed successfully. Output file: %s",
+						workflowOutput.OutputFile,
+					)
+				}
 			case "partial":
 				response.Message = fmt.Sprintf(
 					"Workflow completed with errors. Branch: %s. Errors: %d",
