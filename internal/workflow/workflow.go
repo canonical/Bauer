@@ -51,7 +51,6 @@ type WorkflowOutput struct {
 	BauerResult struct {
 		ExtractionDuration time.Duration `json:"extraction_duration"`
 		PlanDuration       time.Duration `json:"plan_duration"`
-		CopilotDuration    time.Duration `json:"copilot_duration"`
 		ChunkCount         int           `json:"chunk_count"`
 		TotalSuggestions   int           `json:"total_suggestions"`
 	} `json:"bauer_result"`
@@ -142,7 +141,6 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	if bauerResult != nil {
 		output.BauerResult.ExtractionDuration = bauerResult.ExtractionDuration
 		output.BauerResult.PlanDuration = 0
-		output.BauerResult.CopilotDuration = 0
 		if bauerResult.ParseResult != nil {
 			output.BauerResult.TotalSuggestions = len(bauerResult.ParseResult.ActionableSuggestions)
 		}

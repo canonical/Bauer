@@ -23,7 +23,6 @@ type APIRequest struct {
 	ChunkSize   int    `json:"chunk_size" default:"1"`            // Number of chunks
 	PageRefresh bool   `json:"page_refresh" default:"false"`      // Page refresh mode
 	OutputDir   string `json:"output_dir" default:"bauer-output"` // Output directory
-	Model       string `json:"model" default:"gpt-5-mini-high"`   // Copilot model
 	ParseOnly   bool   `json:"parse_only" default:"false"`        // Parse-only mode
 
 	// Local repository path
@@ -84,9 +83,6 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 		if req.OutputDir == "" {
 			req.OutputDir = "bauer-output"
 		}
-		if req.Model == "" {
-			req.Model = "gpt-5-mini-high"
-		}
 		if req.ChunkSize == 0 {
 			req.ChunkSize = 1
 		}
@@ -101,7 +97,6 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 			ChunkSize:     req.ChunkSize,
 			PageRefresh:   req.PageRefresh,
 			OutputDir:     req.OutputDir,
-			Model:         req.Model,
 			ParseOnly:     req.ParseOnly,
 			LocalRepoPath: fmt.Sprintf("%s/%s-%d", req.LocalRepoPath, "bauer-workflow", time.Now().Unix()),
 		}
