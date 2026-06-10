@@ -61,15 +61,14 @@ func BuildPRDescription(result *gdocs.ProcessingResult, chunks []ChunkResult, us
 }
 
 // BuildIssueDescription renders an issue description for Copilot.
-// Full parse JSON is posted in follow-up issue comments to avoid body size limits.
+// The full parse JSON is linked in the "Prompt Source" section appended by the workflow.
 func BuildIssueDescription(result *gdocs.ProcessingResult, chunks []ChunkResult, usePageRefresh bool) string {
 	body := BuildPRDescription(result, chunks, usePageRefresh)
 
 	var b strings.Builder
 	b.WriteString(body)
 	b.WriteString("\n\n## Parsed Output (Machine Readable)\n\n")
-	b.WriteString("Full parse JSON is posted in the issue comments below as chunked `json` blocks.\n")
-	b.WriteString("Process chunks in order (`Part 1/N`, `Part 2/N`, ...).\n")
+	b.WriteString("The full parse JSON is available via the branch-backed prompt file links in the \"Prompt Source\" section below.\n")
 
 	return b.String()
 }

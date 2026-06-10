@@ -160,20 +160,6 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 		)
 	}
 
-	// If parse-only mode, return early
-	if cfg.ParseOnly {
-		totalDuration := time.Since(startTime)
-
-		return &OrchestrationResult{
-			ExtractionResult:   result,
-			ExtractionDuration: extractionDuration,
-			Chunks:             chunks,
-			PlanDuration:       planDuration,
-			TotalDuration:      totalDuration,
-			ParseOnly:          true,
-		}, nil
-	}
-
 	totalDuration := time.Since(startTime)
 
 	return &OrchestrationResult{

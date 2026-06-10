@@ -28,7 +28,6 @@ type WorkflowInput struct {
 	ChunkSize   int
 	PageRefresh bool
 	OutputDir   string
-	Model       string
 	ParseOnly   bool // Parse document to JSON only.
 
 	// Local repository path
@@ -116,18 +115,15 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	bauerCfg := &config.Config{
 		DocID:           input.DocID,
 		CredentialsPath: credentialsPath,
-		DryRun:          true,
 		ChunkSize:       input.ChunkSize,
 		PageRefresh:     input.PageRefresh,
 		OutputDir:       input.OutputDir,
-		Model:           input.Model,
 		TargetRepo:      ".",
 		ParseOnly:       true,
 	}
 
 	bauerCfg.ApplyDefaults()
 	input.OutputDir = bauerCfg.OutputDir
-	input.Model = bauerCfg.Model
 
 	bauerResult, err := orch.Execute(ctx, bauerCfg)
 	if err != nil {

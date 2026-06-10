@@ -13,9 +13,9 @@ import (
 // APIRequest represents the API request for executing a workflow
 type APIRequest struct {
 	// GitHub configuration
-	GitHubRepo   string `json:"github_repo" binding:"required"`  // "owner/repo" or HTTPS URL
-	GitHubToken  string `json:"github_token" binding:"required"` // Personal access token
-	BranchPrefix string `json:"branch_prefix" default:"bauer"`   // Branch naming prefix
+	GitHubRepo   string `json:"github_repo"`                   // "owner/repo" or HTTPS URL (optional; required if not parse_only)
+	GitHubToken  string `json:"github_token"`                  // Personal access token (optional; required if not parse_only)
+	BranchPrefix string `json:"branch_prefix" default:"bauer"` // Branch naming prefix
 
 	// Bauer configuration
 	DocID       string `json:"doc_id" binding:"required"`         // Google Doc ID
@@ -57,12 +57,13 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 		}
 
 		// Validate request
+		// github_repo and github_token are required only when NOT in parse-only mode
 		if !req.ParseOnly && req.GitHubRepo == "" {
-			writeError(w, http.StatusBadRequest, "github_repo is required")
+			writeError(w, http.StatusBadRequest, "github_repo is required (unless parse_only=true)")
 			return
 		}
-		if req.GitHubRepo != "" && req.GitHubToken == "" {
-			writeError(w, http.StatusBadRequest, "github_token is required")
+		if !req.ParseOnly && req.GitHubToken == "" {
+			writeError(w, http.StatusBadRequest, "github_token is required (unless parse_only=true)")
 			return
 		}
 		if req.DocID == "" {

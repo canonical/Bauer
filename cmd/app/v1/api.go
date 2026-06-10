@@ -38,8 +38,6 @@ func JobPost(rc types.RouteConfig) func(w http.ResponseWriter, r *http.Request) 
 			PageRefresh:     payload.PageRefresh,
 			CredentialsPath: rc.APIConfig.CredentialsPath,
 			OutputDir:       fmt.Sprintf("%s/%s", rc.APIConfig.BaseOutputDir, requestID),
-			Model:           rc.APIConfig.Model,
-			SummaryModel:    rc.APIConfig.SummaryModel,
 		}
 
 		go executeJob(requestID, cfg, rc)
