@@ -8,14 +8,12 @@ import (
 
 // ServiceAccountCredentials represents the structure of a Google service account JSON key file.
 type ServiceAccountCredentials struct {
-	Type         string `json:"type"`
-	ProjectID    string `json:"project_id"`
-	PrivateKeyID string `json:"private_key_id"`
-	PrivateKey   string `json:"private_key"`
-	ClientEmail  string `json:"client_email"`
-	ClientID     string `json:"client_id"`
-	AuthURI      string `json:"auth_uri"`
-	TokenURI     string `json:"token_uri"`
+	Type        string `json:"type"`
+	ProjectID   string `json:"project_id"`
+	PrivateKey  string `json:"google_private_key"`
+	ClientEmail string `json:"client_email"`
+	AuthURI     string `json:"auth_uri"`
+	TokenURI    string `json:"token_uri"`
 }
 
 // ValidateCredentialsFile checks if the credentials file exists, is readable, and contains required fields.
@@ -42,7 +40,7 @@ func ValidateCredentialsFile(path string) error {
 	}
 
 	if creds.PrivateKey == "" {
-		return fmt.Errorf("missing required field: private_key")
+		return fmt.Errorf("missing required field: google_private_key")
 	}
 
 	if creds.ClientEmail == "" {
