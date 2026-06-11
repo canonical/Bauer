@@ -126,16 +126,50 @@ func createBranchRef(owner, repo, branchName, sha string) error {
 }
 
 func putFileOnBranch(owner, repo, branch, path, message, encodedContent string) error {
-	cmd := exec.Command(
-		"gh", "api", "-X", "PUT",
+	existingSHA, err := getFileSHAOnBranch(owner, repo, branch, path)
+	if err != nil {
+		return fmt.Errorf("failed to resolve existing file sha: %w", err)
+	}
+
+	args := []string{
+		"api", "-X", "PUT",
 		fmt.Sprintf("repos/%s/%s/contents/%s", owner, repo, path),
-		"-f", "message="+message,
-		"-f", "content="+encodedContent,
-		"-f", "branch="+branch,
-	)
+		"-f", "message=" + message,
+		"-f", "content=" + encodedContent,
+		"-f", "branch=" + branch,
+	}
+	if existingSHA != "" {
+		args = append(args, "-f", "sha="+existingSHA)
+	}
+
+	cmd := exec.Command("gh", args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("gh api failed: %w, output: %s", err, output)
 	}
 	return nil
+}
+
+func getFileSHAOnBranch(owner, repo, branch, path string) (string, error) {
+	cmd := exec.Command(
+		"gh", "api",
+		fmt.Sprintf("repos/%s/%s/contents/%s", owner, repo, path),
+		"-f", "ref="+branch,
+		"--jq", ".sha",
+	)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// File doesn't exist on this branch yet; PUT must omit sha in this case.
+		if strings.Contains(string(output), "404") {
+			return "", nil
+		}
+		return "", fmt.Errorf("gh api failed: %w, output: %s", err, output)
+	}
+
+	sha := strings.TrimSpace(string(output))
+	if sha == "" {
+		return "", nil
+	}
+
+	return sha, nil
 }

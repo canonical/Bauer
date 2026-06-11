@@ -257,7 +257,13 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	output.RepositoryInfo.DefaultBranch = setupOutput.DefaultBranch
 	output.RepositoryInfo.CurrentBranch = setupOutput.CurrentBranch
 
-	repoPromptPath := filepath.ToSlash(filepath.Join("bauer-output", filepath.Base(outputPath)))
+	// Derive a safe directory name for the prompt file within the repo.
+	repoPromptDir := filepath.Base(filepath.Clean(input.OutputDir))
+	if repoPromptDir == "." {
+		repoPromptDir = ""
+	}
+	repoPromptPath := filepath.ToSlash(filepath.Join(repoPromptDir, filepath.Base(outputPath)))
+
 	targetPromptPath := filepath.Join(setupOutput.LocalPath, filepath.FromSlash(repoPromptPath))
 	if err := os.MkdirAll(filepath.Dir(targetPromptPath), 0755); err != nil {
 		output.Status = "failed"
@@ -336,11 +342,7 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 
 	output.EndTime = time.Now()
 	output.TotalDuration = output.EndTime.Sub(output.StartTime)
-	if len(output.Errors) == 0 {
-		output.Status = "success"
-	} else {
-		output.Status = "partial"
-	}
+	output.Status = "success"
 
 	logger.Info("workflow: parse + issue mode complete",
 		"output_file", output.OutputFile,

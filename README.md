@@ -23,7 +23,9 @@ task build
 ```
 ./bauer --doc-id <doc-id> \
   --credentials <path-to-creds>
+  --github-repo <github-repo>
 ```
+Additionally, you can run it with `--parse-only` without creeting an issue.
 
 
 ## Configuration
