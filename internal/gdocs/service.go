@@ -2,7 +2,6 @@ package gdocs
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -24,11 +23,6 @@ func NewClient(ctx context.Context, credentialsPath string) (*Client, error) {
 	credentials, err := os.ReadFile(credentialsPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read service account file: %w", err)
-	}
-
-	credentials, err = normalizeCredentials(credentials)
-	if err != nil {
-		return nil, err
 	}
 
 	// Scopes for both Docs and Drive
@@ -61,28 +55,4 @@ func NewClient(ctx context.Context, credentialsPath string) (*Client, error) {
 		Docs:  docsService,
 		Drive: driveService,
 	}, nil
-}
-
-// normalizeCredentials translates credentials that use the legacy "google_private_key" field to the expected "private_key" field,
-// while ensuring all required fields are present
-func normalizeCredentials(data []byte) ([]byte, error) {
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, fmt.Errorf("failed to parse credentials JSON: %w", err)
-	}
-
-	if _, ok := raw["private_key"]; !ok {
-		if legacyPrivateKey, ok := raw["google_private_key"]; ok {
-			raw["private_key"] = legacyPrivateKey
-		}
-	}
-
-	delete(raw, "google_private_key")
-
-	normalized, err := json.Marshal(raw)
-	if err != nil {
-		return nil, fmt.Errorf("failed to normalize credentials JSON: %w", err)
-	}
-
-	return normalized, nil
 }

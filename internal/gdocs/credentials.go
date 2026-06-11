@@ -10,7 +10,7 @@ import (
 type ServiceAccountCredentials struct {
 	Type        string `json:"type"`
 	ProjectID   string `json:"project_id"`
-	PrivateKey  string `json:"google_private_key"`
+	PrivateKey  string `json:"private_key"`
 	ClientEmail string `json:"client_email"`
 	AuthURI     string `json:"auth_uri"`
 	TokenURI    string `json:"token_uri"`
@@ -40,7 +40,7 @@ func ValidateCredentialsFile(path string) error {
 	}
 
 	if creds.PrivateKey == "" {
-		return fmt.Errorf("missing required field: google_private_key")
+		return fmt.Errorf("missing required field: private_key")
 	}
 
 	if creds.ClientEmail == "" {
