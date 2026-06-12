@@ -323,7 +323,8 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 		"Use this branch-backed prompt file as the machine-readable input, together with this issue description.\n\n" +
 		fmt.Sprintf("- Branch file: %s\n", branchBlobURL) +
 		fmt.Sprintf("- Pinned file (commit SHA): %s\n", pinnedBlobURL) +
-		fmt.Sprintf("- Raw JSON: %s\n", rawURL)
+		fmt.Sprintf("- Raw JSON: %s\n", rawURL) +
+		fmt.Sprintf("\n\n## Cleanup\n\nOnce the PR is merged or this issue is closed, please delete the branch `%s`.\n", setupOutput.BranchName)
 
 	issueURL, issueWarning, err := createIssueWithFallback(repo.Owner, repo.Name, issueTitle, issueBody)
 	if err != nil {
@@ -365,16 +366,17 @@ func createIssueWithFallback(owner, repo, title, body string) (issueURL, warning
 	}
 
 	// Fallback 1: some repos/orgs cannot resolve/assign the "copilot" login.
+	// Assign to copilot label
 	issueURL, err = github.CreateIssue(owner, repo, github.CreateIssueOptions{
 		Title:  title,
 		Body:   body,
-		Labels: []string{"copilot", "bauer"},
+		Labels: []string{"copilot"},
 	})
 	if err == nil {
-		return issueURL, "could not assign issue to 'copilot'; created issue without assignee and kept @copilot mention in body", nil
+		return issueURL, "could not assign issue to 'copilot' and label set {copilot,bauer}; created issue with 'copilot' label only", nil
 	}
 
-	// Fallback 2: some repos don't have one or both labels.
+	// Fallback 3: labels may be unavailable in the target repo.
 	issueURL, err = github.CreateIssue(owner, repo, github.CreateIssueOptions{
 		Title: title,
 		Body:  body,
