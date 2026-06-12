@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"bauer/internal/config"
@@ -298,6 +299,7 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 
 	output.FinalizationInfo.CommitMessage = commitMessage
 	output.FinalizationInfo.BranchPushed = true
+	copilotBranchName := deriveCopilotBranchName(setupOutput.BranchName)
 
 	pinnedRef := setupOutput.BranchName
 	if sha, shaErr := github.GetHeadCommitSHA(setupOutput.LocalPath); shaErr == nil && sha != "" {
@@ -324,6 +326,7 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 		fmt.Sprintf("- Branch file: %s\n", branchBlobURL) +
 		fmt.Sprintf("- Pinned file (commit SHA): %s\n", pinnedBlobURL) +
 		fmt.Sprintf("- Raw JSON: %s\n", rawURL) +
+		fmt.Sprintf("\n\n## Copilot PR Branch\n\nThe parse-output branch is `%s` and contains `bauer-parse-result.json`.\nWhen assigned, create the implementation PR from `%s` as the head branch.\n", setupOutput.BranchName, copilotBranchName) +
 		fmt.Sprintf("\n\n## Cleanup\n\nOnce the PR is merged or this issue is closed, please delete the branch `%s`.\n", setupOutput.BranchName)
 
 	issueURL, issueWarning, err := createIssueWithFallback(repo.Owner, repo.Name, issueTitle, issueBody)
@@ -386,4 +389,12 @@ func createIssueWithFallback(owner, repo, title, body string) (issueURL, warning
 	}
 
 	return "", "", err
+}
+
+func deriveCopilotBranchName(parseOutputBranch string) string {
+	parts := strings.SplitN(parseOutputBranch, "/", 2)
+	if len(parts) == 2 && parts[1] != "" {
+		return "copilot/" + parts[1]
+	}
+	return "copilot/" + strings.TrimPrefix(parseOutputBranch, "/")
 }
