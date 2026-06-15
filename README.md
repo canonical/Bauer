@@ -22,16 +22,16 @@ task build
 
 ```
 ./bauer --doc-id <doc-id> \
-  --credentials <path-to-creds>
+  --credentials <path-to-creds> \
   --github-repo <github-repo>
 ```
-Additionally, you can run it with `--parse-only` without creeting an issue.
+Additionally, you can run it with `--parse-only` without creating an issue.
 
 
 ## Configuration
 1. Create a credentials file by copying the example
 ```
-cp credentials.example.json credentials.json
+cp google-credentials-example.json credentials.json
 ```
 2. Get credentials from Google Cloud service or Bitwarden (internally)
 3. Fill up `credentials.json` with Google Cloud credentials (see [Generating Google Cloud credentials](https://developers.google.com/workspace/guides/create-credentials)).
