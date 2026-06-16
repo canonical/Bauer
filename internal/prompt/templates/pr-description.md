@@ -43,3 +43,4 @@ These files contain the rendered instructions + pattern reference + grouped sugg
 2. For each location group, apply suggestions sequentially.
 3. Validate each change with the provided `verification.text_after_change`.
 4. If a suggestion conflicts with a wider section deletion, prioritize the net change that keeps the final state consistent.
+5. Do **not** create, modify, or delete any test files. This task is limited to content and copy changes only.
