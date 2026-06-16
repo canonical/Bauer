@@ -162,7 +162,7 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 
 	outputPath := filepath.Join(absOutputDir, "bauer-parse-result.json")
 	if bauerResult != nil && bauerResult.ParseResult != nil {
-		parseResultJSON, err := json.MarshalIndent(bauerResult.ParseResult, "", "  ")
+		parseResultJSON, err := json.MarshalIndent(bauerResult.ParseResult.Trim(), "", "  ")
 		if err != nil {
 			output.Status = "failed"
 			output.Errors = append(output.Errors, fmt.Sprintf("failed to marshal parse result: %v", err))
@@ -326,8 +326,8 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 		fmt.Sprintf("- Branch file: %s\n", branchBlobURL) +
 		fmt.Sprintf("- Pinned file (commit SHA): %s\n", pinnedBlobURL) +
 		fmt.Sprintf("- Raw JSON: %s\n", rawURL) +
-		fmt.Sprintf("\n\n## Copilot PR Branch\n\nThe parse-output branch is `%s` and contains `bauer-parse-result.json`.\nWhen assigned, create the implementation PR from `%s` as the head branch.\n", setupOutput.BranchName, copilotBranchName) +
-		fmt.Sprintf("\n\n## Cleanup\n\nOnce the PR is merged or this issue is closed, please delete the branch `%s`.\n", setupOutput.BranchName)
+		fmt.Sprintf("\n\n## Copilot PR Branch\n\nThe parse-output branch is `%s` and contains `bauer-parse-result.json`.\nWhen assigned, create the implementation PR from `%s` as the head branch.\n", setupOutput.BranchName, copilotBranchName)
+		// fmt.Sprintf("\n\n## Cleanup\n\nOnce the PR is merged or this issue is closed, please delete the branch `%s`.\n", setupOutput.BranchName)
 
 	issueURL, issueWarning, err := createIssueWithFallback(repo.Owner, repo.Name, issueTitle, issueBody)
 	if err != nil {
