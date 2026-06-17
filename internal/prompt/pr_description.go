@@ -31,6 +31,11 @@ func BuildPRDescription(result *gdocs.ProcessingResult, chunks []ChunkResult, us
 		suggestedURL = result.Metadata.SuggestedUrl
 	}
 
+	tabIDLine := ""
+	if strings.TrimSpace(result.TabID) != "" {
+		tabIDLine = fmt.Sprintf("- Tab ID: %s", result.TabID)
+	}
+
 	insertCount, deleteCount, replaceCount := summarizeSuggestionTypes(result.ActionableSuggestions)
 
 	chunkList := "- No chunk files were generated."
@@ -46,6 +51,7 @@ func BuildPRDescription(result *gdocs.ProcessingResult, chunks []ChunkResult, us
 	body := prDescriptionTemplate
 	body = replaceVar(body, "DocumentTitle", result.DocumentTitle)
 	body = replaceVar(body, "DocumentID", result.DocumentID)
+	body = replaceVar(body, "TabIDLine", tabIDLine)
 	body = replaceVar(body, "SuggestedURL", suggestedURL)
 	body = replaceVar(body, "Mode", mode)
 	body = replaceVar(body, "InstructionsTemplatePath", instructionsTemplatePath)
