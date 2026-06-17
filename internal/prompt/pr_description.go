@@ -36,6 +36,8 @@ func BuildPRDescription(result *gdocs.ProcessingResult, chunks []ChunkResult, us
 		tabIDLine = fmt.Sprintf("- Tab ID: %s", result.TabID)
 	}
 
+	documentURL := buildGoogleDocURL(result.DocumentID, result.TabID)
+
 	insertCount, deleteCount, replaceCount := summarizeSuggestionTypes(result.ActionableSuggestions)
 
 	chunkList := "- No chunk files were generated."
@@ -51,6 +53,7 @@ func BuildPRDescription(result *gdocs.ProcessingResult, chunks []ChunkResult, us
 	body := prDescriptionTemplate
 	body = replaceVar(body, "DocumentTitle", result.DocumentTitle)
 	body = replaceVar(body, "DocumentID", result.DocumentID)
+	body = replaceVar(body, "DocumentURL", documentURL)
 	body = replaceVar(body, "TabIDLine", tabIDLine)
 	body = replaceVar(body, "SuggestedURL", suggestedURL)
 	body = replaceVar(body, "Mode", mode)
@@ -132,4 +135,21 @@ func summarizeSuggestionTypes(suggestions []gdocs.ActionableSuggestion) (insertC
 		}
 	}
 	return insertCount, deleteCount, replaceCount
+}
+
+func buildGoogleDocURL(documentID, tabID string) string {
+	documentID = strings.TrimSpace(documentID)
+	if documentID == "" {
+		return ""
+	}
+
+	if strings.HasPrefix(documentID, "https://docs.google.com/document/d/") {
+		return documentID
+	}
+
+	if strings.TrimSpace(tabID) != "" {
+		return fmt.Sprintf("https://docs.google.com/document/d/%s/edit?tab=%s", documentID, tabID)
+	}
+
+	return fmt.Sprintf("https://docs.google.com/document/d/%s/edit", documentID)
 }
