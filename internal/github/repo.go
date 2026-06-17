@@ -151,10 +151,16 @@ func CreateFeatureBranch(localPath, branchName string) error {
 	}
 
 	// Pull latest changes
-	cmd = exec.Command("git", "pull", "origin", defaultBranch)
+	cmd = exec.Command("git", "pull", "--ff-only", "origin", defaultBranch)
 	cmd.Dir = localPath
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to pull latest from %s: %w, output: %s", defaultBranch, err, output)
+		// In automation, local default can diverge from origin due to previous runs.
+		// Force sync local default branch to remote default and continue.
+		resetCmd := exec.Command("git", "reset", "--hard", fmt.Sprintf("origin/%s", defaultBranch))
+		resetCmd.Dir = localPath
+		if resetOut, resetErr := resetCmd.CombinedOutput(); resetErr != nil {
+			return fmt.Errorf("failed to pull latest from %s: %w, output: %s (and failed to hard reset to origin/%s: %v, output: %s)", defaultBranch, err, output, defaultBranch, resetErr, resetOut)
+		}
 	}
 
 	// Create new branch
