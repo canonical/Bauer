@@ -17,13 +17,20 @@ const validCredentialsJSON = `{
 	"token_uri": "https://oauth2.googleapis.com/token"
 }`
 
-func TestConfig_Validate(t *testing.T) {
-	// Create a temporary file to act as a valid credentials file
-	tmpDir := t.TempDir()
-	validCredsFile := filepath.Join(tmpDir, "creds.json")
-	if err := os.WriteFile(validCredsFile, []byte(validCredentialsJSON), 0644); err != nil {
+// writeValidCreds writes a valid service-account credentials file into dir and
+// returns its path, failing the test if the file cannot be created.
+func writeValidCreds(t *testing.T, dir string) string {
+	t.Helper()
+	path := filepath.Join(dir, "creds.json")
+	if err := os.WriteFile(path, []byte(validCredentialsJSON), 0644); err != nil {
 		t.Fatalf("Failed to create temp creds file: %v", err)
 	}
+	return path
+}
+
+func TestConfig_Validate(t *testing.T) {
+	tmpDir := t.TempDir()
+	validCredsFile := writeValidCreds(t, tmpDir)
 
 	tests := []struct {
 		name    string
@@ -118,12 +125,7 @@ func TestConfig_Validate(t *testing.T) {
 }
 
 func TestChunkSizeDefaults(t *testing.T) {
-	// Create a temporary file to act as a valid credentials file
-	tmpDir := t.TempDir()
-	validCredsFile := filepath.Join(tmpDir, "creds.json")
-	if err := os.WriteFile(validCredsFile, []byte(validCredentialsJSON), 0644); err != nil {
-		t.Fatalf("Failed to create temp creds file: %v", err)
-	}
+	validCredsFile := writeValidCreds(t, t.TempDir())
 
 	tests := []struct {
 		name              string

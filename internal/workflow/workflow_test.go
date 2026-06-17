@@ -70,11 +70,11 @@ func TestExecuteWorkflow_ParseOnly(t *testing.T) {
 		t.Errorf("orchestrator was not invoked with ParseOnly=true; gotCfg=%+v", orch.gotCfg)
 	}
 
-	// The parse result file must be written and reported.
+	// The parse result file must be written and reported. outputDir comes from
+	// t.TempDir(), which is already absolute, so it matches OutputFile directly.
 	wantPath := filepath.Join(outputDir, "bauer-parse-result.json")
-	absWant, _ := filepath.Abs(wantPath)
-	if output.OutputFile != absWant {
-		t.Errorf("OutputFile = %q, want %q", output.OutputFile, absWant)
+	if output.OutputFile != wantPath {
+		t.Errorf("OutputFile = %q, want %q", output.OutputFile, wantPath)
 	}
 
 	data, statErr := os.ReadFile(wantPath)
