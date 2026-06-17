@@ -16,6 +16,14 @@ import (
 	"bauer/internal/prompt"
 )
 
+// Workflow status values reported in WorkflowOutput.Status and APIResponse.Status.
+const (
+	statusPending = "pending"
+	statusSuccess = "success"
+	statusPartial = "partial"
+	statusFailed  = "failed"
+)
+
 // WorkflowInput represents the input for a complete workflow execution
 type WorkflowInput struct {
 	// GitHub configuration
@@ -82,16 +90,33 @@ type WorkflowOutput struct {
 	Warnings      []string      `json:"warnings"`
 }
 
+// finalize stamps the end time and total duration. It is idempotent, so it is
+// safe to run from a deferred call regardless of which return path is taken.
+func (o *WorkflowOutput) finalize() {
+	o.EndTime = time.Now()
+	o.TotalDuration = o.EndTime.Sub(o.StartTime)
+}
+
+// fail records a failure status and message, returning the output and error so
+// callers can `return output.fail(err, ...)` in one line. The end time is
+// stamped by the deferred finalize in ExecuteWorkflow.
+func (o *WorkflowOutput) fail(err error, format string, args ...any) (*WorkflowOutput, error) {
+	o.Status = statusFailed
+	o.Errors = append(o.Errors, fmt.Sprintf(format, args...))
+	return o, err
+}
+
 // ExecuteWorkflow orchestrates a parse-first flow:
 // 1. Parse Google Doc and write bauer-parse-result.json
 // 2. If ParseOnly is false, push the JSON to a branch and create a Copilot issue
 func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator.Orchestrator) (*WorkflowOutput, error) {
 	output := &WorkflowOutput{
-		Status:    "pending",
+		Status:    statusPending,
 		StartTime: time.Now(),
 		Errors:    []string{},
 		Warnings:  []string{},
 	}
+	defer output.finalize()
 
 	logger := slog.Default()
 
@@ -101,11 +126,7 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	if input.Credentials != "" {
 		absPath, err := filepath.Abs(input.Credentials)
 		if err != nil {
-			output.Status = "failed"
-			output.Errors = append(output.Errors, fmt.Sprintf("failed to resolve credentials path: %v", err))
-			output.EndTime = time.Now()
-			output.TotalDuration = output.EndTime.Sub(output.StartTime)
-			return output, err
+			return output.fail(err, "failed to resolve credentials path: %v", err)
 		}
 		credentialsPath = absPath
 		logger.Info("workflow: resolved credentials path", "path", credentialsPath)
@@ -128,11 +149,7 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 
 	bauerResult, err := orch.Execute(ctx, bauerCfg)
 	if err != nil {
-		output.Status = "failed"
-		output.Errors = append(output.Errors, fmt.Sprintf("Bauer parsing error: %v", err))
-		output.EndTime = time.Now()
-		output.TotalDuration = output.EndTime.Sub(output.StartTime)
-		return output, err
+		return output.fail(err, "Bauer parsing error: %v", err)
 	}
 
 	if bauerResult != nil {
@@ -145,95 +162,57 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 
 	absOutputDir, err := filepath.Abs(input.OutputDir)
 	if err != nil {
-		output.Status = "failed"
-		output.Errors = append(output.Errors, fmt.Sprintf("failed to resolve output directory path: %v", err))
-		output.EndTime = time.Now()
-		output.TotalDuration = output.EndTime.Sub(output.StartTime)
-		return output, err
+		return output.fail(err, "failed to resolve output directory path: %v", err)
 	}
 
 	if err := os.MkdirAll(absOutputDir, 0755); err != nil {
-		output.Status = "failed"
-		output.Errors = append(output.Errors, fmt.Sprintf("failed to create output directory: %v", err))
-		output.EndTime = time.Now()
-		output.TotalDuration = output.EndTime.Sub(output.StartTime)
-		return output, err
+		return output.fail(err, "failed to create output directory: %v", err)
 	}
 
 	outputPath := filepath.Join(absOutputDir, "bauer-parse-result.json")
 	if bauerResult != nil && bauerResult.ParseResult != nil {
 		parseResultJSON, err := json.MarshalIndent(bauerResult.ParseResult.Trim(), "", "  ")
 		if err != nil {
-			output.Status = "failed"
-			output.Errors = append(output.Errors, fmt.Sprintf("failed to marshal parse result: %v", err))
-			output.EndTime = time.Now()
-			output.TotalDuration = output.EndTime.Sub(output.StartTime)
-			return output, err
+			return output.fail(err, "failed to marshal parse result: %v", err)
 		}
 
 		if err := os.WriteFile(outputPath, parseResultJSON, 0644); err != nil {
-			output.Status = "failed"
-			output.Errors = append(output.Errors, fmt.Sprintf("failed to write parse result file: %v", err))
-			output.EndTime = time.Now()
-			output.TotalDuration = output.EndTime.Sub(output.StartTime)
-			return output, err
+			return output.fail(err, "failed to write parse result file: %v", err)
 		}
 	}
 
 	if _, err := os.Stat(outputPath); err != nil {
-		output.Status = "failed"
-		output.Errors = append(output.Errors, fmt.Sprintf("parse result file was not created at expected location: %s: %v", outputPath, err))
-		output.EndTime = time.Now()
-		output.TotalDuration = output.EndTime.Sub(output.StartTime)
-		return output, err
+		return output.fail(err, "parse result file was not created at expected location: %s: %v", outputPath, err)
 	}
 
 	output.OutputFile = outputPath
 
 	if input.ParseOnly {
-		output.EndTime = time.Now()
-		output.TotalDuration = output.EndTime.Sub(output.StartTime)
-		output.Status = "success"
+		output.Status = statusSuccess
 		logger.Info("workflow: parse-only mode complete", "output_file", output.OutputFile)
 		return output, nil
 	}
 
 	repo, err := github.ParseGitHubRepo(input.GitHubRepo)
 	if err != nil {
-		output.Status = "failed"
-		output.Errors = append(output.Errors, fmt.Sprintf("invalid github repo: %v", err))
-		output.EndTime = time.Now()
-		output.TotalDuration = output.EndTime.Sub(output.StartTime)
-		return output, err
+		return output.fail(err, "invalid github repo: %v", err)
 	}
 
 	token := input.GitHubToken
 	if token == "" {
 		token, err = github.GetGitHubToken()
 		if err != nil {
-			output.Status = "failed"
-			output.Errors = append(output.Errors, fmt.Sprintf("failed to get github token: %v", err))
-			output.EndTime = time.Now()
-			output.TotalDuration = output.EndTime.Sub(output.StartTime)
-			return output, err
+			return output.fail(err, "failed to get github token: %v", err)
 		}
 	}
 
 	if err := github.SetupGitHubAuth(token); err != nil {
-		output.Status = "failed"
-		output.Errors = append(output.Errors, fmt.Sprintf("failed to setup github auth: %v", err))
-		output.EndTime = time.Now()
-		output.TotalDuration = output.EndTime.Sub(output.StartTime)
-		return output, err
+		return output.fail(err, "failed to setup github auth: %v", err)
 	}
 
 	parseFileContent, err := os.ReadFile(outputPath)
 	if err != nil {
-		output.Status = "failed"
-		output.Errors = append(output.Errors, fmt.Sprintf("failed to read parse result for issue: %v", err))
-		output.EndTime = time.Now()
-		output.TotalDuration = output.EndTime.Sub(output.StartTime)
-		return output, err
+		return output.fail(err, "failed to read parse result for issue: %v", err)
 	}
 
 	setupInput := github.GitHubSetupInput{
@@ -244,11 +223,7 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	}
 	setupOutput, err := github.SetupGitHubPhase(setupInput)
 	if err != nil {
-		output.Status = "failed"
-		output.Errors = append(output.Errors, fmt.Sprintf("failed to prepare branch-backed prompt file: %v", err))
-		output.EndTime = time.Now()
-		output.TotalDuration = output.EndTime.Sub(output.StartTime)
-		return output, err
+		return output.fail(err, "failed to prepare branch-backed prompt file: %v", err)
 	}
 
 	output.RepositoryInfo.Owner = setupOutput.Repo.Owner
@@ -267,34 +242,18 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 
 	targetPromptPath := filepath.Join(setupOutput.LocalPath, filepath.FromSlash(repoPromptPath))
 	if err := os.MkdirAll(filepath.Dir(targetPromptPath), 0755); err != nil {
-		output.Status = "failed"
-		output.Errors = append(output.Errors, fmt.Sprintf("failed to create prompt file directory in repo: %v", err))
-		output.EndTime = time.Now()
-		output.TotalDuration = output.EndTime.Sub(output.StartTime)
-		return output, err
+		return output.fail(err, "failed to create prompt file directory in repo: %v", err)
 	}
 	if err := os.WriteFile(targetPromptPath, parseFileContent, 0644); err != nil {
-		output.Status = "failed"
-		output.Errors = append(output.Errors, fmt.Sprintf("failed to write prompt file in repo branch: %v", err))
-		output.EndTime = time.Now()
-		output.TotalDuration = output.EndTime.Sub(output.StartTime)
-		return output, err
+		return output.fail(err, "failed to write prompt file in repo branch: %v", err)
 	}
 
 	commitMessage := fmt.Sprintf("Add Bauer parse output for doc %s", input.DocID)
 	if err := github.CommitFiles(setupOutput.LocalPath, commitMessage, []string{repoPromptPath}); err != nil {
-		output.Status = "failed"
-		output.Errors = append(output.Errors, fmt.Sprintf("failed to commit branch prompt file: %v", err))
-		output.EndTime = time.Now()
-		output.TotalDuration = output.EndTime.Sub(output.StartTime)
-		return output, err
+		return output.fail(err, "failed to commit branch prompt file: %v", err)
 	}
 	if err := github.PushBranch(setupOutput.LocalPath, setupOutput.BranchName); err != nil {
-		output.Status = "failed"
-		output.Errors = append(output.Errors, fmt.Sprintf("failed to push branch prompt file: %v", err))
-		output.EndTime = time.Now()
-		output.TotalDuration = output.EndTime.Sub(output.StartTime)
-		return output, err
+		return output.fail(err, "failed to push branch prompt file: %v", err)
 	}
 
 	output.FinalizationInfo.CommitMessage = commitMessage
@@ -331,11 +290,7 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 
 	issueURL, issueWarning, err := createIssueWithFallback(repo.Owner, repo.Name, issueTitle, issueBody)
 	if err != nil {
-		output.Status = "failed"
-		output.Errors = append(output.Errors, fmt.Sprintf("failed to create issue: %v", err))
-		output.EndTime = time.Now()
-		output.TotalDuration = output.EndTime.Sub(output.StartTime)
-		return output, err
+		return output.fail(err, "failed to create issue: %v", err)
 	}
 	if issueWarning != "" {
 		output.Warnings = append(output.Warnings, issueWarning)
@@ -344,9 +299,7 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	output.FinalizationInfo.Issue.URL = issueURL
 	output.FinalizationInfo.Issue.Title = issueTitle
 
-	output.EndTime = time.Now()
-	output.TotalDuration = output.EndTime.Sub(output.StartTime)
-	output.Status = "success"
+	output.Status = statusSuccess
 
 	logger.Info("workflow: parse + issue mode complete",
 		"output_file", output.OutputFile,
@@ -379,7 +332,7 @@ func createIssueWithFallback(owner, repo, title, body string) (issueURL, warning
 		return issueURL, "could not assign issue to 'copilot' and label set {copilot,bauer}; created issue with 'copilot' label only", nil
 	}
 
-	// Fallback 3: labels may be unavailable in the target repo.
+	// Fallback 2: labels may be unavailable in the target repo.
 	issueURL, err = github.CreateIssue(owner, repo, github.CreateIssueOptions{
 		Title: title,
 		Body:  body,

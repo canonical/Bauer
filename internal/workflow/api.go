@@ -10,23 +10,27 @@ import (
 	"bauer/internal/orchestrator"
 )
 
-// APIRequest represents the API request for executing a workflow
+// APIRequest represents the API request for executing a workflow.
+//
+// Defaults are applied by the handler (see ExecuteWorkflowHandler), not by
+// struct tags: encoding/json does not honor `default:"..."` tags, so the
+// defaults live in code to remain a single source of truth.
 type APIRequest struct {
 	// GitHub configuration
-	GitHubRepo   string `json:"github_repo"`                   // "owner/repo" or HTTPS URL (optional; required if not parse_only)
-	GitHubToken  string `json:"github_token"`                  // Personal access token (optional; required if not parse_only)
-	BranchPrefix string `json:"branch_prefix" default:"bauer"` // Branch naming prefix
+	GitHubRepo   string `json:"github_repo"`   // "owner/repo" or HTTPS URL (optional; required if not parse_only)
+	GitHubToken  string `json:"github_token"`  // Personal access token (optional; required if not parse_only)
+	BranchPrefix string `json:"branch_prefix"` // Branch naming prefix (default: "bauer")
 
 	// Bauer configuration
-	DocID       string `json:"doc_id" binding:"required"`         // Google Doc ID
-	Credentials string `json:"credentials" binding:"required"`    // Path to service account JSON
-	ChunkSize   int    `json:"chunk_size" default:"1"`            // Number of chunks
-	PageRefresh bool   `json:"page_refresh" default:"false"`      // Page refresh mode
-	OutputDir   string `json:"output_dir" default:"bauer-output"` // Output directory
-	ParseOnly   bool   `json:"parse_only" default:"false"`        // Parse-only mode
+	DocID       string `json:"doc_id"`      // Google Doc ID (required)
+	Credentials string `json:"credentials"` // Path to service account JSON (required)
+	ChunkSize   int    `json:"chunk_size"`  // Number of chunks (default: 1)
+	PageRefresh bool   `json:"page_refresh"`
+	OutputDir   string `json:"output_dir"` // Output directory (default: "bauer-output")
+	ParseOnly   bool   `json:"parse_only"`
 
 	// Local repository path
-	LocalRepoPath string `json:"local_repo_path" default:"/tmp"` // Where to clone (optional)
+	LocalRepoPath string `json:"local_repo_path"` // Where to clone (default: "/tmp")
 }
 
 // APIResponse represents the API response from workflow execution
@@ -123,7 +127,7 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 			response.Workflow = workflowOutput
 
 			switch workflowOutput.Status {
-			case "success":
+			case statusSuccess:
 				if workflowOutput.FinalizationInfo.Issue.URL != "" {
 					response.Message = fmt.Sprintf(
 						"Workflow completed successfully. Issue: %s",
@@ -135,7 +139,7 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 						workflowOutput.OutputFile,
 					)
 				}
-			case "partial":
+			case statusPartial:
 				response.Message = fmt.Sprintf(
 					"Workflow completed with errors. Branch: %s. Errors: %d",
 					workflowOutput.RepositoryInfo.BranchName,
@@ -150,7 +154,7 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 		}
 
 		if err != nil {
-			response.Status = "failed"
+			response.Status = statusFailed
 			response.Message = "Workflow execution error"
 			response.Error = err.Error()
 			logger.Error("workflow execution error", "error", err)
@@ -159,11 +163,11 @@ func ExecuteWorkflowHandler(orch orchestrator.Orchestrator) http.HandlerFunc {
 		// Determine HTTP status code
 		statusCode := http.StatusOK
 		switch response.Status {
-		case "failed":
+		case statusFailed:
 			statusCode = http.StatusInternalServerError
-		case "partial":
+		case statusPartial:
 			statusCode = http.StatusAccepted
-		case "success":
+		case statusSuccess:
 			statusCode = http.StatusCreated
 		}
 
