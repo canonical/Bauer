@@ -15,10 +15,7 @@ type Config struct {
 	// CredentialsPath is the path to the Google Cloud service account JSON key file.
 	CredentialsPath string `json:"credentials"`
 
-	// DryRun indicates if the tool should skip side-effect operations (Copilot CLI, PR creation).
-	DryRun bool `json:"dry_run"`
-
-	// ParseOnly indicates Phase 1 mode - parse document only, skip Copilot execution and GitHub integration
+	// ParseOnly indicates Phase 1 mode - parse document only, skip GitHub integration
 	ParseOnly bool `json:"parse_only"`
 
 	// ChunkSize is the total number of chunks to create from all locations.
@@ -32,14 +29,6 @@ type Config struct {
 	// OutputDir is the directory where generated prompt files will be saved.
 	// Default is "bauer-output" if not specified.
 	OutputDir string `json:"output_dir"`
-
-	// Model is the Copilot model to use for sessions.
-	// Default is "gpt-5-mini-high" if not specified.
-	Model string `json:"model"`
-
-	// SummaryModel is the Copilot model to use for the summary session.
-	// Default is "gpt-5-mini-high" if not specified.
-	SummaryModel string `json:"summary_model"`
 
 	// TargetRepo is the path (relative or absolute) to the target repository
 	// where tasks should be executed. If not specified, uses the current directory.
@@ -57,12 +46,6 @@ func (c *Config) ApplyDefaults() {
 	}
 	if c.OutputDir == "" {
 		c.OutputDir = "bauer-output"
-	}
-	if c.Model == "" {
-		c.Model = "gpt-5-mini-high"
-	}
-	if c.SummaryModel == "" {
-		c.SummaryModel = "gpt-5-mini-high"
 	}
 }
 

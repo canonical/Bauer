@@ -2,7 +2,6 @@ package orchestrator
 
 import (
 	"bauer/internal/config"
-	"bauer/internal/copilotcli"
 	"bauer/internal/gdocs"
 	"bauer/internal/prompt"
 	"context"
@@ -26,14 +25,9 @@ type OrchestrationResult struct {
 	Chunks       []prompt.ChunkResult
 	PlanDuration time.Duration
 
-	// Only populated if not dry run
-	CopilotOutputs  []copilotcli.ChunkOutput
-	CopilotDuration time.Duration
-	SummaryDuration time.Duration
-
 	// Metadata
 	TotalDuration time.Duration
-	DryRun        bool
+	ParseOnly     bool
 }
 
 // Orchestrator defines the interface for executing the BAU orchestration flow.
@@ -49,7 +43,7 @@ func NewOrchestrator() *DefaultOrchestrator {
 	return &DefaultOrchestrator{}
 }
 
-// Execute runs the full pipeline: extraction, prompt generation, and optional Copilot execution.
+// Execute runs the full pipeline: extraction, prompt generation, and optional GitHub integration.
 // Accepts: Config and Context
 // Returns: OrchestrationResult and error
 func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (*OrchestrationResult, error) {
@@ -127,11 +121,8 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 			ParseResult:        parseResult,
 			Chunks:             []prompt.ChunkResult{},
 			PlanDuration:       0,
-			CopilotOutputs:     []copilotcli.ChunkOutput{},
-			CopilotDuration:    0,
-			SummaryDuration:    0,
 			TotalDuration:      totalDuration,
-			DryRun:             false,
+			ParseOnly:          cfg.ParseOnly,
 		}, nil
 	}
 
@@ -169,80 +160,6 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 		)
 	}
 
-	// If dry run, return early
-	if cfg.DryRun {
-		totalDuration := time.Since(startTime)
-
-		return &OrchestrationResult{
-			ExtractionResult:   result,
-			ExtractionDuration: extractionDuration,
-			Chunks:             chunks,
-			PlanDuration:       planDuration,
-			CopilotOutputs:     []copilotcli.ChunkOutput{},
-			CopilotDuration:    0,
-			SummaryDuration:    0,
-			TotalDuration:      totalDuration,
-			DryRun:             true,
-		}, nil
-	}
-
-	// 6. Execute via Copilot SDK
-	cwd, err := os.Getwd()
-	if err != nil {
-		slog.Error("Failed to get working directory", slog.String("error", err.Error()))
-		return nil, fmt.Errorf("failed to get working directory: %w", err)
-	}
-
-	slog.Info("Initializing Copilot client", slog.String("cwd", cwd))
-	copilotClient, err := copilotcli.NewClient(cwd)
-	if err != nil {
-		slog.Error("Failed to create Copilot client", slog.String("error", err.Error()))
-		return nil, fmt.Errorf("failed to create Copilot client: %w", err)
-	}
-
-	// Start the Copilot CLI server once
-	if err := copilotClient.Start(); err != nil {
-		// Attempt to stop the client if Start failed
-		if stopErr := copilotClient.Stop(); stopErr != nil {
-			slog.Error("Failed to stop Copilot client after start failure", slog.String("error", stopErr.Error()))
-		}
-		slog.Error("Failed to start Copilot", slog.String("error", err.Error()))
-		return nil, fmt.Errorf("failed to start Copilot: %w", err)
-	}
-	defer func() {
-		if err := copilotClient.Stop(); err != nil {
-			slog.Error("Failed to stop Copilot client", slog.String("error", err.Error()))
-		}
-	}()
-
-	// Execute chunks via Copilot SDK
-	chunkOutputs, copilotDuration, err := executeCopilotChunks(ctx, chunks, cfg, copilotClient)
-	if err != nil {
-		slog.Error("Copilot execution failed", slog.String("error", err.Error()))
-		return nil, fmt.Errorf("copilot execution failed: %w", err)
-	}
-
-	slog.Info("Copilot chunks executed",
-		slog.Int("chunk_count", len(chunks)),
-		slog.Duration("total_duration", copilotDuration),
-	)
-
-	// 7. Generate summary if multiple chunks
-	summaryDuration := time.Duration(0)
-	if len(chunks) > 1 {
-		summaryStart := time.Now()
-
-		if err := copilotClient.GenerateSummary(ctx, chunkOutputs, cfg.SummaryModel); err != nil {
-			slog.Error("Summary generation failed", slog.String("error", err.Error()))
-			// Summary failure is not fatal; continue with results
-		} else {
-			summaryDuration = time.Since(summaryStart)
-			slog.Info("Summary generated successfully",
-				slog.Duration("duration", summaryDuration),
-			)
-		}
-	}
-
 	totalDuration := time.Since(startTime)
 
 	return &OrchestrationResult{
@@ -250,57 +167,7 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 		ExtractionDuration: extractionDuration,
 		Chunks:             chunks,
 		PlanDuration:       planDuration,
-		CopilotOutputs:     chunkOutputs,
-		CopilotDuration:    copilotDuration,
-		SummaryDuration:    summaryDuration,
 		TotalDuration:      totalDuration,
-		DryRun:             false,
+		ParseOnly:          false,
 	}, nil
-}
-
-// executeCopilotChunks executes each chunk via the Copilot SDK and returns outputs
-func executeCopilotChunks(
-	ctx context.Context,
-	chunks []prompt.ChunkResult,
-	cfg *config.Config,
-	client *copilotcli.Client,
-) ([]copilotcli.ChunkOutput, time.Duration, error) {
-	executionStart := time.Now()
-
-	var outputs []copilotcli.ChunkOutput
-	totalChunks := len(chunks)
-
-	for i, chunk := range chunks {
-		chunkStart := time.Now()
-
-		slog.Info("Executing chunk",
-			slog.Int("chunk_number", chunk.ChunkNumber),
-			slog.Int("chunk_count", totalChunks),
-		)
-
-		// Execute the chunk
-		output, err := client.ExecuteChunk(ctx, chunk.Filename, chunk.ChunkNumber, cfg.Model)
-		if err != nil {
-			return nil, 0, fmt.Errorf("failed to execute chunk %d: %w", chunk.ChunkNumber, err)
-		}
-
-		chunkDuration := time.Since(chunkStart)
-
-		// Collect output
-		outputs = append(outputs, copilotcli.ChunkOutput{
-			ChunkNumber: chunk.ChunkNumber,
-			Output:      output,
-			Duration:    chunkDuration,
-		})
-
-		slog.Info("Chunk executed successfully",
-			slog.Int("chunk", chunk.ChunkNumber),
-			slog.Int("completed", i+1),
-			slog.Int("total", totalChunks),
-			slog.Duration("duration", chunkDuration),
-		)
-	}
-
-	totalDuration := time.Since(executionStart)
-	return outputs, totalDuration, nil
 }

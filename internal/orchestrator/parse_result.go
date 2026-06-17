@@ -5,6 +5,32 @@ import (
 	"time"
 )
 
+// TrimmedParseResult is a compact representation of ParseResult for writing to disk.
+// It omits fields that are redundant or not needed by Copilot:
+//   - grouped_suggestions (duplicates actionable_suggestions with extra debugging data)
+//   - comments (doc comments; not required to apply changes)
+//   - metadata timing fields (extraction/processing durations)
+type TrimmedParseResult struct {
+	DocumentTitle    string                           `json:"document_title"`
+	DocumentID       string                           `json:"document_id,omitempty"`
+	DocumentMetadata *gdocs.MetadataTable             `json:"document_metadata,omitempty"`
+	Summary          ParseResultSummary               `json:"summary"`
+	FileMappings     map[string]*FileMapping          `json:"file_mappings"`
+	Suggestions      []SimplifiedActionableSuggestion `json:"actionable_suggestions"`
+}
+
+// Trim returns a TrimmedParseResult suitable for writing to bauer-parse-result.json.
+func (p *ParseResult) Trim() TrimmedParseResult {
+	return TrimmedParseResult{
+		DocumentTitle:    p.Metadata.DocumentTitle,
+		DocumentID:       p.Metadata.DocumentID,
+		DocumentMetadata: p.DocumentMetadata,
+		Summary:          p.Summary,
+		FileMappings:     p.FileMappings,
+		Suggestions:      p.ActionableSuggestions,
+	}
+}
+
 // ParseResultMetadata contains metadata about the parsing operation
 type ParseResultMetadata struct {
 	DocumentTitle      string        `json:"document_title"`

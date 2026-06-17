@@ -98,10 +98,11 @@ Templates in `templates/`:
    - Hero, Equal Heights, Text Spotlight, etc.
    - Usage examples and parameters
 
-4. **`pr-description.md`**: PR body template
+4. **`pr-description.md`**: Shared issue/PR body template
     - References instruction/pattern templates
     - Lists generated chunk files
     - Includes suggestion and change-type summary for Copilot execution
+    - Used as the base for issue descriptions in parse-and-issue workflow mode
 
 
 ## String Replacement
