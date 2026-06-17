@@ -6,11 +6,22 @@ import (
 	"testing"
 )
 
+// validCredentialsJSON is a minimal service-account key that satisfies
+// gdocs.ValidateCredentialsFile, which requires the type, private_key,
+// client_email, project_id, and token_uri fields to be non-empty.
+const validCredentialsJSON = `{
+	"type": "service_account",
+	"project_id": "test-project",
+	"private_key": "-----BEGIN PRIVATE KEY-----\nFAKE\n-----END PRIVATE KEY-----\n",
+	"client_email": "test@test-project.iam.gserviceaccount.com",
+	"token_uri": "https://oauth2.googleapis.com/token"
+}`
+
 func TestConfig_Validate(t *testing.T) {
 	// Create a temporary file to act as a valid credentials file
 	tmpDir := t.TempDir()
 	validCredsFile := filepath.Join(tmpDir, "creds.json")
-	if err := os.WriteFile(validCredsFile, []byte("{}"), 0644); err != nil {
+	if err := os.WriteFile(validCredsFile, []byte(validCredentialsJSON), 0644); err != nil {
 		t.Fatalf("Failed to create temp creds file: %v", err)
 	}
 
@@ -110,7 +121,7 @@ func TestChunkSizeDefaults(t *testing.T) {
 	// Create a temporary file to act as a valid credentials file
 	tmpDir := t.TempDir()
 	validCredsFile := filepath.Join(tmpDir, "creds.json")
-	if err := os.WriteFile(validCredsFile, []byte("{}"), 0644); err != nil {
+	if err := os.WriteFile(validCredsFile, []byte(validCredentialsJSON), 0644); err != nil {
 		t.Fatalf("Failed to create temp creds file: %v", err)
 	}
 
