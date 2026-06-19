@@ -214,7 +214,7 @@ Generates a detailed implementation plan from the Google Doc and opens a GitHub 
 
 Full flow: clone repo → apply changes via Copilot → open PR.
 
-> **Implementation status (current):** The shipped endpoint uses an *issue-delegation* flow rather than running Copilot in-process. It extracts suggestions, pushes the parse result to a branch on the target repo, and opens a Copilot-assigned GitHub issue that drives PR creation. The request body carries only non-secret fields (`doc_id`, `github_repo`, `branch_prefix`, `chunk_size`, `page_refresh`) — credentials come from server config and the GitHub token from the server environment. The call is synchronous and returns `{ "code": 201, "status", "issue_url", "branch" }`.
+ > **Implementation status (current):** The shipped endpoint uses an *issue-delegation* flow rather than running Copilot in-process. It extracts suggestions, pushes the parse result to a branch on the target repo, and opens a Copilot-assigned GitHub issue that drives PR creation. The request body carries only non-secret fields (`doc_id`, `github_repo`, `branch_prefix`, `chunk_size`, `page_refresh`) — credentials come from server config and the GitHub token from the server environment. The call is synchronous and returns `{ "code": 201, "status": "success", "issue_url": "...", "branch": "..." }`.
 
 **Request:**
 

@@ -28,7 +28,7 @@ tasks:
     vars:
       CREDENTIALS: '{{.CREDENTIALS | default "./credentials.json"}}'
     cmds:
-      - ./bauer-api --credentials {{.CREDENTIALS}}
+      - ./bauer-api --credentials "{{.CREDENTIALS}}"
 
   clean:
     desc: Clean up generated files
