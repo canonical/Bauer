@@ -121,7 +121,9 @@ func WorkflowPost(rc types.RouteConfig) func(w http.ResponseWriter, r *http.Requ
 
 func getWorkflowFromRequest(w http.ResponseWriter, r *http.Request, requestID string) (*models.WorkflowPost, error) {
 	payload := models.WorkflowPost{}
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&payload); err != nil {
 		slog.Error("failed to decode request body", "error", err.Error(), "requestID", requestID)
 		if renderErr := types.BadRequest(fmt.Errorf("invalid request body: %w", err)).Render(w, r); renderErr != nil {
 			slog.Error("error writing response", "error", renderErr.Error(), "requestID", requestID)
