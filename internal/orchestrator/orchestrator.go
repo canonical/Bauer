@@ -74,7 +74,7 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 		slog.Error("Failed to marshal output", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("failed to generate output JSON: %w", err)
 	}
-	outputFile :=  fmt.Sprintf("/tmp/bauer-workflow-%s/bauer-doc-suggestions.json", requestID)
+	outputFile :=  fmt.Sprintf("bauer-doc-suggestions-%s.json", requestID)
 	err = os.WriteFile(outputFile, outputJSON, 0644)
 	if err != nil {
 		slog.Error("Failed to write output file", slog.String("error", err.Error()))
