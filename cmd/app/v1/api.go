@@ -109,6 +109,13 @@ func WorkflowPost(rc types.RouteConfig) func(w http.ResponseWriter, r *http.Requ
 		if err := resp.Render(w, r); err != nil {
 			slog.Error("error writing response", "error", err.Error(), "requestID", requestID)
 		}
+
+		// Cleanup: remove the temporary local repository after the workflow completes.
+		slog.Info("cleaning up local repository", "local_path", input.LocalRepoPath, "for requestID", requestID)
+
+		if err := github.RemoveLocalRepo(input.LocalRepoPath); err != nil {
+			slog.Error("failed to cleanup local repository", "error", err.Error(), "requestID", requestID)
+		}
 	}
 }
 

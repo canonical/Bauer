@@ -134,6 +134,31 @@ func CloneOrUpdateRepo(repo *Repository, localPath string) error {
 	return fmt.Errorf("path exists but is not a git repository: %s", localPath)
 }
 
+func RemoveLocalRepo(localPath string) error {
+	info, err := os.Stat(localPath)
+
+	// If path doesn't exist, nothing to remove
+	if os.IsNotExist(err) {
+		return nil
+	}
+
+	if err != nil {
+		return fmt.Errorf("error checking path: %w", err)
+	}
+
+	// If path exists but is not a directory, error
+	if !info.IsDir() {
+		return fmt.Errorf("path exists but is not a directory: %s", localPath)
+	}
+
+	// Remove the directory
+	if err := os.RemoveAll(localPath); err != nil {
+		return fmt.Errorf("failed to remove directory: %w", err)
+	}
+
+	return nil
+}
+
 // GetDefaultBranch returns the default branch name (main or master)
 func GetDefaultBranch(localPath string) (string, error) {
 	name := getDefaultBranch(localPath)
