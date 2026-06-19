@@ -48,6 +48,7 @@ func NewOrchestrator() *DefaultOrchestrator {
 // Returns: OrchestrationResult and error
 func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (*OrchestrationResult, error) {
 	startTime := time.Now()
+	requestID := ctx.Value("requestID").(string)
 
 	// 1. Initialize GDocs Client and extract from doc
 	extractionStart := time.Now()
@@ -73,7 +74,7 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 		slog.Error("Failed to marshal output", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("failed to generate output JSON: %w", err)
 	}
-	outputFile := "bauer-doc-suggestions.json"
+	outputFile :=  fmt.Sprintf("/tmp/bauer-workflow-%s/bauer-doc-suggestions.json", requestID)
 	err = os.WriteFile(outputFile, outputJSON, 0644)
 	if err != nil {
 		slog.Error("Failed to write output file", slog.String("error", err.Error()))
