@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -23,13 +24,13 @@ func (m *mockOrchestrator) Execute(_ context.Context, _ *config.Config) (*orches
 	return m.result, m.err
 }
 
-func newRouteConfig() types.RouteConfig {
+func newRouteConfig(orch orchestrator.Orchestrator, outputDir string) types.RouteConfig {
 	return types.RouteConfig{
 		APIConfig: types.APIConfig{
 			CredentialsPath: "creds.json",
-			BaseOutputDir:   "bauer-output",
+			BaseOutputDir:   outputDir,
 		},
-		Orchestrator: &mockOrchestrator{},
+		Orchestrator: orch,
 	}
 }
 
@@ -56,6 +57,51 @@ func TestGetHealth(t *testing.T) {
 	}
 	if resp.Code != http.StatusOK {
 		t.Errorf("response code = %d, want %d", resp.Code, http.StatusOK)
+	}
+	if resp.Error != "" {
+		t.Errorf("response error = %q, want empty", resp.Error)
+	}
+}
+
+// TestPost covers POST /api/v1, which triggers the orchestration process.
+func TestPost(t *testing.T) {
+	payload := struct {
+		GithubRepo string `json:"github_repo"`
+		DocId      string `json:"doc_id"`
+		ParseOnly  bool   `json:"parse_only"`
+	}{
+		GithubRepo: "canonical/canonical.com",
+		DocId:      "1WJ-N_Xkkx4r_6knxW7h200oIDyi4mVMzgh1xYt5xaU0",
+		ParseOnly:  true,
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+
+	// The mock returns a populated result so ExecuteWorkflow can write the
+	// parse-result file; output goes to a temp dir to avoid source-tree artifacts.
+	mock := &mockOrchestrator{
+		result: &orchestrator.OrchestrationResult{
+			ParseResult: &orchestrator.ParseResult{},
+		},
+	}
+	rc := newRouteConfig(mock, t.TempDir())
+
+	WorkflowPost(rc)(rec, withRequestID(req, "test-request-id"))
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want %d (body: %s)", rec.Code, http.StatusCreated, rec.Body.String())
+	}
+
+	var resp types.Response
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode health response: %v", err)
+	}
+	if resp.Code != http.StatusCreated {
+		t.Errorf("response code = %d, want %d", resp.Code, http.StatusCreated)
 	}
 	if resp.Error != "" {
 		t.Errorf("response error = %q, want empty", resp.Error)

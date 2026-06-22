@@ -70,7 +70,7 @@ func WorkflowPost(rc types.RouteConfig) func(w http.ResponseWriter, r *http.Requ
 			ChunkSize:     payload.ChunkSize,
 			PageRefresh:   payload.PageRefresh,
 			OutputDir:     fmt.Sprintf("%s/%s", rc.APIConfig.BaseOutputDir, requestID),
-			ParseOnly:     false,
+			ParseOnly:     payload.ParseOnly,
 			LocalRepoPath: fmt.Sprintf("/tmp/bauer-workflow-%s", requestID),
 		}
 

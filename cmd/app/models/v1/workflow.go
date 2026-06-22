@@ -20,4 +20,8 @@ type WorkflowPost struct {
 
 	// PageRefresh enables page-refresh instruction mode.
 	PageRefresh bool `json:"page_refresh"`
+
+	// ParseOnly enables parse-only mode, which generates a json file
+	// containing the parsed suggestions without creating a branch or PR.
+	ParseOnly bool `json:"parse_only"`
 }
