@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
