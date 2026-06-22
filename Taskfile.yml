@@ -16,7 +16,7 @@ tasks:
     desc: Format code using gofmt
     cmds:
       - gofmt -w .
-  
+
   lint:
     desc: Check code formatting and vet
     cmds:
@@ -25,16 +25,19 @@ tasks:
 
   run-server:
     desc: Run the API server locally
+    vars:
+      CREDENTIALS: '{{.CREDENTIALS | default "./credentials.json"}}'
     cmds:
-      - ./bauer-api --config config.json
+      - ./bauer-api --credentials "{{.CREDENTIALS}}"
 
   clean:
     desc: Clean up generated files
     cmds:
       - rm -rf bauer-output
       - rm -f bauer
+      - rm -f bauer-api
       - rm -f bauer.log
-      - rm -rf /tmp/gh* /tmp/tmp* /tmp/test-bauer-repo* || true
+      - rm -rf /tmp/gh* /tmp/tmp* /tmp/test-bauer-repo* /tmp/bauer-workflow-* || true
 
   run:
     desc: Clean up generated files, build and run Bauer server

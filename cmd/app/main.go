@@ -5,7 +5,6 @@ import (
 	"bauer/cmd/app/types"
 	v1 "bauer/cmd/app/v1"
 	"bauer/internal/orchestrator"
-	"bauer/internal/workflow"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -32,10 +31,16 @@ func run() error {
 		Orchestrator: orchestrator,
 	}
 
+	// Register routes and start the HTTP server.
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/job", v1.JobPost(rc))
-	mux.HandleFunc("/api/v1/health", v1.GetHealth)
-	mux.HandleFunc("/api/v1/workflow", workflow.ExecuteWorkflowHandler(orchestrator))
+
+	// Health check endpoint
+	mux.HandleFunc("GET /api/v1", v1.GetHealth)
+
+	// Workflow endpoint, which triggers the PR-creation workflow on a target repository.
+	mux.HandleFunc("POST /api/v1", v1.WorkflowPost(rc))
+
+	// Starting web server on port 8090
 	slog.Info("starting server", "address", ":8090")
 	err = http.ListenAndServe(":8090", middleware.RequestTrace(mux))
 

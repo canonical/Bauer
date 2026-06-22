@@ -145,30 +145,52 @@ bauer --doc-id <your-document-id> \
         --page-refresh
 ``` -->
 
-<!-- ## API usage
+## API usage
 
-The API server exposes a small HTTP surface for submitting jobs and checking health. Jobs run asynchronously and write outputs to `base-output-dir/<request-id>`.
+The API server exposes a small HTTP surface for triggering the PR-creation workflow and checking health.
+
+Secrets are **never** accepted in request bodies. The Google service account credentials path is configured server-side (via `--credentials`), and the GitHub token is resolved from the server environment (`GITHUB_TOKEN` / `GH_TOKEN` / `gh auth token`).
 
 ### Run the API server
 
-From Repository root:
+From the repository root:
 
 ```bash
-task build-api
-./bauer-api --config config.json
+task build
+task run-server
 ```
+
+`task run-server` defaults `CREDENTIALS` to `./credentials.json`. You can also run the binary directly:
+
+```bash
+./bauer-api --credentials ./credentials.json
+```
+
+The server listens on `:8090`.
 
 ### Endpoints
 
-#### POST /api/v1/job
+#### GET /api/v1
 
-Submit a job for a Google Doc.
+Simple liveness check.
+
+Example:
+
+```bash
+curl http://localhost:8090/api/v1
+```
+
+#### POST /api/v1
+
+Trigger the PR-creation workflow for a Google Doc: extract suggestions, push the parse result to a branch on the target repository, and open a Copilot-assigned issue that drives PR creation.
 
 Request body:
 
 ```json
 {
   "doc_id": "<google-doc-id>",
+  "github_repo": "owner/repo",
+  "branch_prefix": "bauer",
   "chunk_size": 1,
   "page_refresh": false
 }
@@ -176,36 +198,29 @@ Request body:
 
 Notes:
 
+- `doc_id` and `github_repo` are required.
+- `branch_prefix` defaults to `bauer` if omitted.
 - `chunk_size` defaults to 1 if omitted.
 - When `page_refresh` is true, the default chunk size becomes 5.
 
 Responses:
 
-- `202 Accepted` with body `{"code":202}` when the job is accepted.
-- `400 Bad Request` for invalid JSON.
+- `201 Created` with `{"code":201,"status":"success","issue_url":"...","branch":"..."}` on success.
+- `400 Bad Request` for invalid JSON or missing `doc_id` / `github_repo`.
+- `500 Internal Server Error` if GitHub auth is not configured or the workflow fails.
 
 Example:
 
 ```bash
-curl -X POST http://localhost:8090/api/v1/job \
+curl -X POST http://localhost:8090/api/v1 \
         -H 'Content-Type: application/json' \
-        -d '{"doc_id":"<google-doc-id>","chunk_size":2,"page_refresh":false}'
+        -d '{"doc_id":"<google-doc-id>","github_repo":"owner/repo"}'
 ```
-
-#### GET /api/v1/health
-
-Simple health check.
-
-Example:
-
-```bash
-curl http://localhost:8090/api/v1/health
-``` -->
 
 
 ## Documentation
 
-For more information refer to [`ARCHITECTURE.md`](/docs/ARCHITECTURE.md)
+For more information refer to [`ARCHITECTURE.md`](/docs/ARCHITECTURE_v2_1.md)
 
 <!-- ## Future improvements
 
