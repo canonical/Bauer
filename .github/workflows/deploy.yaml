@@ -1,0 +1,36 @@
+name: Pack and Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - pack-rock   # TODO: Remove before merging
+
+concurrency: 
+  group: bauer-deploy
+  cancel-in-progress: false
+
+env:
+  ROCKCRAFT_ENABLE_EXPERIMENTAL_EXTENSIONS: true
+
+jobs:
+  pack-rock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup LXD
+        uses: canonical/setup-lxd@main
+
+      - name: Setup Rockcraft
+        run: sudo snap install rockcraft --classic --channel=latest/edge
+
+      - name: Pack Rock
+        run: rockcraft pack -v
+
+      - name: Upload Rock
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ vars.CHARM_NAME }}-rock
+          path: ./*.rock
