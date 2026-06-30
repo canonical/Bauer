@@ -1,18 +1,18 @@
 package github
 
 import (
+	"bauer/internal/env"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 )
 
 // GetGitHubToken retrieves a GitHub token from environment variables or gh CLI
 func GetGitHubToken() (string, error) {
-	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+	if token := env.GetGoEnv("GITHUB_TOKEN"); token != "" {
 		return token, nil
 	}
-	if token := os.Getenv("GH_TOKEN"); token != "" {
+	if token := env.GetGoEnv("GH_TOKEN"); token != "" {
 		return token, nil
 	}
 
@@ -56,12 +56,12 @@ func SetupGitHubAuth(token string) error {
 	}
 
 	// Set environment variable for this process and child processes
-	if err := os.Setenv("GITHUB_TOKEN", token); err != nil {
+	if err := env.SetGoEnv("GITHUB_TOKEN", token); err != nil {
 		return fmt.Errorf("failed to set GITHUB_TOKEN: %w", err)
 	}
 
 	// Also set for gh CLI
-	if err := os.Setenv("GH_TOKEN", token); err != nil {
+	if err := env.SetGoEnv("GH_TOKEN", token); err != nil {
 		return fmt.Errorf("failed to set GH_TOKEN: %w", err)
 	}
 

@@ -1,9 +1,9 @@
 package github
 
 import (
+	"bauer/internal/env"
 	"fmt"
 	"log/slog"
-	"os"
 	"os/exec"
 	"strings"
 )
@@ -68,9 +68,9 @@ func CreatePR(owner, repo string, opts CreatePROptions) (string, error) {
 
 	// Log token availability for debugging
 	logger := slog.Default()
-	ghToken := os.Getenv("GH_TOKEN")
+	ghToken := env.GetGoEnv("GH_TOKEN")
 	if ghToken == "" {
-		ghToken = os.Getenv("GITHUB_TOKEN")
+		ghToken = env.GetGoEnv("GITHUB_TOKEN")
 	}
 	if ghToken == "" {
 		logger.Warn("No GH_TOKEN or GITHUB_TOKEN environment variable set for PR creation")
