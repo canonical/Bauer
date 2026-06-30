@@ -13,8 +13,6 @@ base: ubuntu@24.04
 platforms:
   # amd64:
   arm64:
-  # ppc64el:
-  # s390x:
 
 # (Required)
 summary: Automate copy update changes
@@ -28,56 +26,11 @@ description: |
 extensions:
   - go-framework
 
-# Uncomment the integrations used by your application
-# Integrations set to "optional: false" will block the charm
-# until the applications are integrated.
-# requires:
-#   mysql:
-#     interface: mysql_client
-#     optional: false
-#     limit: 1
-#   postgresql:
-#     interface: postgresql_client
-#     optional: false
-#     limit: 1
-#   mongodb:
-#     interface: mongodb_client
-#     optional: false
-#     limit: 1
-#   redis:
-#     interface: redis
-#     optional: false
-#     limit: 1
-#   valkey:
-#     interface: valkey_client
-#     optional: true
-#     limit: 1
-#   s3:
-#     interface: s3
-#     optional: false
-#     limit: 1
-#   saml:
-#     interface: saml
-#     optional: false
-#     limit: 1
-#   rabbitmq:
-#     interface: rabbitmq
-#     optional: false
-#     limit: 1
-#   tracing:
-#     interface: tracing
-#     optional: true
-#     limit: 1
-#   smtp:
-#     interface: smtp
-#     optional: false
-#     limit: 1
-#   openfga:
-#     interface: openfga
-#     optional: false
-#     limit: 1
-#   http-proxy:
-#     interface: http_proxy
-#     optional: true
-#     limit: 1
+
+config:
+  options:
+    github-token:
+      type: string
+      description: GitHub token for authentication
+      default: ""
 
