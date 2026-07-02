@@ -20,7 +20,6 @@ engine, _ := prompt.NewEngine()
 // Generate prompts
 chunks, _ := engine.GenerateAllChunks(
     result,      // *gdocs.ProcessingResult
-    10,          // chunk size (locations per chunk)
     "bauer-output", // output directory
 )
 
@@ -33,27 +32,14 @@ for _, chunk := range chunks {
 
 ## Key Features
 
-- **Location-based chunking**: Splits suggestions into manageable chunks by location count
+- **Single prompt output**: All suggestion locations are rendered into one prompt
 - **Embedded templates**: Templates bundled in binary via `go:embed`
 - **Raw JSON output**: Suggestions embedded as JSON for Copilot to parse
-- **Single file per chunk**: Each chunk is a complete, standalone prompt
-
-## How Chunking Works
-
-Simple array slicing by location count:
-
-```go
-// 23 locations with chunk size 10:
-// Chunk 1: locations 0-9   (10 locations)
-// Chunk 2: locations 10-19 (10 locations)
-// Chunk 3: locations 20-22 (3 locations)
-
-chunks := ChunkLocations(groups, chunkSize)
-```
+- **Standalone prompt**: The generated prompt is complete and self-contained
 
 ## Output Structure
 
-Generated files: `chunk-{N}-of-{TOTAL}.md`
+Generated file: `chunk-1-of-1.md`
 
 Each file contains:
 1. **Instructions**: Context, file path resolution, how to apply changes
@@ -133,7 +119,6 @@ go test ./internal/prompt/... -v
 
 Tests cover:
 - Engine initialization
-- Location-based chunking
 - Chunk rendering
 - File generation
 - String replacement
@@ -142,5 +127,4 @@ Tests cover:
 
 - User must run from target repository (CWD = repo)
 - User must checkout correct branch before running
-- Chunk size is location count, not suggestion count
 - Output directory created automatically if missing

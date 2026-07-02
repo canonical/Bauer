@@ -34,18 +34,15 @@ type PromptData struct {
 	// Target file from metadata
 	SuggestedURL string
 
-	// Chunking information
-	ChunkNumber   int
-	TotalChunks   int
+	// Number of location groups included in the prompt
 	LocationCount int
 
-	// Location-grouped suggestions for this chunk (raw JSON)
+	// Location-grouped suggestions (raw JSON)
 	SuggestionsJSON string
 }
 
-// ChunkResult contains the rendered prompt and metadata for a chunk
-type ChunkResult struct {
-	ChunkNumber   int
+// PromptResult contains the rendered prompt and metadata
+type PromptResult struct {
 	Content       string
 	Filename      string
 	LocationCount int
@@ -58,48 +55,8 @@ func NewEngine(usePageRefresh bool) (*Engine, error) {
 	}, nil
 }
 
-// ChunkLocations splits location groups into the desired number of chunks
-// chunkSize is the desired number of chunks to create, not locations per chunk
-func ChunkLocations(groups []gdocs.LocationGroupedSuggestions, desiredChunks int) [][]gdocs.LocationGroupedSuggestions {
-	if desiredChunks <= 0 {
-		desiredChunks = 1
-	}
-
-	totalLocations := len(groups)
-
-	// Handle edge cases
-	if totalLocations == 0 {
-		return [][]gdocs.LocationGroupedSuggestions{{}}
-	}
-
-	// If desired chunks is greater than or equal to total locations,
-	// create one chunk per location
-	if desiredChunks >= totalLocations {
-		var chunks [][]gdocs.LocationGroupedSuggestions
-		for _, group := range groups {
-			chunks = append(chunks, []gdocs.LocationGroupedSuggestions{group})
-		}
-		return chunks
-	}
-
-	// Calculate locations per chunk (rounded up to ensure all locations are included)
-	locationsPerChunk := (totalLocations + desiredChunks - 1) / desiredChunks
-
-	var chunks [][]gdocs.LocationGroupedSuggestions
-
-	for i := 0; i < totalLocations; i += locationsPerChunk {
-		end := i + locationsPerChunk
-		if end > totalLocations {
-			end = totalLocations
-		}
-		chunks = append(chunks, groups[i:end])
-	}
-
-	return chunks
-}
-
-// RenderChunk generates a complete prompt for a single chunk
-func (e *Engine) RenderChunk(data PromptData) (string, error) {
+// RenderPrompt generates a complete prompt from the provided data
+func (e *Engine) RenderPrompt(data PromptData) (string, error) {
 	var buf bytes.Buffer
 
 	// Write instructions with template variable substitution
@@ -110,8 +67,6 @@ func (e *Engine) RenderChunk(data PromptData) (string, error) {
 	}
 	instructions = replaceVar(instructions, "DocumentTitle", data.DocumentTitle)
 	instructions = replaceVar(instructions, "SuggestedURL", data.SuggestedURL)
-	instructions = replaceVar(instructions, "ChunkNumber", fmt.Sprintf("%d", data.ChunkNumber))
-	instructions = replaceVar(instructions, "TotalChunks", fmt.Sprintf("%d", data.TotalChunks))
 
 	buf.WriteString(instructions)
 	buf.WriteString("\n\n")
@@ -133,20 +88,15 @@ func (e *Engine) RenderChunk(data PromptData) (string, error) {
 	return buf.String(), nil
 }
 
-// GenerateAllChunks creates prompts for all chunks and saves them to files
-func (e *Engine) GenerateAllChunks(
+// GeneratePrompt renders the prompt for all suggestions and saves it to a file
+func (e *Engine) GeneratePrompt(
 	result *gdocs.ProcessingResult,
-	chunkSize int,
 	outputDir string,
-) ([]ChunkResult, error) {
+) (PromptResult, error) {
 	// Create output directory if it doesn't exist
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create output directory: %w", err)
+		return PromptResult{}, fmt.Errorf("failed to create output directory: %w", err)
 	}
-
-	// Chunk the location groups (simple slicing)
-	chunks := ChunkLocations(result.GroupedSuggestions, chunkSize)
-	totalChunks := len(chunks)
 
 	// Extract suggested URL from metadata
 	suggestedURL := ""
@@ -154,52 +104,37 @@ func (e *Engine) GenerateAllChunks(
 		suggestedURL = result.Metadata.SuggestedUrl
 	}
 
-	var results []ChunkResult
-
-	// Generate prompt for each chunk
-	for i, chunk := range chunks {
-		chunkNum := i + 1
-
-		// Marshal chunk to JSON
-		chunkJSON, err := json.MarshalIndent(chunk, "", "  ")
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal chunk %d to JSON: %w", chunkNum, err)
-		}
-
-		// Build prompt data
-		data := PromptData{
-			DocumentTitle:   result.DocumentTitle,
-			SuggestedURL:    suggestedURL,
-			ChunkNumber:     chunkNum,
-			TotalChunks:     totalChunks,
-			LocationCount:   len(chunk),
-			SuggestionsJSON: string(chunkJSON),
-		}
-
-		// Render the chunk
-		content, err := e.RenderChunk(data)
-		if err != nil {
-			return nil, fmt.Errorf("failed to render chunk %d: %w", chunkNum, err)
-		}
-
-		// Generate filename
-		filename := fmt.Sprintf("chunk-%d-of-%d.md", chunkNum, totalChunks)
-		filepath := filepath.Join(outputDir, filename)
-
-		// Write to file
-		if err := os.WriteFile(filepath, []byte(content), 0644); err != nil {
-			return nil, fmt.Errorf("failed to write chunk %d to file: %w", chunkNum, err)
-		}
-
-		results = append(results, ChunkResult{
-			ChunkNumber:   chunkNum,
-			Content:       content,
-			Filename:      filepath,
-			LocationCount: len(chunk),
-		})
+	// Marshal all location groups to JSON
+	suggestionsJSON, err := json.MarshalIndent(result.GroupedSuggestions, "", "  ")
+	if err != nil {
+		return PromptResult{}, fmt.Errorf("failed to marshal suggestions to JSON: %w", err)
 	}
 
-	return results, nil
+	// Build prompt data
+	data := PromptData{
+		DocumentTitle:   result.DocumentTitle,
+		SuggestedURL:    suggestedURL,
+		LocationCount:   len(result.GroupedSuggestions),
+		SuggestionsJSON: string(suggestionsJSON),
+	}
+
+	// Render the prompt
+	content, err := e.RenderPrompt(data)
+	if err != nil {
+		return PromptResult{}, fmt.Errorf("failed to render prompt: %w", err)
+	}
+
+	// Write to file
+	outputPath := filepath.Join(outputDir, "prompt.md")
+	if err := os.WriteFile(outputPath, []byte(content), 0644); err != nil {
+		return PromptResult{}, fmt.Errorf("failed to write prompt to file: %w", err)
+	}
+
+	return PromptResult{
+		Content:       content,
+		Filename:      outputPath,
+		LocationCount: len(result.GroupedSuggestions),
+	}, nil
 }
 
 // replaceVar is a simple string replacement helper for template variables

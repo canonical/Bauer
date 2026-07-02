@@ -26,7 +26,6 @@ type WorkflowInput struct {
 	// Bauer configuration
 	DocID       string
 	Credentials string
-	ChunkSize   int
 	PageRefresh bool
 	OutputDir   string
 	ParseOnly   bool // Parse document to JSON only.
@@ -51,7 +50,6 @@ type WorkflowOutput struct {
 	BauerResult struct {
 		ExtractionDuration time.Duration `json:"extraction_duration"`
 		PlanDuration       time.Duration `json:"plan_duration"`
-		ChunkCount         int           `json:"chunk_count"`
 		TotalSuggestions   int           `json:"total_suggestions"`
 	} `json:"bauer_result"`
 
@@ -116,7 +114,6 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	bauerCfg := &config.Config{
 		DocID:           input.DocID,
 		CredentialsPath: credentialsPath,
-		ChunkSize:       input.ChunkSize,
 		PageRefresh:     input.PageRefresh,
 		OutputDir:       input.OutputDir,
 		TargetRepo:      ".",
@@ -317,7 +314,6 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	if bauerResult != nil && bauerResult.ExtractionResult != nil {
 		issueBody = prompt.BuildIssueDescription(
 			bauerResult.ExtractionResult,
-			bauerResult.Chunks,
 			input.PageRefresh,
 		)
 	}

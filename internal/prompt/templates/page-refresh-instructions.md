@@ -232,10 +232,8 @@ This prompt is organized in the following order:
 
 ## Processing Instructions
 
-**Chunk {{.ChunkNumber}} of {{.TotalChunks}}**
-
-After reviewing the Vanilla Framework Patterns Reference section, process the suggestions data at the end of this document one location at a time. After processing ALL locations in this chunk, report:
+After reviewing the Vanilla Framework Patterns Reference section, process the suggestions data at the end of this document one location at a time. After processing ALL locations, report:
 - Number of locations processed
 - Number of successful changes
 - Any errors or issues encountered
-- For each chunk, report if a vanilla pattern was changed or added and which one
+- Report if a vanilla pattern was changed or added and which one

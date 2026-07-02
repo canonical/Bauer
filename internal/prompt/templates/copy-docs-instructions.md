@@ -211,9 +211,7 @@ This prompt is organized in the following order:
 
 ## Processing Instructions
 
-**Chunk {{.ChunkNumber}} of {{.TotalChunks}}**
-
-Process the suggestions data at the end of this document one location at a time. After processing ALL locations in this chunk, report:
+Process the suggestions data at the end of this document one location at a time. After processing ALL locations, report:
 - Number of locations processed
 - Number of successful changes
 - Any errors or issues encountered
