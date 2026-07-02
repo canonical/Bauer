@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - pack-rock   # TODO: Remove before merging
 
 concurrency: 
   group: bauer-deploy
