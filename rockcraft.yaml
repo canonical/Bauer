@@ -12,3 +12,8 @@ platforms:
 
 extensions:
     - go-framework
+
+parts:
+    go-framework/install-app:
+        organize:
+            bin/bauer: usr/local/bin/bauer-api
