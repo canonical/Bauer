@@ -1,0 +1,19 @@
+name: bauer-api
+base: bare # as an alternative, an ubuntu base can be used
+build-base: ubuntu@24.04 # build-base is required when the base is bare
+version: '0.1' # just for humans. Semantic versioning is recommended
+summary: Automate copy update changes # 79 char long summary
+description: |
+    Bauer is a Go application that extracts document content, suggestions
+    (proposed edits), and comments from Google Docs using the Google Docs
+    API and Google Drive API.
+platforms:
+    amd64:
+
+extensions:
+    - go-framework
+
+parts:
+    go-framework/install-app:
+        organize:
+            bin/bauer: usr/local/bin/bauer-api
