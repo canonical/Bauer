@@ -101,7 +101,7 @@ Go doesn't load `.env` files automatically, so the API uses a loader (e.g. `godo
 
 ```bash
 # .env — safe to commit
-BAUER_API_PORT=8090
+BAUER_API_PORT=8080
 BAUER_MODEL=gpt-5-mini-high
 BAUER_SUMMARY_MODEL=gpt-5-mini-high
 BAUER_CHUNK_SIZE=1
@@ -399,8 +399,8 @@ FROM golang:1.22 AS builder
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y git gh
 COPY --from=builder /app/bauer-api /usr/local/bin/
-ENV BAUER_API_PORT=8090
-EXPOSE 8090
+ENV BAUER_API_PORT=8080
+EXPOSE 8080
 CMD ["bauer-api"]
 ```
 
