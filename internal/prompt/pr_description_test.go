@@ -24,14 +24,12 @@ func TestBuildPRDescription_IncludesTemplateReferences(t *testing.T) {
 		},
 	}
 
-	chunks := []ChunkResult{{Filename: "bauer-output/chunk-1-of-1.md"}}
-	body := BuildPRDescription(result, chunks, false)
+	body := BuildPRDescription(result, false)
 
 	expected := []string{
 		"@copilot",
 		"internal/prompt/templates/copy-docs-instructions.md",
 		"internal/prompt/templates/vanilla-patterns.md",
-		"`bauer-output/chunk-1-of-1.md`",
 		"Grouped locations: 2",
 		"Atomic actionable suggestions: 3",
 	}
@@ -49,7 +47,7 @@ func TestBuildPRDescription_PageRefreshTemplateReference(t *testing.T) {
 		DocumentID:    "doc-abc",
 	}
 
-	body := BuildPRDescription(result, nil, true)
+	body := BuildPRDescription(result, true)
 	if !contains(body, "internal/prompt/templates/page-refresh-instructions.md") {
 		t.Fatalf("expected page refresh template reference in PR description")
 	}

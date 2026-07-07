@@ -10,6 +10,8 @@ import (
 	"log/slog"
 	"os"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // OrchestrationResult contains all outputs from the orchestration flow.
@@ -21,8 +23,6 @@ type OrchestrationResult struct {
 	// Parse-only result (populated when ParseOnly is true)
 	ParseResult *ParseResult
 
-	// Prompt generation
-	Chunks       []prompt.ChunkResult
 	PlanDuration time.Duration
 
 	// Metadata
@@ -48,7 +48,10 @@ func NewOrchestrator() *DefaultOrchestrator {
 // Returns: OrchestrationResult and error
 func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (*OrchestrationResult, error) {
 	startTime := time.Now()
-	requestID := ctx.Value("requestID").(string)
+	requestID, _ := ctx.Value("requestID").(string)
+	if requestID == "" {
+		requestID = uuid.NewString()
+	}
 
 	// 1. Initialize GDocs Client and extract from doc
 	extractionStart := time.Now()
@@ -85,7 +88,7 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 		slog.Duration("extraction_duration", extractionDuration),
 	)
 
-	// Parse-only mode: return immediately after extraction without generating chunks
+	// Parse-only mode: return immediately after extraction without generating a prompt
 	if cfg.ParseOnly {
 		totalDuration := time.Since(startTime)
 		fileMappings := buildFileMappings(result)
@@ -120,7 +123,6 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 			ExtractionResult:   result,
 			ExtractionDuration: extractionDuration,
 			ParseResult:        parseResult,
-			Chunks:             []prompt.ChunkResult{},
 			PlanDuration:       0,
 			TotalDuration:      totalDuration,
 			ParseOnly:          cfg.ParseOnly,
@@ -135,38 +137,32 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 		return nil, fmt.Errorf("failed to initialize prompt engine: %w", err)
 	}
 
-	// 5. Generate Prompts from Chunks
+	// 5. Generate Prompt
 	totalLocations := len(result.GroupedSuggestions)
-	slog.Info("Generating prompts",
+	slog.Info("Generating prompt",
 		slog.Int("total_locations", totalLocations),
-		slog.Int("chunk_size", cfg.ChunkSize),
 	)
-	chunks, err := engine.GenerateAllChunks(
+	promptResult, err := engine.GeneratePrompt(
 		result,
-		cfg.ChunkSize,
 		cfg.OutputDir,
 	)
 	if err != nil {
-		slog.Error("Failed to generate prompts", slog.String("error", err.Error()))
-		return nil, fmt.Errorf("failed to generate prompts: %w", err)
+		slog.Error("Failed to generate prompt", slog.String("error", err.Error()))
+		return nil, fmt.Errorf("failed to generate prompt: %w", err)
 	}
 
 	planDuration := time.Since(planStart)
 
-	for _, chunk := range chunks {
-		slog.Info("Generated chunk",
-			slog.Int("chunk_number", chunk.ChunkNumber),
-			slog.String("filename", chunk.Filename),
-			slog.Int("location_count", chunk.LocationCount),
-		)
-	}
+	slog.Info("Generated prompt",
+		slog.String("filename", promptResult.Filename),
+		slog.Int("location_count", promptResult.LocationCount),
+	)
 
 	totalDuration := time.Since(startTime)
 
 	return &OrchestrationResult{
 		ExtractionResult:   result,
 		ExtractionDuration: extractionDuration,
-		Chunks:             chunks,
 		PlanDuration:       planDuration,
 		TotalDuration:      totalDuration,
 		ParseOnly:          false,

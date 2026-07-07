@@ -18,12 +18,8 @@ type Config struct {
 	// ParseOnly indicates Phase 1 mode - parse document only, skip GitHub integration
 	ParseOnly bool `json:"parse_only"`
 
-	// ChunkSize is the total number of chunks to create from all locations.
-	// Default is 1 if not specified, or 5 if PageRefresh is true.
-	ChunkSize int `json:"chunk_size"`
-
 	// PageRefresh indicates if the page refresh mode should be used.
-	// When true, uses page-refresh-instructions.md template and defaults ChunkSize to 5.
+	// When true, uses page-refresh-instructions.md template.
 	PageRefresh bool `json:"page_refresh"`
 
 	// OutputDir is the directory where generated prompt files will be saved.
@@ -37,13 +33,6 @@ type Config struct {
 
 // Apply default config values
 func (c *Config) ApplyDefaults() {
-	if c.ChunkSize == 0 {
-		if c.PageRefresh {
-			c.ChunkSize = 5
-		} else {
-			c.ChunkSize = 1
-		}
-	}
 	if c.OutputDir == "" {
 		c.OutputDir = "bauer-output"
 	}
@@ -58,10 +47,6 @@ func (c *Config) Validate() error {
 	// Validate required fields
 	if c.DocID == "" {
 		return errors.New("missing required field: doc_id")
-	}
-
-	if c.ChunkSize <= 0 {
-		return errors.New("chunk_size must be greater than 0")
 	}
 
 	return ValidateCredentialsPath(c.CredentialsPath)
