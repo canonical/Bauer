@@ -14,51 +14,25 @@ This package takes processed document feedback and creates markdown files contai
 ```go
 import "bauer/internal/prompt"
 
-// Create engine
-engine, _ := prompt.NewEngine()
+// Create engine (pass true for page-refresh mode)
+engine, _ := prompt.NewEngine(false)
 
-// Generate prompts
-chunks, _ := engine.GenerateAllChunks(
-    result,      // *gdocs.ProcessingResult
-    10,          // chunk size (locations per chunk)
+// Generate the prompt
+result, _ := engine.GeneratePrompt(
+    docResult,      // *gdocs.ProcessingResult
     "bauer-output", // output directory
 )
 
-// Access results
-for _, chunk := range chunks {
-    fmt.Printf("Chunk %d: %s (%d locations)\n", 
-        chunk.ChunkNumber, chunk.Filename, chunk.LocationCount)
-}
+// Access result
+fmt.Printf("%s (%d locations)\n", result.Filename, result.LocationCount)
 ```
 
 ## Key Features
 
-- **Location-based chunking**: Splits suggestions into manageable chunks by location count
+- **Single prompt output**: All suggestion locations are rendered into one prompt file, `prompt.md`
 - **Embedded templates**: Templates bundled in binary via `go:embed`
 - **Raw JSON output**: Suggestions embedded as JSON for Copilot to parse
-- **Single file per chunk**: Each chunk is a complete, standalone prompt
-
-## How Chunking Works
-
-Simple array slicing by location count:
-
-```go
-// 23 locations with chunk size 10:
-// Chunk 1: locations 0-9   (10 locations)
-// Chunk 2: locations 10-19 (10 locations)
-// Chunk 3: locations 20-22 (3 locations)
-
-chunks := ChunkLocations(groups, chunkSize)
-```
-
-## Output Structure
-
-Generated files: `chunk-{N}-of-{TOTAL}.md`
-
-Each file contains:
-1. **Instructions**: Context, file path resolution, how to apply changes
-2. **JSON Data**: Array of location-grouped suggestions with schema
-3. **Patterns**: Vanilla Framework pattern reference
+- **Standalone prompt**: The generated prompt is complete and self-contained
 
 ## Data Structures
 
@@ -66,14 +40,11 @@ Each file contains:
 type PromptData struct {
     DocumentTitle   string  // For context
     SuggestedURL    string  // Target file path
-    ChunkNumber     int     // Current chunk number
-    TotalChunks     int     // Total chunks
-    LocationCount   int     // Locations in this chunk
+    LocationCount   int     // Number of location groups included
     SuggestionsJSON string  // Raw JSON suggestions
 }
 
-type ChunkResult struct {
-    ChunkNumber   int
+type PromptResult struct {
     Content       string
     Filename      string
     LocationCount int
@@ -100,7 +71,6 @@ Templates in `templates/`:
 
 4. **`pr-description.md`**: Shared issue/PR body template
     - References instruction/pattern templates
-    - Lists generated chunk files
     - Includes suggestion and change-type summary for Copilot execution
     - Used as the base for issue descriptions in parse-and-issue workflow mode
 
@@ -112,7 +82,7 @@ Simple variable substitution without template engine:
 ```go
 // Replaces {{.Variable}} with value
 instructions = replaceVar(instructions, "DocumentTitle", data.DocumentTitle)
-instructions = replaceVar(instructions, "ChunkNumber", "1")
+instructions = replaceVar(instructions, "SuggestedURL", data.SuggestedURL)
 ```
 
 No `html/template` needed - just string operations for clarity and simplicity.
@@ -133,8 +103,7 @@ go test ./internal/prompt/... -v
 
 Tests cover:
 - Engine initialization
-- Location-based chunking
-- Chunk rendering
+- Prompt rendering
 - File generation
 - String replacement
 
@@ -142,5 +111,4 @@ Tests cover:
 
 - User must run from target repository (CWD = repo)
 - User must checkout correct branch before running
-- Chunk size is location count, not suggestion count
 - Output directory created automatically if missing

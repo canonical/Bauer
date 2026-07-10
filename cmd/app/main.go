@@ -40,9 +40,18 @@ func run() error {
 	// Workflow endpoint, which triggers the PR-creation workflow on a target repository.
 	mux.HandleFunc("POST /api/v1", v1.WorkflowPost(rc))
 
-	// Starting web server on port 8090
-	slog.Info("starting server", "address", ":8090")
-	err = http.ListenAndServe(":8090", middleware.RequestTrace(mux))
+	// The go-framework charm injects the port the workload should listen on via
+	// the APP_PORT environment variable. Fall back to the go-framework default
+	// of 8080 when it is not set (e.g. running outside the charm).
+	port := os.Getenv("APP_PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	// Starting web server.
+	address := ":" + port
+	slog.Info("starting server", "address", address)
+	err = http.ListenAndServe(address, middleware.RequestTrace(mux))
 
 	if err != nil {
 		slog.Error("server error", "error", err.Error())

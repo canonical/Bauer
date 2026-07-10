@@ -12,6 +12,8 @@ concurrency:
 
 env:
   CHARMCRAFT_ENABLE_EXPERIMENTAL_EXTENSIONS: true
+  ROCKCRAFT_ENABLE_EXPERIMENTAL_EXTENSIONS: true
+
 
 jobs:
   pack-charm:
@@ -57,4 +59,3 @@ jobs:
         with:
           name: ${{ vars.CHARM_NAME }}-rock
           path: ./*.rock
-  

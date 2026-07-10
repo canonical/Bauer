@@ -67,7 +67,6 @@ func WorkflowPost(rc types.RouteConfig) func(w http.ResponseWriter, r *http.Requ
 			BranchPrefix:  branchPrefix,
 			DocID:         payload.DocID,
 			Credentials:   rc.APIConfig.CredentialsPath,
-			ChunkSize:     payload.ChunkSize,
 			PageRefresh:   payload.PageRefresh,
 			OutputDir:     fmt.Sprintf("%s/%s", rc.APIConfig.BaseOutputDir, requestID),
 			ParseOnly:     payload.ParseOnly,

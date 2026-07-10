@@ -3,7 +3,6 @@ package prompt
 import (
 	_ "embed"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"bauer/internal/gdocs"
@@ -14,7 +13,7 @@ var prDescriptionTemplate string
 
 // BuildPRDescription renders a PR description that references the prompt templates
 // and summarizes extracted suggestions for Copilot execution.
-func BuildPRDescription(result *gdocs.ProcessingResult, chunks []ChunkResult, usePageRefresh bool) string {
+func BuildPRDescription(result *gdocs.ProcessingResult, usePageRefresh bool) string {
 	if result == nil {
 		return "# @copilot Apply BAU Suggestions\n\nNo extraction result was available."
 	}
@@ -40,16 +39,6 @@ func BuildPRDescription(result *gdocs.ProcessingResult, chunks []ChunkResult, us
 
 	insertCount, deleteCount, replaceCount := summarizeSuggestionTypes(result.ActionableSuggestions)
 
-	chunkList := "- No chunk files were generated."
-	if len(chunks) > 0 {
-		var lines []string
-		for _, chunk := range chunks {
-			chunkFile := filepath.ToSlash(chunk.Filename)
-			lines = append(lines, fmt.Sprintf("- `%s`", chunkFile))
-		}
-		chunkList = strings.Join(lines, "\n")
-	}
-
 	body := prDescriptionTemplate
 	body = replaceVar(body, "DocumentTitle", result.DocumentTitle)
 	body = replaceVar(body, "DocumentID", result.DocumentID)
@@ -59,7 +48,6 @@ func BuildPRDescription(result *gdocs.ProcessingResult, chunks []ChunkResult, us
 	body = replaceVar(body, "Mode", mode)
 	body = replaceVar(body, "InstructionsTemplatePath", instructionsTemplatePath)
 	body = replaceVar(body, "PatternsTemplatePath", "internal/prompt/templates/vanilla-patterns.md")
-	body = replaceVar(body, "ChunkFiles", chunkList)
 	body = replaceVar(body, "LocationCount", fmt.Sprintf("%d", len(result.GroupedSuggestions)))
 	body = replaceVar(body, "SuggestionCount", fmt.Sprintf("%d", len(result.ActionableSuggestions)))
 	body = replaceVar(body, "InsertCount", fmt.Sprintf("%d", insertCount))
@@ -71,8 +59,8 @@ func BuildPRDescription(result *gdocs.ProcessingResult, chunks []ChunkResult, us
 
 // BuildIssueDescription renders an issue description for Copilot.
 // The full parse JSON is linked in the "Prompt Source" section appended by the workflow.
-func BuildIssueDescription(result *gdocs.ProcessingResult, chunks []ChunkResult, usePageRefresh bool) string {
-	body := BuildPRDescription(result, chunks, usePageRefresh)
+func BuildIssueDescription(result *gdocs.ProcessingResult, usePageRefresh bool) string {
+	body := BuildPRDescription(result, usePageRefresh)
 
 	var b strings.Builder
 	b.WriteString(body)
@@ -82,7 +70,7 @@ func BuildIssueDescription(result *gdocs.ProcessingResult, chunks []ChunkResult,
 	return b.String()
 }
 
-// BuildIssueJSONComments splits parse JSON into comment-safe chunks.
+// BuildIssueJSONComments splits parse JSON into comment-safe parts.
 func BuildIssueJSONComments(parseResultJSON string) []string {
 	const maxJSONPerComment = 45000
 	if parseResultJSON == "" {

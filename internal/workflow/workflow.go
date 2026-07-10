@@ -26,7 +26,6 @@ type WorkflowInput struct {
 	// Bauer configuration
 	DocID       string
 	Credentials string
-	ChunkSize   int
 	PageRefresh bool
 	OutputDir   string
 	ParseOnly   bool // Parse document to JSON only.
@@ -51,7 +50,6 @@ type WorkflowOutput struct {
 	BauerResult struct {
 		ExtractionDuration time.Duration `json:"extraction_duration"`
 		PlanDuration       time.Duration `json:"plan_duration"`
-		ChunkCount         int           `json:"chunk_count"`
 		TotalSuggestions   int           `json:"total_suggestions"`
 	} `json:"bauer_result"`
 
@@ -116,7 +114,6 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	bauerCfg := &config.Config{
 		DocID:           input.DocID,
 		CredentialsPath: credentialsPath,
-		ChunkSize:       input.ChunkSize,
 		PageRefresh:     input.PageRefresh,
 		OutputDir:       input.OutputDir,
 		TargetRepo:      ".",
@@ -317,7 +314,6 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	if bauerResult != nil && bauerResult.ExtractionResult != nil {
 		issueBody = prompt.BuildIssueDescription(
 			bauerResult.ExtractionResult,
-			bauerResult.Chunks,
 			input.PageRefresh,
 		)
 	}
@@ -326,8 +322,7 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 		fmt.Sprintf("- Branch file: %s\n", branchBlobURL) +
 		fmt.Sprintf("- Pinned file (commit SHA): %s\n", pinnedBlobURL) +
 		fmt.Sprintf("- Raw JSON: %s\n", rawURL) +
-		fmt.Sprintf("\n\n## Copilot PR Branch\n\nThe parse-output branch is `%s` and contains `bauer-parse-result.json`.\nWhen assigned, create the implementation PR from `%s` as the head branch.\n", setupOutput.BranchName, copilotBranchName)
-		// fmt.Sprintf("\n\n## Cleanup\n\nOnce the PR is merged or this issue is closed, please delete the branch `%s`.\n", setupOutput.BranchName)
+		fmt.Sprintf("\n\n## Copilot PR Branch\n\nThe parse-output branch is `%s` and contains `bauer-parse-result.json`.\nWhen assigned, create the implementation PR from `%s` as the head branch.\nInclude the parse-output branch name in the PR description for clean-up.\n", setupOutput.BranchName, copilotBranchName)
 
 	issueURL, issueWarning, err := createIssueWithFallback(repo.Owner, repo.Name, issueTitle, issueBody)
 	if err != nil {

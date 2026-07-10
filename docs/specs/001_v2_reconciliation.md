@@ -1042,7 +1042,7 @@ BAUER_CREDENTIALS_PATH=/path/to/service-account.json
 # BAUER_JIRA_DOC_FIELD=customfield_10100
 
 # --- API Server ---
-BAUER_API_PORT=8090
+BAUER_API_PORT=8080
 
 # --- Copilot / model ---
 BAUER_MODEL=gpt-5-mini-high
@@ -1522,8 +1522,8 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
 WORKDIR /app
 COPY --from=builder /app/bauer-api .
 
-ENV BAUER_API_PORT=8090
-EXPOSE 8090
+ENV BAUER_API_PORT=8080
+EXPOSE 8080
 
 CMD ["./bauer-api"]
 ```
@@ -1556,7 +1556,7 @@ docker-run:
     Requires .env.local to be set up with BAUER_GITHUB_TOKEN and BAUER_CREDENTIALS_PATH.
     The credentials file is mounted read-only into the container.
   cmds:
-    - docker run -p 8090:8090
+    - docker run -p 8080:8080
       --env-file .env.local
       -v "${BAUER_CREDENTIALS_PATH}:/creds/service-account.json:ro"
       -e BAUER_CREDENTIALS_PATH=/creds/service-account.json
@@ -1566,7 +1566,7 @@ docker-run:
 **Acceptance criteria**:
 
 - [ ] `docker build -t bauer-api:latest .` completes without errors
-- [ ] Container starts: `docker run -p 8090:8090 bauer-api:latest` and `/api/v1/health` returns `200`
+- [ ] Container starts: `docker run -p 8080:8080 bauer-api:latest` and `/api/v1/health` returns `200`
 - [ ] `gh` and `git` are available inside the container: `docker run --rm bauer-api:latest sh -c "gh --version && git --version"`
 - [ ] `.env.local` and any `.pem` files are NOT baked into the image (verified via `.dockerignore`)
 - [ ] Image is based on `debian:bookworm-slim` (not `golang` — runtime image stays lean)
@@ -1612,7 +1612,7 @@ func main() {
 
 ```bash
 # API Server
-BAUER_API_PORT=8090
+BAUER_API_PORT=8080
 
 # Copilot defaults
 BAUER_MODEL=gpt-5-mini-high

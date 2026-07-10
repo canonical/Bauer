@@ -15,9 +15,6 @@ type WorkflowPost struct {
 	// BranchPrefix is the branch naming prefix. Defaults to "bauer" when empty.
 	BranchPrefix string `json:"branch_prefix"`
 
-	// ChunkSize is the total number of chunks to create from all locations.
-	ChunkSize int `json:"chunk_size"`
-
 	// PageRefresh enables page-refresh instruction mode.
 	PageRefresh bool `json:"page_refresh"`
 

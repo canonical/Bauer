@@ -113,12 +113,11 @@ bauer --doc-id <your-document-id> \
         --github-repo owner/repo
 ```
 
-#### Custom chunk size and output directory
+#### Custom output directory
 
 ```bash
 bauer --doc-id <your-document-id> \
         --credentials ./credentials.json \
-        --chunk-size 5 \
         --output-dir ./results
 ```
 
@@ -166,7 +165,7 @@ task run-server
 ./bauer-api --credentials ./credentials.json
 ```
 
-The server listens on `:8090`.
+The server listens on the port set by the `APP_PORT` environment variable (injected by the `go-framework` charm), defaulting to `:8080` when it is not set.
 
 ### Endpoints
 
@@ -177,7 +176,7 @@ Simple liveness check.
 Example:
 
 ```bash
-curl http://localhost:8090/api/v1
+curl http://localhost:8080/api/v1
 ```
 
 #### POST /api/v1
@@ -191,7 +190,6 @@ Request body:
   "doc_id": "<google-doc-id>",
   "github_repo": "owner/repo",
   "branch_prefix": "bauer",
-  "chunk_size": 1,
   "page_refresh": false
 }
 ```
@@ -200,8 +198,6 @@ Notes:
 
 - `doc_id` and `github_repo` are required.
 - `branch_prefix` defaults to `bauer` if omitted.
-- `chunk_size` defaults to 1 if omitted.
-- When `page_refresh` is true, the default chunk size becomes 5.
 
 Responses:
 
@@ -212,7 +208,7 @@ Responses:
 Example:
 
 ```bash
-curl -X POST http://localhost:8090/api/v1 \
+curl -X POST http://localhost:8080/api/v1 \
         -H 'Content-Type: application/json' \
         -d '{"doc_id":"<google-doc-id>","github_repo":"owner/repo"}'
 ```
