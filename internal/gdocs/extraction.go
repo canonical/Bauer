@@ -297,9 +297,6 @@ func BuildActionableSuggestions(suggestions []Suggestion, structure *DocumentStr
 		}
 
 		parentHeading, headingLevel := findParentHeading(structure, sugg.StartIndex)
-		// if sugg.ID == "suggest.r3eqy31u1iac" {
-		// 	fmt.Printf("\n\n SUSPECT \n\n PARENT: %v -- level: %v \n\n", parentHeading, headingLevel)
-		// }
 		as.Location.ParentHeading = parentHeading
 		as.Location.HeadingLevel = headingLevel
 
@@ -308,14 +305,8 @@ func BuildActionableSuggestions(suggestions []Suggestion, structure *DocumentStr
 			as.Location.InTable = true
 			as.Location.Table = tableLoc
 		}
-		// if sugg.ID == "suggest.r3eqy31u1iac" {
-		// 	fmt.Printf("\n\n SUSPECT 1 \n\n TABLE LOC:\n %v \n\n ", tableLoc)
-		// }
 
 		precedingText, followingText := getTextAround(structure, sugg.StartIndex, sugg.EndIndex, anchorLength)
-		// if sugg.ID == "suggest.r3eqy31u1iac" {
-		// 	fmt.Printf("\n\n SUSPECT 2 \n\n PRECEDING:\n %v \n\n --FOLLOWING:\n\n %v \n\n", precedingText, followingText)
-		// }
 		as.Anchor = SuggestionAnchor{
 			PrecedingText: precedingText,
 			FollowingText: followingText,
