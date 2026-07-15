@@ -2,6 +2,10 @@
 
 > The Bauer architecture delta after v2: add design-aware inputs, starting with Figma, without breaking the CLI-first and shared-core direction established in v2.
 
+> [!IMPORTANT]
+> **Status: target design — not yet implemented.**
+> This document builds on [ARCHITECTURE_v2.md](./ARCHITECTURE_v2.md) (also a target design) and describes planned design-aware source intake. The Figma ingestion path, the source-intake abstraction, and append-only run artifacts are **not** present in the codebase yet. For current CLI/API behavior, see the [README](../README.md). For sequencing, see [specs/002_figma_integration.md](./specs/002_figma_integration.md).
+
 ---
 
 ## Table of Contents
