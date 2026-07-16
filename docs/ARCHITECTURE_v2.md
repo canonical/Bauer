@@ -2,6 +2,10 @@
 
 > The target architecture for Bauer — a shared-core system with a CLI, an HTTP API, and a Jira webhook integration.
 
+> [!IMPORTANT]
+> **Status: target design — not yet implemented.**
+> This document describes where Bauer is heading, not how it currently works. Several packages referenced here (`internal/source`, `internal/agent`, `internal/copilotcli`, `internal/artifacts`), the `Agent` abstraction, and the `.env`/`.env.local` config loading do **not** exist in the codebase yet. For current CLI/API behavior, see the [README](../README.md). For the migration plan, see [specs/001_v2_reconciliation.md](./specs/001_v2_reconciliation.md).
+
 ---
 
 ## What is Bauer v2?

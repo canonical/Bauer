@@ -1,9 +1,8 @@
 # Bauer
 
-> Info
-> Start with [docs/specs](./docs/specs/). The current README may be out of date while the v2 and v2.1 work is in progress.
+Bauer is a Go application that extracts document content, suggestions (proposed edits), and comments from Google Docs using the Google Docs API and Google Drive API.
 
-A proof-of-concept Go application that extracts document content, suggestions (proposed edits), and comments from Google Docs using the Google Docs API and Google Drive API.
+> This README documents Bauer's **current** behavior (the `bauer` CLI and `bauer-api` server). The documents under [`docs/`](./docs/) describe **target designs** for future work — see [Documentation](#documentation).
 
 ## Local development
 
@@ -89,60 +88,6 @@ Current execution modes:
 
 *GitHub auth is only required when using parse-and-issue mode.
 
-<!-- ### Examples
-
-#### Basic run
-
-```bash
-bauer --doc-id <your-document-id> --credentials ./credentials.json
-```
-
-#### Parse only
-
-```bash
-bauer --doc-id <your-document-id> \
-        --credentials ./credentials.json \
-        --parse-only
-```
-
-#### Parse and create issue
-
-```bash
-bauer --doc-id <your-document-id> \
-        --credentials ./credentials.json \
-        --github-repo owner/repo
-```
-
-#### Custom output directory
-
-```bash
-bauer --doc-id <your-document-id> \
-        --credentials ./credentials.json \
-        --output-dir ./results
-```
-
-#### Specify model
-
-```bash
-bauer --doc-id <your-document-id> \
-        --credentials ./credentials.json \
-        --model "claude-sonnet-4.5"
-```
-
-#### Run on a different repository
-```bash
-bauer --doc-id <your-document-id> \
-        --credentials ./credentials.json \
-        --target-repo ../my-other-repo
-```
-
-### Page refresh
-
-```bash
-bauer --doc-id <your-document-id> \
-        --credentials ./credentials.json \
-        --page-refresh
-``` -->
 
 ## API usage
 
@@ -216,7 +161,11 @@ curl -X POST http://localhost:8080/api/v1 \
 
 ## Documentation
 
-For more information refer to [`ARCHITECTURE.md`](/docs/ARCHITECTURE_v2_1.md)
+This README is the source of truth for how Bauer works today. The architecture documents describe **planned, not-yet-implemented** work:
+
+- [`docs/ARCHITECTURE_v2.md`](./docs/ARCHITECTURE_v2.md) — target shared-core architecture (CLI + API + Jira webhook).
+- [`docs/ARCHITECTURE_v2_1.md`](./docs/ARCHITECTURE_v2_1.md) — target design-aware source intake, starting with Figma.
+- [`docs/specs/`](./docs/specs/) — the reconciliation plan (001) and Figma integration spec (002).
 
 <!-- ## Future improvements
 
