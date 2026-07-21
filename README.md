@@ -24,6 +24,8 @@ task build
   --credentials <path-to-creds> \
   --github-repo <github-repo>
 ```
+`--doc-id` accepts either a bare document ID or a full Google Docs URL (e.g. `https://docs.google.com/document/d/<doc-id>`); the document ID and tab are extracted automatically.
+
 Additionally, you can run it with `--parse-only` without creating an issue.
 
 
@@ -63,10 +65,11 @@ gh auth status
 ./bauer --doc-id <your-document-id> --credentials ./credentials.json
 ```
 
-5. Optional parameters
+5. Parameters
 
 | Flag               | Type   | Default              | Description                                                                     | Requires GitHub Auth |
 | ------------------ | ------ | -------------------- | ------------------------------------------------------------------------------- | -------------------- |
+| `--doc-id`         | string | (required)           | Google Doc ID or full Google Docs URL (e.g. `https://docs.google.com/document/d/<doc-id>/edit?tab=t.0`) | No               |
 | `--github-repo`    | string | (required if not parse-only) | GitHub repository (owner/repo or HTTPS URL)                              | Yes*             |
 | `--credentials`    | string | `bau-test-creds.json` | Path to service account credentials JSON                                       | No               |
 | `--local-repo-path` | string | `/tmp/ubuntu.com`    | Local path for cloned repository                                               | No               |
