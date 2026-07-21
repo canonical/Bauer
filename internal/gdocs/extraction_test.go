@@ -829,3 +829,49 @@ func TestBuildActionableSuggestions_LinkChanges(t *testing.T) {
 		t.Errorf("ins: %+v", c)
 	}
 }
+
+func TestParseDocIDAndTab(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantDocID string
+		wantTabID string
+	}{
+		{"bare id", "abc123", "abc123", ""},
+		{"id with tab", "abc123?tab=t.0", "abc123", "t.0"},
+		{"id with edit", "abc123/edit", "abc123", ""},
+		{"id with edit and tab", "abc123/edit?tab=t.0", "abc123", "t.0"},
+		{"id with extra params", "abc123?tab=t.0&usp=sharing", "abc123", "t.0"},
+		{"id with fragment", "abc123?tab=t.0#heading", "abc123", "t.0"},
+		{
+			name:      "full url with tab",
+			input:     "https://docs.google.com/document/d/15QhtNdZTw2Mk5YPnc3y1RH4R7UBi3F8dZ70bJRB8xJc/edit?tab=t.0",
+			wantDocID: "15QhtNdZTw2Mk5YPnc3y1RH4R7UBi3F8dZ70bJRB8xJc",
+			wantTabID: "t.0",
+		},
+		{
+			name:      "full url without tab",
+			input:     "https://docs.google.com/document/d/15QhtNdZTw2Mk5YPnc3y1RH4R7UBi3F8dZ70bJRB8xJc/edit",
+			wantDocID: "15QhtNdZTw2Mk5YPnc3y1RH4R7UBi3F8dZ70bJRB8xJc",
+			wantTabID: "",
+		},
+		{
+			name:      "full url no edit suffix",
+			input:     "https://docs.google.com/document/d/15QhtNdZTw2Mk5YPnc3y1RH4R7UBi3F8dZ70bJRB8xJc",
+			wantDocID: "15QhtNdZTw2Mk5YPnc3y1RH4R7UBi3F8dZ70bJRB8xJc",
+			wantTabID: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotDocID, gotTabID := ParseDocIDAndTab(tt.input)
+			if gotDocID != tt.wantDocID {
+				t.Errorf("docID: got %q, want %q", gotDocID, tt.wantDocID)
+			}
+			if gotTabID != tt.wantTabID {
+				t.Errorf("tabID: got %q, want %q", gotTabID, tt.wantTabID)
+			}
+		})
+	}
+}
