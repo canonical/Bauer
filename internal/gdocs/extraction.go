@@ -17,8 +17,16 @@ import (
 //   - "docID/edit" → returns (docID, "")
 //   - "docID?tab=tabID&usp=sharing" → returns (docID, tabID)  (extra params stripped)
 //   - "docID?tab=tabID#heading" → returns (docID, tabID)      (fragment stripped)
+//   - "https://docs.google.com/document/d/docID/edit?tab=tabID" → returns (docID, tabID)
 func ParseDocIDAndTab(docID string) (string, string) {
 	tabID := ""
+
+	// Strip the Google Docs URL prefix if a full link is provided, leaving just
+	// the "docID/edit?tab=tabID" style remainder for the parsing below.
+	const docsURLPrefix = "https://docs.google.com/document/d/"
+	if idx := strings.Index(docID, docsURLPrefix); idx != -1 {
+		docID = docID[idx+len(docsURLPrefix):]
+	}
 
 	// Extract tab ID if present, then trim any trailing query parameters or
 	// fragment that may follow the tab value (e.g. "&usp=sharing", "#heading").
