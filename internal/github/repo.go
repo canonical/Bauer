@@ -131,7 +131,20 @@ func CloneOrUpdateRepo(repo *Repository, localPath string) error {
 		return nil
 	}
 
-	return fmt.Errorf("path exists but is not a git repository: %s", localPath)
+	// Directory exists but is not a valid git repository (e.g. a leftover or
+	// partially-cloned directory with a broken .git). Remove it and clone fresh.
+	if err := os.RemoveAll(localPath); err != nil {
+		return fmt.Errorf("path exists but is not a git repository and could not be removed: %s: %w", localPath, err)
+	}
+	if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
+		return fmt.Errorf("failed to create parent directory: %w", err)
+	}
+	cloneCmd := exec.Command("git", "clone", repo.HTTPURL, localPath)
+	if out, err := cloneCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to clone repo after removing broken directory: %w, output: %s", err, out)
+	}
+	repo.LocalPath = localPath
+	return nil
 }
 
 func RemoveLocalRepo(localPath string) error {
@@ -327,9 +340,18 @@ func DeleteLocalBranch(localPath, branchName string) error {
 // Helper functions
 
 func isGitRepo(path string) bool {
+	// A .git directory must exist...
 	gitDir := filepath.Join(path, ".git")
 	info, err := os.Stat(gitDir)
-	return err == nil && info.IsDir()
+	if err != nil || !info.IsDir() {
+		return false
+	}
+	// ...and git must recognize it as a valid working tree. This guards against
+	// leftover or partially-cloned directories that contain a .git folder but
+	// are missing essential metadata (HEAD, config, index).
+	cmd := exec.Command("git", "rev-parse", "--is-inside-work-tree")
+	cmd.Dir = path
+	return cmd.Run() == nil
 }
 
 func getDefaultBranch(localPath string) string {
