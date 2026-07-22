@@ -47,13 +47,17 @@ func WorkflowPost(rc types.RouteConfig) func(w http.ResponseWriter, r *http.Requ
 		}
 
 		// Resolve the GitHub token server-side; it is never accepted in the body.
-		token, err := github.GetGitHubToken()
-		if err != nil {
-			slog.Error("failed to resolve github token", "error", err.Error(), "requestID", requestID)
-			if err := types.InternalError(fmt.Errorf("github authentication not configured")).Render(w, r); err != nil {
-				slog.Error("error writing response", "error", err.Error(), "requestID", requestID)
+		// Parse-only mode never touches GitHub, so no token is required.
+		var token string
+		if !payload.ParseOnly {
+			token, err = github.GetGitHubToken()
+			if err != nil {
+				slog.Error("failed to resolve github token", "error", err.Error(), "requestID", requestID)
+				if err := types.InternalError(fmt.Errorf("github authentication not configured")).Render(w, r); err != nil {
+					slog.Error("error writing response", "error", err.Error(), "requestID", requestID)
+				}
+				return
 			}
-			return
 		}
 
 		branchPrefix := payload.BranchPrefix
