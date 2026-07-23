@@ -56,22 +56,27 @@ func ParseGitHubRepo(input string) (*Repository, error) {
 	}, nil
 }
 
+// cloneRepo ensures the parent directory of localPath exists and clones repo
+// into localPath. On success it records the clone location on repo.
+func cloneRepo(repo *Repository, localPath string) error {
+	if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
+		return fmt.Errorf("failed to create parent directory: %w", err)
+	}
+	cmd := exec.Command("git", "clone", repo.HTTPURL, localPath)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to clone repo: %w, output: %s", err, output)
+	}
+	repo.LocalPath = localPath
+	return nil
+}
+
 // CloneOrUpdateRepo clones or updates a repository at the specified local path
 func CloneOrUpdateRepo(repo *Repository, localPath string) error {
 	info, err := os.Stat(localPath)
 
 	// If path doesn't exist, clone
 	if os.IsNotExist(err) {
-		if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
-			return fmt.Errorf("failed to create parent directory: %w", err)
-		}
-
-		cmd := exec.Command("git", "clone", repo.HTTPURL, localPath)
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("failed to clone repo: %w, output: %s", err, output)
-		}
-		repo.LocalPath = localPath
-		return nil
+		return cloneRepo(repo, localPath)
 	}
 
 	if err != nil {
@@ -113,11 +118,9 @@ func CloneOrUpdateRepo(repo *Repository, localPath string) error {
 			if removeErr := os.RemoveAll(localPath); removeErr != nil {
 				return fmt.Errorf("failed to fetch from remote: %w, output: %s (also failed to remove corrupted repo: %v)", err, output, removeErr)
 			}
-			cloneCmd := exec.Command("git", "clone", repo.HTTPURL, localPath)
-			if cloneOut, cloneErr := cloneCmd.CombinedOutput(); cloneErr != nil {
-				return fmt.Errorf("failed to fetch from remote: %w, output: %s (re-clone also failed: %v, output: %s)", err, output, cloneErr, cloneOut)
+			if cloneErr := cloneRepo(repo, localPath); cloneErr != nil {
+				return fmt.Errorf("failed to fetch from remote: %w, output: %s (re-clone also failed: %v)", err, output, cloneErr)
 			}
-			repo.LocalPath = localPath
 			return nil
 		}
 
@@ -136,14 +139,9 @@ func CloneOrUpdateRepo(repo *Repository, localPath string) error {
 	if err := os.RemoveAll(localPath); err != nil {
 		return fmt.Errorf("path exists but is not a git repository and could not be removed: %s: %w", localPath, err)
 	}
-	if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
-		return fmt.Errorf("failed to create parent directory: %w", err)
+	if err := cloneRepo(repo, localPath); err != nil {
+		return fmt.Errorf("clone after removing broken directory: %w", err)
 	}
-	cloneCmd := exec.Command("git", "clone", repo.HTTPURL, localPath)
-	if out, err := cloneCmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to clone repo after removing broken directory: %w, output: %s", err, out)
-	}
-	repo.LocalPath = localPath
 	return nil
 }
 
