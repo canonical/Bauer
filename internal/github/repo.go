@@ -56,22 +56,27 @@ func ParseGitHubRepo(input string) (*Repository, error) {
 	}, nil
 }
 
+// cloneRepo ensures the parent directory of localPath exists and clones repo
+// into localPath. On success it records the clone location on repo.
+func cloneRepo(repo *Repository, localPath string) error {
+	if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
+		return fmt.Errorf("failed to create parent directory: %w", err)
+	}
+	cmd := exec.Command("git", "clone", repo.HTTPURL, localPath)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to clone repo: %w, output: %s", err, output)
+	}
+	repo.LocalPath = localPath
+	return nil
+}
+
 // CloneOrUpdateRepo clones or updates a repository at the specified local path
 func CloneOrUpdateRepo(repo *Repository, localPath string) error {
 	info, err := os.Stat(localPath)
 
 	// If path doesn't exist, clone
 	if os.IsNotExist(err) {
-		if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
-			return fmt.Errorf("failed to create parent directory: %w", err)
-		}
-
-		cmd := exec.Command("git", "clone", repo.HTTPURL, localPath)
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("failed to clone repo: %w, output: %s", err, output)
-		}
-		repo.LocalPath = localPath
-		return nil
+		return cloneRepo(repo, localPath)
 	}
 
 	if err != nil {
@@ -113,11 +118,9 @@ func CloneOrUpdateRepo(repo *Repository, localPath string) error {
 			if removeErr := os.RemoveAll(localPath); removeErr != nil {
 				return fmt.Errorf("failed to fetch from remote: %w, output: %s (also failed to remove corrupted repo: %v)", err, output, removeErr)
 			}
-			cloneCmd := exec.Command("git", "clone", repo.HTTPURL, localPath)
-			if cloneOut, cloneErr := cloneCmd.CombinedOutput(); cloneErr != nil {
-				return fmt.Errorf("failed to fetch from remote: %w, output: %s (re-clone also failed: %v, output: %s)", err, output, cloneErr, cloneOut)
+			if cloneErr := cloneRepo(repo, localPath); cloneErr != nil {
+				return fmt.Errorf("failed to fetch from remote: %w, output: %s (re-clone also failed: %v)", err, output, cloneErr)
 			}
-			repo.LocalPath = localPath
 			return nil
 		}
 
@@ -131,7 +134,15 @@ func CloneOrUpdateRepo(repo *Repository, localPath string) error {
 		return nil
 	}
 
-	return fmt.Errorf("path exists but is not a git repository: %s", localPath)
+	// Directory exists but is not a valid git repository (e.g. a leftover or
+	// partially-cloned directory with a broken .git). Remove it and clone fresh.
+	if err := os.RemoveAll(localPath); err != nil {
+		return fmt.Errorf("path exists but is not a git repository and could not be removed: %s: %w", localPath, err)
+	}
+	if err := cloneRepo(repo, localPath); err != nil {
+		return fmt.Errorf("clone after removing broken directory: %w", err)
+	}
+	return nil
 }
 
 func RemoveLocalRepo(localPath string) error {
@@ -327,9 +338,18 @@ func DeleteLocalBranch(localPath, branchName string) error {
 // Helper functions
 
 func isGitRepo(path string) bool {
+	// A .git directory must exist...
 	gitDir := filepath.Join(path, ".git")
 	info, err := os.Stat(gitDir)
-	return err == nil && info.IsDir()
+	if err != nil || !info.IsDir() {
+		return false
+	}
+	// ...and git must recognize it as a valid working tree. This guards against
+	// leftover or partially-cloned directories that contain a .git folder but
+	// are missing essential metadata (HEAD, config, index).
+	cmd := exec.Command("git", "rev-parse", "--is-inside-work-tree")
+	cmd.Dir = path
+	return cmd.Run() == nil
 }
 
 func getDefaultBranch(localPath string) string {
