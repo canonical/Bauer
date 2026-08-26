@@ -221,7 +221,7 @@ What Bauer extracts from the link:
 ```mermaid
 graph TD
     CLI["CLI\ncmd/bauer"]
-    API["API\ncmd/app"]
+    API["API\ncmd/bauer-api"]
 
     subgraph Shared Core
         Config["internal/config"]

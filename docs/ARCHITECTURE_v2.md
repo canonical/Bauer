@@ -57,7 +57,7 @@ graph TD
     API --> GitHub
 ```
 
-Both `cmd/bauer` and `cmd/app` are thin wiring layers — all business logic lives in `internal/`. Adding a new entry point (GitHub Action, scheduled job, etc.) is just a new `cmd/` package.
+Both `cmd/bauer` and `cmd/bauer-api` are thin wiring layers — all business logic lives in `internal/`. Adding a new entry point (GitHub Action, scheduled job, etc.) is just a new `cmd/` package.
 
 ---
 
@@ -66,7 +66,7 @@ Both `cmd/bauer` and `cmd/app` are thin wiring layers — all business logic liv
 | Binary      | Package      | Purpose                           |
 | ----------- | ------------ | --------------------------------- |
 | `bauer`     | `cmd/bauer/` | CLI — runs inside the target repo |
-| `bauer-api` | `cmd/app/`   | HTTP API server                   |
+| `bauer-api` | `cmd/bauer-api/`   | HTTP API server                   |
 
 ---
 

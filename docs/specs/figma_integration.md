@@ -2580,13 +2580,13 @@ Drift markers in `mappings.json` for low-confidence mappings:
 
 **Files touched**:
 
-- `cmd/app/models/v1/job.go` — **modify** (add `FigmaURL` field)
-- `cmd/app/v1/api.go` — **modify** (thread figma URL through the workflow call)
+- `cmd/bauer-api/models/v1/job.go` — **modify** (add `FigmaURL` field)
+- `cmd/bauer-api/v1/api.go` — **modify** (thread figma URL through the workflow call)
 
 **Implementation**:
 
 ```go
-// cmd/app/models/v1/job.go
+// cmd/bauer-api/models/v1/job.go
 type IssueRequest struct {
     DocID     string `json:"doc_id"`
     GitHubRepo string `json:"github_repo"`
@@ -2613,7 +2613,7 @@ type IssueRequest struct {
 
 - `internal/artifacts/hosting.go` — **create** (`ScreenshotHost` interface + first implementation)
 - `internal/github/issue.go` — **modify** (embed hosted URLs instead of local paths)
-- `cmd/app/` — **modify** (wire the configured host into the handler)
+- `cmd/bauer-api/` — **modify** (wire the configured host into the handler)
 
 **Options considered:**
 

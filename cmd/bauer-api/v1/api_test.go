@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"bauer/cmd/app/types"
+	"bauer/cmd/bauer-api/types"
 	"bauer/internal/config"
 	"bauer/internal/orchestrator"
 )

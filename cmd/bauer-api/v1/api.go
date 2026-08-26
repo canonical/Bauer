@@ -1,8 +1,8 @@
 package v1
 
 import (
-	"bauer/cmd/app/models/v1"
-	"bauer/cmd/app/types"
+	"bauer/cmd/bauer-api/models/v1"
+	"bauer/cmd/bauer-api/types"
 	"bauer/internal/github"
 	"bauer/internal/workflow"
 	"encoding/json"

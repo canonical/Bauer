@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"bauer/cmd/app/types"
+	"bauer/cmd/bauer-api/types"
 	"context"
 	"log/slog"
 	"net/http"
