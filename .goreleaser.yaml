@@ -13,7 +13,7 @@ before:
     - go mod tidy
 
 builds:
-  - main: ./cmd/bauer/
+  - main: ./cmd/bauer-cli/
     env:
       - CGO_ENABLED=0
     goos:

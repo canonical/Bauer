@@ -220,7 +220,7 @@ What Bauer extracts from the link:
 
 ```mermaid
 graph TD
-    CLI["CLI\ncmd/bauer"]
+    CLI["CLI\ncmd/bauer-cli"]
     API["API\ncmd/bauer-api"]
 
     subgraph Shared Core

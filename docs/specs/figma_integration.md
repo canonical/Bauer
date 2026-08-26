@@ -2416,14 +2416,14 @@ func (m *Manager) EnsureScreenshotsDir(runID string) (string, error) {
 
 **Files touched**:
 
-- `cmd/bauer/main.go` — **modify** (add figma intake: parse URL, fetch, normalize, resolve chunks)
+- `cmd/bauer-cli/main.go` — **modify** (add figma intake: parse URL, fetch, normalize, resolve chunks)
 - `internal/workflow/workflow.go` — **modify** (accept figma URL as optional parameter)
 - `internal/workflow/api.go` — **modify** (same)
 
 **Implementation outline**:
 
 ```go
-// cmd/bauer/main.go (figma integration addition)
+// cmd/bauer-cli/main.go (figma integration addition)
 
 var figmaRef *figma.LinkRef
 if cfg.FigmaURL != "" {
@@ -2853,7 +2853,7 @@ No figma or mapping packages yet. The orchestrator talks to `internal/source`, w
 After CLI is fully restored and `--open-pr` / `--open-issue` are working (T2.1 – T2.3), no new internal packages have been added. The structure is the same as after P0 with the addition of:
 
 ```text
-cmd/bauer/
+cmd/bauer-cli/
   main.go   ← all flags restored; --open-pr and --open-issue implemented
   
 (All other packages unchanged from after P0.)
