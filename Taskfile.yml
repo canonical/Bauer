@@ -5,7 +5,7 @@ tasks:
     desc: Build the Bauer and Bauer API binaries
     cmds:
       - go build -o bauer cmd/bauer/main.go
-      - go build -o bauer-api cmd/app/main.go
+      - go build -o bauer-api cmd/bauer-api/main.go
 
   test:
     desc: Run all tests

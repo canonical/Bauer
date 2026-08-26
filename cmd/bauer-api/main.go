@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bauer/cmd/app/core/middleware"
-	"bauer/cmd/app/types"
-	v1 "bauer/cmd/app/v1"
+	"bauer/cmd/bauer-api/core/middleware"
+	"bauer/cmd/bauer-api/types"
+	v1 "bauer/cmd/bauer-api/v1"
 	"bauer/internal/orchestrator"
 	"fmt"
 	"log/slog"
