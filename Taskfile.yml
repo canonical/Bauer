@@ -4,7 +4,7 @@ tasks:
   build:
     desc: Build the Bauer and Bauer API binaries
     cmds:
-      - go build -o bauer cmd/bauer/main.go
+      - go build -o bauer-cli cmd/bauer-cli/main.go
       - go build -o bauer-api cmd/bauer-api/main.go
 
   test:
@@ -34,7 +34,7 @@ tasks:
     desc: Clean up generated files
     cmds:
       - rm -rf bauer-output
-      - rm -f bauer
+      - rm -f bauer-cli
       - rm -f bauer-api
       - rm -f bauer.log
       - rm -rf /tmp/gh* /tmp/tmp* /tmp/test-bauer-repo* /tmp/bauer-workflow-* || true

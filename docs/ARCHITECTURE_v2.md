@@ -23,8 +23,8 @@ Bauer reads implementation suggestions from a Google Doc, generates structured p
 
 ```mermaid
 graph TD
-    CLI["CLI\ncmd/bauer"]
-    API["API Server\ncmd/app"]
+    CLI["CLI\ncmd/bauer-cli"]
+    API["API Server\ncmd/bauer-api"]
     Jira["Jira Webhook\n/api/v1/webhooks/jira"]
 
     subgraph Shared Core
@@ -57,7 +57,7 @@ graph TD
     API --> GitHub
 ```
 
-Both `cmd/bauer` and `cmd/bauer-api` are thin wiring layers — all business logic lives in `internal/`. Adding a new entry point (GitHub Action, scheduled job, etc.) is just a new `cmd/` package.
+Both `cmd/bauer-cli` and `cmd/bauer-api` are thin wiring layers — all business logic lives in `internal/`. Adding a new entry point (GitHub Action, scheduled job, etc.) is just a new `cmd/` package.
 
 ---
 
@@ -65,7 +65,7 @@ Both `cmd/bauer` and `cmd/bauer-api` are thin wiring layers — all business log
 
 | Binary      | Package      | Purpose                           |
 | ----------- | ------------ | --------------------------------- |
-| `bauer`     | `cmd/bauer/` | CLI — runs inside the target repo |
+| `bauer-cli` | `cmd/bauer-cli/` | CLI — runs inside the target repo |
 | `bauer-api` | `cmd/bauer-api/`   | HTTP API server                   |
 
 ---
