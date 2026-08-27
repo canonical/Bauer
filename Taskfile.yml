@@ -27,8 +27,11 @@ tasks:
     desc: Run the API server locally
     vars:
       CREDENTIALS: '{{.CREDENTIALS | default "./credentials.json"}}'
+    env:
+      APP_GOOGLE_CREDENTIALS:
+        sh: cat {{.CREDENTIALS}}
     cmds:
-      - ./bauer-api --credentials "{{.CREDENTIALS}}"
+      - ./bauer-api
 
   clean:
     desc: Clean up generated files
