@@ -3,14 +3,18 @@ package types
 import (
 	"bauer/internal/config"
 	"bauer/internal/env"
+	"bauer/internal/gdocs"
 	"flag"
-	"fmt"
 	"os"
 )
 
 type APIConfig struct {
 	// CredentialsPath is the path to the Google Cloud service account JSON key file.
 	CredentialsPath string
+
+	// CredentialsJSON holds the raw service account JSON supplied via the
+	// environment. When set it is used directly, avoiding any on-disk staging.
+	CredentialsJSON []byte
 
 	// OutputDir is the directory where generated prompt files will be saved.
 	// Default is "bauer-output" if not specified.
@@ -43,25 +47,24 @@ func LoadConfig() (*APIConfig, error) {
 
 	resolvedCredentialsPath := *credentialsPath
 
+	var credentialsJSON []byte
 	// When no credentials file is provided via the flag, fall back to the raw
-	// credentials JSON injected through the environment.
+	// credentials JSON injected through the environment. It is used directly,
+	// so no temporary file is written to disk.
 	if resolvedCredentialsPath == "" {
 		if raw := env.GetGoEnv("GOOGLE_CREDENTIALS"); raw != "" {
-			path, err := writeCredentialsToTempFile(raw)
-			if err != nil {
-				return nil, err
-			}
-			resolvedCredentialsPath = path
+			credentialsJSON = []byte(raw)
 		}
 	}
 
-	if resolvedCredentialsPath == "" {
+	if resolvedCredentialsPath == "" && len(credentialsJSON) == 0 {
 		flag.Usage()
 		os.Exit(1)
 	}
 
 	cfg := &APIConfig{
 		CredentialsPath: resolvedCredentialsPath,
+		CredentialsJSON: credentialsJSON,
 		BaseOutputDir:   *baseOutputDir,
 		TargetRepo:      *targetRepo,
 	}
@@ -73,27 +76,9 @@ func LoadConfig() (*APIConfig, error) {
 	return cfg, nil
 }
 
-// writeCredentialsToTempFile persists raw service account JSON to a private
-// temporary file and returns its path, allowing the file-based pipeline to
-// consume credentials that were supplied through the environment.
-func writeCredentialsToTempFile(content string) (string, error) {
-	f, err := os.CreateTemp("", "bauer-credentials-*.json")
-	if err != nil {
-		return "", fmt.Errorf("failed to create temp credentials file: %w", err)
-	}
-	defer f.Close()
-
-	if err := f.Chmod(0o600); err != nil {
-		return "", fmt.Errorf("failed to secure temp credentials file: %w", err)
-	}
-
-	if _, err := f.WriteString(content); err != nil {
-		return "", fmt.Errorf("failed to write temp credentials file: %w", err)
-	}
-
-	return f.Name(), nil
-}
-
 func (c *APIConfig) Validate() error {
+	if len(c.CredentialsJSON) > 0 {
+		return gdocs.ValidateCredentials(c.CredentialsJSON)
+	}
 	return config.ValidateCredentialsPath(c.CredentialsPath)
 }

@@ -26,9 +26,12 @@ type WorkflowInput struct {
 	// Bauer configuration
 	DocID       string
 	Credentials string
-	PageRefresh bool
-	OutputDir   string
-	ParseOnly   bool // Parse document to JSON only.
+	// CredentialsJSON holds the raw service account JSON. When set it is used
+	// directly instead of reading Credentials from disk.
+	CredentialsJSON []byte
+	PageRefresh     bool
+	OutputDir       string
+	ParseOnly       bool // Parse document to JSON only.
 
 	// Local repository path
 	LocalRepoPath string
@@ -94,9 +97,10 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	logger := slog.Default()
 
 	// Convert credentials path to absolute
-	// Do this before changing directory so relative paths work
+	// Do this before changing directory so relative paths work.
+	// Skipped when inline credentials JSON is supplied.
 	var credentialsPath string
-	if input.Credentials != "" {
+	if len(input.CredentialsJSON) == 0 && input.Credentials != "" {
 		absPath, err := filepath.Abs(input.Credentials)
 		if err != nil {
 			output.Status = "failed"
@@ -114,6 +118,7 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 	bauerCfg := &config.Config{
 		DocID:           input.DocID,
 		CredentialsPath: credentialsPath,
+		CredentialsJSON: input.CredentialsJSON,
 		PageRefresh:     input.PageRefresh,
 		OutputDir:       input.OutputDir,
 		TargetRepo:      ".",

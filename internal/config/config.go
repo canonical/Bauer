@@ -15,6 +15,11 @@ type Config struct {
 	// CredentialsPath is the path to the Google Cloud service account JSON key file.
 	CredentialsPath string `json:"credentials"`
 
+	// CredentialsJSON holds the raw service account JSON. When set it takes
+	// precedence over CredentialsPath, allowing credentials supplied through the
+	// environment to be used without staging them on disk.
+	CredentialsJSON []byte `json:"-"`
+
 	// ParseOnly indicates Phase 1 mode - parse document only, skip GitHub integration
 	ParseOnly bool `json:"parse_only"`
 
@@ -49,7 +54,25 @@ func (c *Config) Validate() error {
 		return errors.New("missing required field: doc_id")
 	}
 
+	// Prefer inline credentials JSON when provided.
+	if len(c.CredentialsJSON) > 0 {
+		return gdocs.ValidateCredentials(c.CredentialsJSON)
+	}
+
 	return ValidateCredentialsPath(c.CredentialsPath)
+}
+
+// ResolveCredentials returns the raw service account JSON, reading it from
+// CredentialsPath when inline CredentialsJSON was not supplied.
+func (c *Config) ResolveCredentials() ([]byte, error) {
+	if len(c.CredentialsJSON) > 0 {
+		return c.CredentialsJSON, nil
+	}
+	data, err := os.ReadFile(c.CredentialsPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read credentials file: %w", err)
+	}
+	return data, nil
 }
 
 func ValidateCredentialsPath(path string) error {

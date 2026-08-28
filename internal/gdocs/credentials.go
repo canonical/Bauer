@@ -28,6 +28,16 @@ func ValidateCredentialsFile(path string) error {
 		return fmt.Errorf("credentials file is empty: %s", path)
 	}
 
+	return ValidateCredentials(data)
+}
+
+// ValidateCredentials checks that the raw service account JSON is parseable and
+// contains the required fields.
+func ValidateCredentials(data []byte) error {
+	if len(data) == 0 {
+		return fmt.Errorf("credentials are empty")
+	}
+
 	// Parse JSON
 	var creds ServiceAccountCredentials
 	if err := json.Unmarshal(data, &creds); err != nil {
