@@ -24,11 +24,6 @@ tasks:
       - gofmt -l .
       - go vet ./...
 
-  run-server:
-    desc: Run the API server locally
-    cmds:
-      - ./bauer-api
-
   clean:
     desc: Clean up generated files
     cmds:
@@ -39,8 +34,15 @@ tasks:
       - rm -rf /tmp/gh* /tmp/tmp* /tmp/test-bauer-repo* /tmp/bauer-workflow-* || true
 
   run:
-    desc: Clean up generated files, build and run Bauer server
+    desc: Clean up generated files, build and run Bauer API server
     cmds:
       - task: clean
       - task: build
-      - task: run-server
+      - ./bauer-api
+
+  run-cli:
+    desc: Clean up generated files, build and run Bauer CLI (pass flags after --, e.g. task run-cli -- --doc-id "xxx" --parse-only)
+    cmds:
+      - task: clean
+      - task: build
+      - ./bauer-cli {{.CLI_ARGS}}
