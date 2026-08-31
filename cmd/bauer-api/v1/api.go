@@ -70,7 +70,6 @@ func WorkflowPost(rc types.RouteConfig) func(w http.ResponseWriter, r *http.Requ
 			GitHubToken:     token,
 			BranchPrefix:    branchPrefix,
 			DocID:           payload.DocID,
-			Credentials:     rc.APIConfig.CredentialsPath,
 			CredentialsJSON: rc.APIConfig.CredentialsJSON,
 			PageRefresh:     payload.PageRefresh,
 			OutputDir:       fmt.Sprintf("%s/%s", rc.APIConfig.BaseOutputDir, requestID),

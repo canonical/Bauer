@@ -2,18 +2,13 @@ package types
 
 import (
 	"bauer/internal/config"
-	"bauer/internal/env"
 	"bauer/internal/gdocs"
 	"flag"
-	"os"
 )
 
 type APIConfig struct {
-	// CredentialsPath is the path to the Google Cloud service account JSON key file.
-	CredentialsPath string
-
-	// CredentialsJSON holds the raw service account JSON supplied via the
-	// environment. When set it is used directly, avoiding any on-disk staging.
+	// CredentialsJSON holds the raw service account JSON assembled from the
+	// environment. It is used directly, avoiding any on-disk staging.
 	CredentialsJSON []byte
 
 	// OutputDir is the directory where generated prompt files will be saved.
@@ -26,12 +21,17 @@ type APIConfig struct {
 }
 
 func LoadConfig() (*APIConfig, error) {
-	credentialsPath := flag.String("credentials", "", "Path to service account JSON (required unless APP_GOOGLE_CREDENTIALS is set)")
 	baseOutputDir := flag.String("base-output-dir", "bauer-output", "Base path of directory for generated prompt files (default: bauer-output)")
 	configFile := flag.String("config", "", "Path to JSON config file")
 	targetRepo := flag.String("target-repo", "", "Path to target repository where tasks should be executed (default: current directory)")
 
 	flag.Parse()
+
+	// Credentials are always assembled from individual environment variables.
+	credentialsJSON, err := gdocs.CredentialsFromEnv()
+	if err != nil {
+		return nil, err
+	}
 
 	if *configFile != "" {
 		cfg, err := config.LoadFromJSONFile(*configFile)
@@ -39,31 +39,13 @@ func LoadConfig() (*APIConfig, error) {
 			return nil, err
 		}
 		return &APIConfig{
-			CredentialsPath: cfg.CredentialsPath,
+			CredentialsJSON: credentialsJSON,
 			BaseOutputDir:   cfg.OutputDir,
 			TargetRepo:      cfg.TargetRepo,
 		}, nil
 	}
 
-	resolvedCredentialsPath := *credentialsPath
-
-	var credentialsJSON []byte
-	// When no credentials file is provided via the flag, fall back to the raw
-	// credentials JSON injected through the environment. It is used directly,
-	// so no temporary file is written to disk.
-	if resolvedCredentialsPath == "" {
-		if raw := env.GetGoEnv("GOOGLE_CREDENTIALS"); raw != "" {
-			credentialsJSON = []byte(raw)
-		}
-	}
-
-	if resolvedCredentialsPath == "" && len(credentialsJSON) == 0 {
-		flag.Usage()
-		os.Exit(1)
-	}
-
 	cfg := &APIConfig{
-		CredentialsPath: resolvedCredentialsPath,
 		CredentialsJSON: credentialsJSON,
 		BaseOutputDir:   *baseOutputDir,
 		TargetRepo:      *targetRepo,
@@ -77,8 +59,5 @@ func LoadConfig() (*APIConfig, error) {
 }
 
 func (c *APIConfig) Validate() error {
-	if len(c.CredentialsJSON) > 0 {
-		return gdocs.ValidateCredentials(c.CredentialsJSON)
-	}
-	return config.ValidateCredentialsPath(c.CredentialsPath)
+	return gdocs.ValidateCredentials(c.CredentialsJSON)
 }
