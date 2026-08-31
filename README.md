@@ -96,7 +96,17 @@ Current execution modes:
 
 The API server exposes a small HTTP surface for triggering the PR-creation workflow and checking health.
 
-Secrets are **never** accepted in request bodies. The Google service account credentials path is configured server-side (via `--credentials`), and the GitHub token is resolved from the server environment (`GITHUB_TOKEN` / `GH_TOKEN` / `gh auth token`).
+Secrets are **never** accepted in request bodies. The Google service account credentials are read from environment variables (see below), and the GitHub token is resolved from the server environment (`GITHUB_TOKEN` / `GH_TOKEN` / `gh auth token`).
+
+### Credentials via environment variables
+Copy the `.env` file into `.env.local` and populate the Google API keys:
+
+```bash
+APP_PROJECT_ID=your-project
+APP_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+APP_CLIENT_EMAIL=svc@your-project.iam.gserviceaccount.com
+APP_CLIENT_ID=1234567890
+```
 
 ### Run the API server
 
@@ -107,10 +117,9 @@ task build
 task run-server
 ```
 
-`task run-server` defaults `CREDENTIALS` to `./credentials.json`. You can also run the binary directly:
-
+`task run-server` reads the credentials from your environment (exported shell variables and/or the `.env` / `.env.local` files).
 ```bash
-./bauer-api --credentials ./credentials.json
+./bauer-api
 ```
 
 The server listens on the port set by the `APP_PORT` environment variable (injected by the `go-framework` charm), defaulting to `:8080` when it is not set.
