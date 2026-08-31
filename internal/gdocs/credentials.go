@@ -3,7 +3,6 @@ package gdocs
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"bauer/internal/env"
 )
@@ -51,21 +50,6 @@ func CredentialsFromEnv() ([]byte, error) {
 	}
 
 	return data, nil
-}
-
-// ValidateCredentialsFile checks if the credentials file exists, is readable, and contains required fields.
-func ValidateCredentialsFile(path string) error {
-	// Read the credentials file
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("failed to read credentials file: %w", err)
-	}
-
-	if len(data) == 0 {
-		return fmt.Errorf("credentials file is empty: %s", path)
-	}
-
-	return ValidateCredentials(data)
 }
 
 // ValidateCredentials checks that the raw service account JSON is parseable and

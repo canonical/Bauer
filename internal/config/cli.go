@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bauer/internal/gdocs"
 	"flag"
 	"fmt"
 	"os"
@@ -15,7 +16,6 @@ func Load() (*Config, error) {
 	// but standard `flag` usage usually assumes run once per process.
 
 	docID := flag.String("doc-id", "", "Google Doc ID to extract feedback from (required)")
-	credentialsPath := flag.String("credentials", "", "Path to service account JSON (required)")
 	configFile := flag.String("config", "", "Path to JSON config file")
 	parseOnly := flag.Bool("parse-only", false, "Parse document to JSON only; skip GitHub integration")
 	pageRefresh := flag.Bool("page-refresh", false, "Use page refresh mode with page-refresh-instructions template")
@@ -25,7 +25,7 @@ func Load() (*Config, error) {
 	// Custom usage message
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage:\n\n")
-		fmt.Fprintf(os.Stderr, "\t%s --doc-id <doc-id> --credentials <path> [flags]\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "\t%s --doc-id <doc-id> [flags]\n\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Flags:\n\n")
 
 		// Manually format flags
@@ -36,7 +36,6 @@ func Load() (*Config, error) {
 		}{
 			{"--config", "<string>", "Path to JSON config file"},
 			{"--doc-id", "<string>", "Google Doc ID to extract feedback from (required)"},
-			{"--credentials", "<string>", "Path to service account JSON (required)"},
 			{"--parse-only", "", "Parse document to JSON only; skip GitHub integration"},
 			{"--page-refresh", "", "Use page refresh mode with page-refresh-instructions template"},
 			{"--output-dir", "<string>", "Directory for generated prompt files (default: bauer-output)"},
@@ -62,14 +61,20 @@ func Load() (*Config, error) {
 	}
 
 	// If no required flags are provided, show usage and exit
-	if *docID == "" && *credentialsPath == "" {
+	if *docID == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
 
+	// Credentials are assembled from environment variables.
+	credentialsJSON, err := gdocs.CredentialsFromEnv()
+	if err != nil {
+		return nil, err
+	}
+
 	cfg := &Config{
 		DocID:           *docID,
-		CredentialsPath: *credentialsPath,
+		CredentialsJSON: credentialsJSON,
 		ParseOnly:       *parseOnly,
 		PageRefresh:     *pageRefresh,
 		OutputDir:       *outputDir,

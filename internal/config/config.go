@@ -3,8 +3,6 @@ package config
 import (
 	"bauer/internal/gdocs"
 	"errors"
-	"fmt"
-	"os"
 )
 
 // Config holds the runtime configuration for BAU.
@@ -12,12 +10,8 @@ type Config struct {
 	// DocID is the Google Doc ID to extract feedback from.
 	DocID string `json:"doc_id"`
 
-	// CredentialsPath is the path to the Google Cloud service account JSON key file.
-	CredentialsPath string `json:"credentials"`
-
-	// CredentialsJSON holds the raw service account JSON. When set it takes
-	// precedence over CredentialsPath, allowing credentials supplied through the
-	// environment to be used without staging them on disk.
+	// CredentialsJSON holds the raw service account JSON assembled from the
+	// environment. Credentials are never read from disk.
 	CredentialsJSON []byte `json:"-"`
 
 	// ParseOnly indicates Phase 1 mode - parse document only, skip GitHub integration
@@ -54,43 +48,20 @@ func (c *Config) Validate() error {
 		return errors.New("missing required field: doc_id")
 	}
 
-	// Prefer inline credentials JSON when provided.
+	// Credentials are assembled from the environment. Validate them only when
+	// present; entry points build and validate them before use.
 	if len(c.CredentialsJSON) > 0 {
 		return gdocs.ValidateCredentials(c.CredentialsJSON)
 	}
 
-	return ValidateCredentialsPath(c.CredentialsPath)
-}
-
-// ResolveCredentials returns the raw service account JSON, reading it from
-// CredentialsPath when inline CredentialsJSON was not supplied.
-func (c *Config) ResolveCredentials() ([]byte, error) {
-	if len(c.CredentialsJSON) > 0 {
-		return c.CredentialsJSON, nil
-	}
-	data, err := os.ReadFile(c.CredentialsPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read credentials file: %w", err)
-	}
-	return data, nil
-}
-
-func ValidateCredentialsPath(path string) error {
-	// Verify credentials file exists
-	info, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return fmt.Errorf("credentials file not found: %s", path)
-	}
-	if err != nil {
-		return fmt.Errorf("error checking credentials file: %w", err)
-	}
-	if info.IsDir() {
-		return fmt.Errorf("credentials path is a directory, expected a file: %s", path)
-	}
-
-	// Validate credentials content
-	if err := gdocs.ValidateCredentialsFile(path); err != nil {
-		return fmt.Errorf("%w", err)
-	}
 	return nil
+}
+
+// ResolveCredentials returns the raw service account JSON assembled from the
+// environment.
+func (c *Config) ResolveCredentials() ([]byte, error) {
+	if len(c.CredentialsJSON) == 0 {
+		return nil, errors.New("missing service account credentials")
+	}
+	return c.CredentialsJSON, nil
 }

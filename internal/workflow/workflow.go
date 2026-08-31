@@ -24,10 +24,9 @@ type WorkflowInput struct {
 	BranchPrefix string
 
 	// Bauer configuration
-	DocID       string
-	Credentials string
-	// CredentialsJSON holds the raw service account JSON. When set it is used
-	// directly instead of reading Credentials from disk.
+	DocID string
+	// CredentialsJSON holds the raw service account JSON assembled from the
+	// environment. It is used directly to authenticate against Google APIs.
 	CredentialsJSON []byte
 	PageRefresh     bool
 	OutputDir       string
@@ -96,28 +95,10 @@ func ExecuteWorkflow(ctx context.Context, input WorkflowInput, orch orchestrator
 
 	logger := slog.Default()
 
-	// Convert credentials path to absolute
-	// Do this before changing directory so relative paths work.
-	// Skipped when inline credentials JSON is supplied.
-	var credentialsPath string
-	if len(input.CredentialsJSON) == 0 && input.Credentials != "" {
-		absPath, err := filepath.Abs(input.Credentials)
-		if err != nil {
-			output.Status = "failed"
-			output.Errors = append(output.Errors, fmt.Sprintf("failed to resolve credentials path: %v", err))
-			output.EndTime = time.Now()
-			output.TotalDuration = output.EndTime.Sub(output.StartTime)
-			return output, err
-		}
-		credentialsPath = absPath
-		logger.Info("workflow: resolved credentials path", "path", credentialsPath)
-	}
-
 	logger.Info("workflow: parse phase")
 
 	bauerCfg := &config.Config{
 		DocID:           input.DocID,
-		CredentialsPath: credentialsPath,
 		CredentialsJSON: input.CredentialsJSON,
 		PageRefresh:     input.PageRefresh,
 		OutputDir:       input.OutputDir,

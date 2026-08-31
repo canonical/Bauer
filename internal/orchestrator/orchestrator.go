@@ -64,7 +64,6 @@ func (o *DefaultOrchestrator) Execute(ctx context.Context, cfg *config.Config) (
 	if err != nil {
 		slog.Error("Failed to initialize Google Docs client",
 			slog.String("error", err.Error()),
-			slog.String("credentials_path", cfg.CredentialsPath),
 		)
 		return nil, fmt.Errorf("failed to initialize Google Docs client: %w", err)
 	}
