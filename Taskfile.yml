@@ -1,4 +1,5 @@
 version: "3"
+dotenv: [".env.local", ".env"]
 
 tasks:
   build:
@@ -25,11 +26,6 @@ tasks:
 
   run-server:
     desc: Run the API server locally
-    vars:
-      CREDENTIALS: '{{.CREDENTIALS | default "./credentials.json"}}'
-    env:
-      APP_GOOGLE_CREDENTIALS:
-        sh: cat {{.CREDENTIALS}}
     cmds:
       - ./bauer-api
 
