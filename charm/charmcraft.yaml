@@ -32,9 +32,19 @@ config:
       type: string
       description: GitHub token for authentication
       default: ""
-    google-credentials:
+    project-id:
       type: string
-      description: |
-        Contents of the Google service account JSON key file used to
-        authenticate against the Google service APIs.
+      description: Google service account project_id.
+      default: ""
+    private-key:
+      type: string
+      description: Google service account private_key.
+      default: ""
+    client-email:
+      type: string
+      description: Google service account client_email.
+      default: ""
+    client-id:
+      type: string
+      description: Google service account client_id.
       default: ""
