@@ -27,8 +27,7 @@ func (m *mockOrchestrator) Execute(_ context.Context, _ *config.Config) (*orches
 func newRouteConfig(orch orchestrator.Orchestrator, outputDir string) types.RouteConfig {
 	return types.RouteConfig{
 		APIConfig: types.APIConfig{
-			CredentialsPath: "creds.json",
-			BaseOutputDir:   outputDir,
+			BaseOutputDir: outputDir,
 		},
 		Orchestrator: orch,
 	}

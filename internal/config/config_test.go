@@ -8,12 +8,13 @@ import (
 
 // validCredentialsJSON is a minimal service-account key that satisfies
 // gdocs.ValidateCredentialsFile, which requires the type, private_key,
-// client_email, project_id, and token_uri fields to be non-empty.
+// client_email, client_id, project_id, and token_uri fields to be non-empty.
 const validCredentialsJSON = `{
 	"type": "service_account",
 	"project_id": "test-project",
 	"private_key": "-----BEGIN PRIVATE KEY-----\nFAKE\n-----END PRIVATE KEY-----\n",
 	"client_email": "test@test-project.iam.gserviceaccount.com",
+	"client_id": "1234567890",
 	"token_uri": "https://oauth2.googleapis.com/token"
 }`
 
