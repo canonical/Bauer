@@ -21,7 +21,6 @@ task build
 
 ```
 ./bauer --doc-id <doc-id> \
-  --credentials <path-to-creds> \
   --github-repo <github-repo>
 ```
 `--doc-id` accepts either a bare document ID or a full Google Docs URL (e.g. `https://docs.google.com/document/d/<doc-id>`); the document ID and tab are extracted automatically.
@@ -30,13 +29,19 @@ Additionally, you can run it with `--parse-only` without creating an issue.
 
 
 ## Configuration
-1. Create a credentials file by copying the example
-```
-cp google-credentials-example.json credentials.json
-```
-2. Get credentials from Google Cloud service or Bitwarden (internally)
-3. Fill up `credentials.json` with Google Cloud credentials (see [Generating Google Cloud credentials](https://developers.google.com/workspace/guides/create-credentials)).
-4. Share copy document with service account
+
+The service account credentials are read from environment variables (the same `APP_*` variables used by the API — see [Credentials via environment variables](#credentials-via-environment-variables)):
+
+| Environment variable | Service account field |
+| -------------------- | --------------------- |
+| `APP_PROJECT_ID`     | `project_id`          |
+| `APP_PRIVATE_KEY`    | `private_key`         |
+| `APP_CLIENT_EMAIL`   | `client_email`        |
+| `APP_CLIENT_ID`      | `client_id`           |
+
+1. Get credentials from Google Cloud service or Bitwarden (internally) (see [Generating Google Cloud credentials](https://developers.google.com/workspace/guides/create-credentials)).
+2. Export the `APP_*` variables in your shell or place them in a `.env` / `.env.local` file at the repository root (`task` loads these automatically).
+3. Share the copy document with the service account.
 
 ## Usage
 
@@ -62,7 +67,7 @@ gh auth status
 ```
 
 ```bash
-./bauer --doc-id <your-document-id> --credentials ./credentials.json
+task run-cli -- --doc-id <your-document-id> --parse-only
 ```
 
 5. Parameters
@@ -71,7 +76,6 @@ gh auth status
 | ------------------ | ------ | -------------------- | ------------------------------------------------------------------------------- | -------------------- |
 | `--doc-id`         | string | (required)           | Google Doc ID or full Google Docs URL (e.g. `https://docs.google.com/document/d/<doc-id>/edit?tab=t.0`) | No               |
 | `--github-repo`    | string | (required if not parse-only) | GitHub repository (owner/repo or HTTPS URL)                              | Yes*             |
-| `--credentials`    | string | `bau-test-creds.json` | Path to service account credentials JSON                                       | No               |
 | `--local-repo-path` | string | `/tmp/ubuntu.com`    | Local path for cloned repository                                               | No               |
 | `--output-dir`     | string | `bauer-output`       | Output directory for Bauer results                                             | No               |
 | `--branch-prefix`  | string | `bauer`              | Branch naming prefix                                                            | No               |
@@ -96,7 +100,17 @@ Current execution modes:
 
 The API server exposes a small HTTP surface for triggering the PR-creation workflow and checking health.
 
-Secrets are **never** accepted in request bodies. The Google service account credentials path is configured server-side (via `--credentials`), and the GitHub token is resolved from the server environment (`GITHUB_TOKEN` / `GH_TOKEN` / `gh auth token`).
+Secrets are **never** accepted in request bodies. The Google service account credentials are read from environment variables (see below), and the GitHub token is resolved from the server environment (`GITHUB_TOKEN` / `GH_TOKEN` / `gh auth token`).
+
+### Credentials via environment variables
+Copy the `.env` file into `.env.local` and populate the Google API keys:
+
+```bash
+APP_PROJECT_ID=your-project
+APP_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+APP_CLIENT_EMAIL=svc@your-project.iam.gserviceaccount.com
+APP_CLIENT_ID=1234567890
+```
 
 ### Run the API server
 
@@ -107,10 +121,9 @@ task build
 task run-server
 ```
 
-`task run-server` defaults `CREDENTIALS` to `./credentials.json`. You can also run the binary directly:
-
+`task run-server` reads the credentials from your environment (exported shell variables and/or the `.env` / `.env.local` files).
 ```bash
-./bauer-api --credentials ./credentials.json
+./bauer-api
 ```
 
 The server listens on the port set by the `APP_PORT` environment variable (injected by the `go-framework` charm), defaulting to `:8080` when it is not set.

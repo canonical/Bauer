@@ -66,15 +66,15 @@ func WorkflowPost(rc types.RouteConfig) func(w http.ResponseWriter, r *http.Requ
 		}
 
 		input := workflow.WorkflowInput{
-			GitHubRepo:    payload.GitHubRepo,
-			GitHubToken:   token,
-			BranchPrefix:  branchPrefix,
-			DocID:         payload.DocID,
-			Credentials:   rc.APIConfig.CredentialsPath,
-			PageRefresh:   payload.PageRefresh,
-			OutputDir:     fmt.Sprintf("%s/%s", rc.APIConfig.BaseOutputDir, requestID),
-			ParseOnly:     payload.ParseOnly,
-			LocalRepoPath: fmt.Sprintf("/tmp/bauer-workflow-%s", requestID),
+			GitHubRepo:      payload.GitHubRepo,
+			GitHubToken:     token,
+			BranchPrefix:    branchPrefix,
+			DocID:           payload.DocID,
+			CredentialsJSON: rc.APIConfig.CredentialsJSON,
+			PageRefresh:     payload.PageRefresh,
+			OutputDir:       fmt.Sprintf("%s/%s", rc.APIConfig.BaseOutputDir, requestID),
+			ParseOnly:       payload.ParseOnly,
+			LocalRepoPath:   fmt.Sprintf("/tmp/bauer-workflow-%s", requestID),
 		}
 
 		slog.Info("workflow request received",

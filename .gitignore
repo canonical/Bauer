@@ -16,3 +16,4 @@ bauer
 dist/
 credentials.json
 bauer-api
+bauer-cli

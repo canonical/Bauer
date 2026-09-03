@@ -3,8 +3,6 @@ package config
 import (
 	"bauer/internal/gdocs"
 	"errors"
-	"fmt"
-	"os"
 )
 
 // Config holds the runtime configuration for BAU.
@@ -12,8 +10,9 @@ type Config struct {
 	// DocID is the Google Doc ID to extract feedback from.
 	DocID string `json:"doc_id"`
 
-	// CredentialsPath is the path to the Google Cloud service account JSON key file.
-	CredentialsPath string `json:"credentials"`
+	// CredentialsJSON holds the raw service account JSON assembled from the
+	// environment. Credentials are never read from disk.
+	CredentialsJSON []byte `json:"-"`
 
 	// ParseOnly indicates Phase 1 mode - parse document only, skip GitHub integration
 	ParseOnly bool `json:"parse_only"`
@@ -49,25 +48,20 @@ func (c *Config) Validate() error {
 		return errors.New("missing required field: doc_id")
 	}
 
-	return ValidateCredentialsPath(c.CredentialsPath)
+	// Credentials are assembled from the environment. Validate them only when
+	// present; entry points build and validate them before use.
+	if len(c.CredentialsJSON) > 0 {
+		return gdocs.ValidateCredentials(c.CredentialsJSON)
+	}
+
+	return nil
 }
 
-func ValidateCredentialsPath(path string) error {
-	// Verify credentials file exists
-	info, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return fmt.Errorf("credentials file not found: %s", path)
+// ResolveCredentials returns the raw service account JSON assembled from the
+// environment.
+func (c *Config) ResolveCredentials() ([]byte, error) {
+	if len(c.CredentialsJSON) == 0 {
+		return nil, errors.New("missing service account credentials")
 	}
-	if err != nil {
-		return fmt.Errorf("error checking credentials file: %w", err)
-	}
-	if info.IsDir() {
-		return fmt.Errorf("credentials path is a directory, expected a file: %s", path)
-	}
-
-	// Validate credentials content
-	if err := gdocs.ValidateCredentialsFile(path); err != nil {
-		return fmt.Errorf("%w", err)
-	}
-	return nil
+	return c.CredentialsJSON, nil
 }

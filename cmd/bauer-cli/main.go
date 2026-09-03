@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bauer/internal/gdocs"
 	"bauer/internal/github"
 	"bauer/internal/orchestrator"
 	"bauer/internal/workflow"
@@ -15,7 +16,6 @@ func main() {
 	// Parse CLI flags
 	githubRepo := flag.String("github-repo", "", "GitHub repository (owner/repo or HTTPS URL)")
 	docID := flag.String("doc-id", "", "Google Doc ID")
-	credentialsPath := flag.String("credentials", "bau-test-creds.json", "Path to service account credentials JSON")
 	localRepoPath := flag.String("local-repo-path", "/tmp/ubuntu.com", "Local path for cloned repository")
 	parseOnly := flag.Bool("parse-only", false, "Parse document and output machine-readable JSON only")
 	outputDir := flag.String("output-dir", "bauer-output", "Output directory for Bauer results")
@@ -35,6 +35,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Credentials are assembled from environment variables (APP_PROJECT_ID,
+	// APP_PRIVATE_KEY, APP_CLIENT_EMAIL, APP_CLIENT_ID).
+	credentialsJSON, err := gdocs.CredentialsFromEnv()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+		os.Exit(1)
+	}
+
 	fmt.Println(strings.Repeat("=", 80))
 	fmt.Println("Bauer - A tool to automate BAU tasks")
 	fmt.Println(strings.Repeat("=", 80))
@@ -51,14 +59,14 @@ func main() {
 	}
 
 	workflowInput := workflow.WorkflowInput{
-		GitHubRepo:    *githubRepo,
-		GitHubToken:   ghToken,
-		BranchPrefix:  *branchPrefix,
-		DocID:         *docID,
-		Credentials:   *credentialsPath,
-		LocalRepoPath: *localRepoPath,
-		ParseOnly:     *parseOnly,
-		OutputDir:     *outputDir,
+		GitHubRepo:      *githubRepo,
+		GitHubToken:     ghToken,
+		BranchPrefix:    *branchPrefix,
+		DocID:           *docID,
+		CredentialsJSON: credentialsJSON,
+		LocalRepoPath:   *localRepoPath,
+		ParseOnly:       *parseOnly,
+		OutputDir:       *outputDir,
 	}
 
 	orch := orchestrator.NewOrchestrator()
