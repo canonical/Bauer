@@ -38,6 +38,10 @@ func NotFound(err error) *Response {
 	return &Response{Code: http.StatusNotFound, Error: err.Error()}
 }
 
+func Unauthorized(err error) *Response {
+	return &Response{Code: http.StatusUnauthorized, Error: err.Error()}
+}
+
 func (r *Response) Render(w http.ResponseWriter, _ *http.Request) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(r.Code)

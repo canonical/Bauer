@@ -21,7 +21,10 @@ parts:
         plugin: nil
         stage-packages:
             - git
-            - ca-certificates
+        # ca-certificates is already staged by the go-framework runtime part;
+        # drop git's differing copy to avoid a staging collision.
+        stage:
+            - -etc/ssl/certs/ca-certificates.crt
 
     gh-cli:
         plugin: dump

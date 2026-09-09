@@ -2,6 +2,7 @@ package types
 
 import (
 	"bauer/internal/config"
+	"bauer/internal/env"
 	"bauer/internal/gdocs"
 	"flag"
 )
@@ -18,6 +19,10 @@ type APIConfig struct {
 	// TargetRepo is the path (relative or absolute) to the target repository
 	// where tasks should be executed. If not specified, uses the current directory.
 	TargetRepo string `json:"target_repo"`
+
+	// APIToken is the shared bearer token callers must present to reach the
+	// workflow endpoint. Sourced from the charm config option "api-token".
+	APIToken string
 }
 
 func LoadConfig() (*APIConfig, error) {
@@ -33,6 +38,8 @@ func LoadConfig() (*APIConfig, error) {
 		return nil, err
 	}
 
+	apiToken := env.GetGoEnv("API_TOKEN")
+
 	if *configFile != "" {
 		cfg, err := config.LoadFromJSONFile(*configFile)
 		if err != nil {
@@ -42,6 +49,7 @@ func LoadConfig() (*APIConfig, error) {
 			CredentialsJSON: credentialsJSON,
 			BaseOutputDir:   cfg.OutputDir,
 			TargetRepo:      cfg.TargetRepo,
+			APIToken:        apiToken,
 		}, nil
 	}
 
@@ -49,6 +57,7 @@ func LoadConfig() (*APIConfig, error) {
 		CredentialsJSON: credentialsJSON,
 		BaseOutputDir:   *baseOutputDir,
 		TargetRepo:      *targetRepo,
+		APIToken:        apiToken,
 	}
 
 	if err := cfg.Validate(); err != nil {
