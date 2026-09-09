@@ -70,6 +70,6 @@ func SetupGitHubAuth(token string) error {
 
 // IsGhCLIInstalled checks if gh CLI is installed
 func IsGhCLIInstalled() bool {
-	cmd := exec.Command("which", "gh")
-	return cmd.Run() == nil
+	_, err := exec.LookPath("gh")
+	return err == nil
 }

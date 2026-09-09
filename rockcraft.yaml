@@ -1,6 +1,5 @@
 name: bauer-api
-base: bare # as an alternative, an ubuntu base can be used
-build-base: ubuntu@24.04 # build-base is required when the base is bare
+base: ubuntu@24.04
 version: '0.1' # just for humans. Semantic versioning is recommended
 summary: Automate copy update changes # 79 char long summary
 description: |
@@ -17,3 +16,17 @@ parts:
     go-framework/install-app:
         organize:
             bin/bauer-api: usr/local/bin/bauer-api
+
+    runtime-tools:
+        plugin: nil
+        stage-packages:
+            - git
+            - ca-certificates
+
+    gh-cli:
+        plugin: dump
+        source: https://github.com/cli/cli/releases/download/v2.63.2/gh_2.63.2_linux_amd64.tar.gz
+        organize:
+            gh_2.63.2_linux_amd64/bin/gh: usr/bin/gh
+        stage:
+            - usr/bin/gh
