@@ -2,8 +2,6 @@ name: Pack and Deploy
 
 on:
   workflow_dispatch:
-  # TODO: Remove after QA
-  pull_request:
   push:
     branches:
       - main
