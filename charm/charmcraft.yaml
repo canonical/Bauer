@@ -28,6 +28,9 @@ extensions:
 
 config:
   options:
+    api-token:
+      type: secret
+      description: Shared bearer token required to call the workflow endpoint.
     github-token:
       type: string
       description: GitHub token for authentication

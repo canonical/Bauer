@@ -11,9 +11,9 @@ bauer-output/
 .DS_Store
 .vscode/
 *.exe
-bauer
+/bauer
 # Added by goreleaser init:
 dist/
 credentials.json
-bauer-api
-bauer-cli
+/bauer-api
+/bauer-cli

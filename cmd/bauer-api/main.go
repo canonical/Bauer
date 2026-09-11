@@ -38,7 +38,8 @@ func run() error {
 	mux.HandleFunc("GET /api/v1", v1.GetHealth)
 
 	// Workflow endpoint, which triggers the PR-creation workflow on a target repository.
-	mux.HandleFunc("POST /api/v1", v1.WorkflowPost(rc))
+	// Guarded by a shared bearer token so it cannot be triggered anonymously.
+	mux.Handle("POST /api/v1", middleware.RequireAPIToken(cfg.APIToken)(http.HandlerFunc(v1.WorkflowPost(rc))))
 
 	// The go-framework charm injects the port the workload should listen on via
 	// the APP_PORT environment variable. Fall back to the go-framework default
