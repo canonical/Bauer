@@ -1,0 +1,3177 @@
+{
+  "document_title": "Copy of /solutions/infrastructure/sovereign-cloud",
+  "document_id": "1G2MAxR5GIHph7dAaBrvKrV3CEZjVgWxEzen06_XB4wE",
+  "tab_id": "t.0",
+  "metadata": {
+    "raw": {
+      "Main CTA (call to action)": "Contact us",
+      "NEW *Suggested navigation": "Bubble navigation under Canonical \u003e Solutions \u003e Infrastructure \u003e Sovereign Cloud",
+      "Page description (160 characters max)": "Gain control of your data and infrastructure with an open source sovereign cloud from Canonical",
+      "Page owner (writer and department)": "",
+      "Page title (60 characters max)": "Sovereign cloud",
+      "Page type (choose from drop down)": "",
+      "Stage in the funnel": "",
+      "Suggested page URL": "/solutions/infrastructure/sovereign-cloud",
+      "Target audience (choose from drop down)": "",
+      "Top three SEO keywords": "Sovereign cloud"
+    },
+    "page_title": "Sovereign cloud",
+    "page_description": "Gain control of your data and infrastructure with an open source sovereign cloud from Canonical",
+    "suggested_url": "/solutions/infrastructure/sovereign-cloud",
+    "table_start_index": 10,
+    "table_end_index": 619
+  },
+  "structure": {
+    "headings": [
+      {
+        "id": "heading-1",
+        "text": "What customers say",
+        "level": 1,
+        "start_index": 11778,
+        "end_index": 11797
+      }
+    ],
+    "tables": [
+      {
+        "id": "table-1",
+        "title": "TEMPLATE",
+        "start_index": 10,
+        "end_index": 619,
+        "row_ranges": [
+          {
+            "start_index": 11,
+            "end_index": 24,
+            "cell_ranges": [
+              {
+                "start_index": 12,
+                "end_index": 22,
+                "text": "Metadata",
+                "first_line": "Metadata"
+              },
+              {
+                "start_index": 22,
+                "end_index": 24,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          },
+          {
+            "start_index": 24,
+            "end_index": 74,
+            "cell_ranges": [
+              {
+                "start_index": 25,
+                "end_index": 57,
+                "text": "Page title (60 characters max)",
+                "first_line": "Page title (60 characters max)"
+              },
+              {
+                "start_index": 57,
+                "end_index": 74,
+                "text": "Sovereign cloud",
+                "first_line": "Sovereign cloud"
+              }
+            ]
+          },
+          {
+            "start_index": 74,
+            "end_index": 212,
+            "cell_ranges": [
+              {
+                "start_index": 75,
+                "end_index": 114,
+                "text": "Page description (160 characters max)",
+                "first_line": "Page description (160 characters max)"
+              },
+              {
+                "start_index": 114,
+                "end_index": 212,
+                "text": "Gain control of your data and infrastructure with an open source sovereign cloud from Canonical",
+                "first_line": "Gain control of your data and infrastructure with ..."
+              }
+            ]
+          },
+          {
+            "start_index": 212,
+            "end_index": 276,
+            "cell_ranges": [
+              {
+                "start_index": 213,
+                "end_index": 233,
+                "text": "Suggested page URL",
+                "first_line": "Suggested page URL"
+              },
+              {
+                "start_index": 233,
+                "end_index": 276,
+                "text": "/solutions/infrastructure/sovereign-cloud",
+                "first_line": "/solutions/infrastructure/sovereign-cloud"
+              }
+            ]
+          },
+          {
+            "start_index": 276,
+            "end_index": 386,
+            "cell_ranges": [
+              {
+                "start_index": 277,
+                "end_index": 304,
+                "text": "NEW *Suggested navigation",
+                "first_line": "NEW *Suggested navigation"
+              },
+              {
+                "start_index": 304,
+                "end_index": 386,
+                "text": "Bubble navigation under Canonical \u003e Solutions \u003e Infrastructure \u003e Sovereign Cloud",
+                "first_line": "Bubble navigation under Canonical \u003e Solutions \u003e In..."
+              }
+            ]
+          },
+          {
+            "start_index": 386,
+            "end_index": 426,
+            "cell_ranges": [
+              {
+                "start_index": 387,
+                "end_index": 414,
+                "text": "Main CTA (call to action)",
+                "first_line": "Main CTA (call to action)"
+              },
+              {
+                "start_index": 414,
+                "end_index": 426,
+                "text": "Contact us",
+                "first_line": "Contact us"
+              }
+            ]
+          },
+          {
+            "start_index": 426,
+            "end_index": 469,
+            "cell_ranges": [
+              {
+                "start_index": 427,
+                "end_index": 451,
+                "text": "Top three SEO keywords",
+                "first_line": "Top three SEO keywords"
+              },
+              {
+                "start_index": 451,
+                "end_index": 469,
+                "text": "Sovereign cloud",
+                "first_line": "Sovereign cloud"
+              }
+            ]
+          },
+          {
+            "start_index": 469,
+            "end_index": 514,
+            "cell_ranges": [
+              {
+                "start_index": 470,
+                "end_index": 511,
+                "text": "Target audience (choose from drop down)",
+                "first_line": "Target audience (choose from drop down)"
+              },
+              {
+                "start_index": 511,
+                "end_index": 514,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          },
+          {
+            "start_index": 514,
+            "end_index": 553,
+            "cell_ranges": [
+              {
+                "start_index": 515,
+                "end_index": 550,
+                "text": "Page type (choose from drop down)",
+                "first_line": "Page type (choose from drop down)"
+              },
+              {
+                "start_index": 550,
+                "end_index": 553,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          },
+          {
+            "start_index": 553,
+            "end_index": 578,
+            "cell_ranges": [
+              {
+                "start_index": 554,
+                "end_index": 575,
+                "text": "Stage in the funnel",
+                "first_line": "Stage in the funnel"
+              },
+              {
+                "start_index": 575,
+                "end_index": 578,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          },
+          {
+            "start_index": 578,
+            "end_index": 618,
+            "cell_ranges": [
+              {
+                "start_index": 579,
+                "end_index": 615,
+                "text": "Page owner (writer and department)",
+                "first_line": "Page owner (writer and department)"
+              },
+              {
+                "start_index": 615,
+                "end_index": 618,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          }
+        ],
+        "column_headers": [
+          "Metadata",
+          ""
+        ]
+      },
+      {
+        "id": "table-2",
+        "title": "HERO",
+        "start_index": 627,
+        "end_index": 1167,
+        "row_ranges": [
+          {
+            "start_index": 628,
+            "end_index": 1166,
+            "cell_ranges": [
+              {
+                "start_index": 629,
+                "end_index": 1164,
+                "text": "Sovereign cloud\nControl your infrastructure with an open source sovereign cloud\n\nGeopolitical tensions, evolving regulations, and new security challenges linked to AI have increased enterprises’ needs to control and safeguard their infrastructure. Sovereign clouds built with open source components provide total control over your data, systems, and processing. Choose Canonical to build your sovereign cloud, tailored to meet your organization’s individual compliance, data sovereignty, and operational needs. \n\n[Contact Canonical]",
+                "first_line": "Sovereign cloud"
+              },
+              {
+                "start_index": 1164,
+                "end_index": 1166,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          }
+        ],
+        "column_headers": [
+          "Sovereign cloud",
+          ""
+        ]
+      },
+      {
+        "id": "table-3",
+        "title": "CTA SECTION",
+        "start_index": 1180,
+        "end_index": 1313,
+        "row_ranges": [
+          {
+            "start_index": 1181,
+            "end_index": 1312,
+            "cell_ranges": [
+              {
+                "start_index": 1182,
+                "end_index": 1312,
+                "text": "Learn about sovereign clouds in our free, comprehensive guide.\nGet the guide \u003e\n[https://ubuntu.com/engage/sovereign-cloud-guide]",
+                "first_line": "Learn about sovereign clouds in our free, comprehe..."
+              }
+            ]
+          }
+        ],
+        "column_headers": [
+          "Learn about sovereign clouds in our free, comprehe..."
+        ]
+      },
+      {
+        "id": "table-4",
+        "title": "BASIC TEXT",
+        "start_index": 1325,
+        "end_index": 1927,
+        "row_ranges": [
+          {
+            "start_index": 1326,
+            "end_index": 1926,
+            "cell_ranges": [
+              {
+                "start_index": 1327,
+                "end_index": 1356,
+                "text": "What is a sovereign cloud?",
+                "first_line": "What is a sovereign cloud?"
+              },
+              {
+                "start_index": 1356,
+                "end_index": 1926,
+                "text": "Sovereign clouds are more than a particular cloud architecture. Truly sovereign clouds adhere to a comprehensive set of legal, operational, regulatory, and technical requirements. This ensures that nations and organizations maintain complete control over their data and ownership of their infrastructure, mitigating reliance on cloud providers outside of their region or country.\nA sovereign cloud also offers greater security for sensitive systems through cryptographic features and ensuring that only authorized individuals have access to infrastructure and data.",
+                "first_line": "Sovereign clouds are more than a particular cloud ..."
+              }
+            ]
+          }
+        ],
+        "column_headers": [
+          "What is a sovereign cloud?",
+          "Sovereign clouds are more than a particular cloud ..."
+        ]
+      },
+      {
+        "id": "table-5",
+        "title": "TABBED SECTIONS",
+        "start_index": 1943,
+        "end_index": 4709,
+        "row_ranges": [
+          {
+            "start_index": 1944,
+            "end_index": 2775,
+            "cell_ranges": [
+              {
+                "start_index": 1945,
+                "end_index": 2771,
+                "text": "Levels of sovereignty in the cloud\n[https://assets.ubuntu.com/v1/2aa22624-sovereign_cloud_the_essential_guide_for_enterprises.pdf]\n\nUpdated asset here\n\n\n[alt-text: a diagram linking different types of cloud computing with different levels of sovereignty. It shows that the lowest level, data sovereignty – where the provider offers control over data residency and security – is provided by some public clouds. Some hosted private clouds and proprietary private clouds offer a higher level of control, which is operational sovereignty, where the provider offers control and oversight of cloud management and maintenance. The highest level of control, software sovereignty, is provided by sovereign clouds which offer control and autonomy over software and reduced vendor lock-in.\n\n[Overview] [Data] [Operational][ySoftware]",
+                "first_line": "Levels of sovereignty in the cloud"
+              },
+              {
+                "start_index": 2771,
+                "end_index": 2773,
+                "text": "",
+                "first_line": ""
+              },
+              {
+                "start_index": 2773,
+                "end_index": 2775,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          },
+          {
+            "start_index": 2775,
+            "end_index": 3223,
+            "cell_ranges": [
+              {
+                "start_index": 2776,
+                "end_index": 2779,
+                "text": "",
+                "first_line": ""
+              },
+              {
+                "start_index": 2779,
+                "end_index": 3221,
+                "text": "Digital sovereignty in the cloud\n\nDigital sovereignty refers to the technologies and services that empower organizations to gain and retain absolute control over their infrastructure and data. The specific level of control you require is dictated by your risk tolerance, industry regulations, and legal obligations. While many cloud options exist, a sovereign cloud offers the highest, most comprehensive level of digital control available.",
+                "first_line": "Digital sovereignty in the cloud"
+              },
+              {
+                "start_index": 3221,
+                "end_index": 3223,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          },
+          {
+            "start_index": 3223,
+            "end_index": 3752,
+            "cell_ranges": [
+              {
+                "start_index": 3224,
+                "end_index": 3231,
+                "text": "Data",
+                "first_line": "Data"
+              },
+              {
+                "start_index": 3231,
+                "end_index": 3750,
+                "text": "The foundational level of control that cloud solutions can offer is data sovereignty: control over data residency and the security measures that protect data at rest, in transit, and during processing. \n\nOnly some clouds will guarantee control over where data is stored. This control is critical. Since data is governed by the laws of every region it touches, storing data in the wrong jurisdiction can create significant risks, and may even violate industry-specific and/or national legal or regulatory requirements.",
+                "first_line": "The foundational level of control that cloud solut..."
+              },
+              {
+                "start_index": 3750,
+                "end_index": 3752,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          },
+          {
+            "start_index": 3752,
+            "end_index": 4212,
+            "cell_ranges": [
+              {
+                "start_index": 3753,
+                "end_index": 3767,
+                "text": "Operational",
+                "first_line": "Operational"
+              },
+              {
+                "start_index": 3767,
+                "end_index": 4210,
+                "text": "Operational sovereignty combines data sovereignty with full visibility into the day-to-day management and maintenance of an organization’s cloud. With this independent oversight, you can actively monitor security events, enforce regional compliance, and autonomously restrict access to sensitive systems. Hosted private clouds are a prime example, which provide organizations with dedicated, isolated infrastructure without resource sharing.",
+                "first_line": "Operational sovereignty combines data sovereignty ..."
+              },
+              {
+                "start_index": 4210,
+                "end_index": 4212,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          },
+          {
+            "start_index": 4212,
+            "end_index": 4708,
+            "cell_ranges": [
+              {
+                "start_index": 4213,
+                "end_index": 4225,
+                "text": "ySoftware",
+                "first_line": "ySoftware"
+              },
+              {
+                "start_index": 4225,
+                "end_index": 4706,
+                "text": "ySoftware sovereignty is the ultimate level of control you can have over your cloud, providing data and operational sovereignty and extending control to the underlying technology.\nThe most effective path to software sovereignty is through open source software. Unlike proprietary solutions, open source offers more transparency into cloud components, and may provide opportunities to influence the roadmap. Only sovereign clouds built on open source provide software sovereignty.",
+                "first_line": "ySoftware sovereignty is the ultimate level of con..."
+              },
+              {
+                "start_index": 4706,
+                "end_index": 4708,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          }
+        ],
+        "column_headers": [
+          "Levels of sovereignty in the cloud",
+          "",
+          ""
+        ]
+      },
+      {
+        "id": "table-6",
+        "title": "TEMPLATE BASIC TEXT + SUBHEADINGS",
+        "start_index": 4746,
+        "end_index": 6987,
+        "row_ranges": [
+          {
+            "start_index": 4747,
+            "end_index": 6986,
+            "cell_ranges": [
+              {
+                "start_index": 4748,
+                "end_index": 4779,
+                "text": "Why build a sovereign cloud?",
+                "first_line": "Why build a sovereign cloud?"
+              },
+              {
+                "start_index": 4779,
+                "end_index": 6986,
+                "text": "Reducing reliance on external vendors, mitigating security risk, and new regulations and laws are driving both private enterprises as well as governments and their institutions towards sovereign clouds. \n\nMitigate cybersecurity threats \nSensitive data, including military information and personal medical records, can be at high risk of cyber threats and foreign interference.  Gaining control over both physical infrastructure and code helps you to support robust, safe operations.\nReduce dependence on foreign vendors\nSanctions, wars, infrastructure damage – many circumstances beyond your control could bring your cloud operations to a halt. Relying on global public cloud providers can create dependencies on foreign companies, potentially compromising digital autonomy. \n\nSovereign clouds help you avoid this risky dependence and take control of your digital future.\n\nFind out more about geopatriation of clouds \u003e\nMeet compliance and regulations\nMany countries and entities have adopted data protection laws that mandate storing and processing sensitive and confidential data within national boundaries – a requirement which some public cloud providers can’t meet. The NIS-2 directive and the DORA act in the EU, for example, are making some enterprises rethink their cloud infrastructure.\n\nIf your cloud vendor stores, hosts, or processes your data outside of your jurisdiction, it may be subject to the access and processing laws of the external national entity, potentially creating significant legal and compliance risks.\nGain control over the entire cloud and operations\nSovereign clouds provide you with control and greater transparency of personnel, staffing, and organizational access. For sensitive data, or highly regulated industries, this may be a necessary risk reduction strategy.\n\nImprove resilience and disaster recovery\n\nStandard clouds often mitigate disasters by failing over to international data centers. Depending on the relevant compliance requirements, this may violate local data laws. \n\nBy establishing geographically distant, isolated regions within the same national borders, sovereign clouds can ensure high availability and data recovery whilst mitigating legal risk.",
+                "first_line": "Reducing reliance on external vendors, mitigating ..."
+              }
+            ]
+          }
+        ],
+        "column_headers": [
+          "Why build a sovereign cloud?",
+          "Reducing reliance on external vendors, mitigating ..."
+        ]
+      },
+      {
+        "id": "table-7",
+        "title": "TEMPLATE BASIC TEXT",
+        "start_index": 7008,
+        "end_index": 8167,
+        "row_ranges": [
+          {
+            "start_index": 7009,
+            "end_index": 8166,
+            "cell_ranges": [
+              {
+                "start_index": 7010,
+                "end_index": 7057,
+                "text": "How are sovereign clouds used in industry?",
+                "first_line": "How are sovereign clouds used in industry?"
+              },
+              {
+                "start_index": 7057,
+                "end_index": 8166,
+                "text": "Public sector\nSensitive, personal, and potentially secret state information requires shielding to ensure the integrity of government services and protect national security.\n\nLegal firms\nLegal firms need to ensure that their highly confidential and privileged information is completely controlled. Entire cases could depend on it.\n\nHealthcare\nMedical organizations are tasked with safeguarding individuals' most sensitive medical and personal information. They also need to protect their operations and life-saving equipment against disruptions.\n\nFinancial\nFinancial organizations have regulatory and legal requirements to keep highly sensitive information safe from cyberattacks. A sovereign cloud provides these institutions more autonomy over their infrastructure and data.  \nHighly regulated industries\nThese are just some examples of the verticals that are taking advantage of sovereign clouds. The benefits of digital sovereignty extend to any heavily regulated industry that has a vital interest in controlling its infrastructure and guarding its data.\n\nHow to build a sovereign cloud with Canonical \u003e",
+                "first_line": "Public sector"
+              }
+            ]
+          }
+        ],
+        "column_headers": [
+          "How are sovereign clouds used in industry?",
+          "Public sector"
+        ]
+      },
+      {
+        "id": "table-8",
+        "title": "TABBED SECTIONS",
+        "start_index": 8184,
+        "end_index": 11776,
+        "row_ranges": [
+          {
+            "start_index": 8185,
+            "end_index": 8910,
+            "cell_ranges": [
+              {
+                "start_index": 8186,
+                "end_index": 8906,
+                "text": "Building an open source sovereign cloud\n[https://assets.ubuntu.com/v1/30a0857f-2x_canonicals_composable_software_elements_1.png]\n[alt-text: \n\nA diagram of Canonical’s sovereign cloud software stack. From bottom to top, the layers are MAAS for server automation, Ceph for software defined storage, Landscape and Ubuntu for systems management, and Kubernetes, MicroCloud, and OpenStack for virtualization and orchestration. Kubernetes is an automated container management and workload orchestration solution. MicroCloud is a lightweight, low entry-barrier cloud computing platform. OpenStack is a highly customizable, featureful cloud. \n\n[Overview] [MAAS] [Ceph][Landscape][Ubuntu OS][MicroCloud][OpenStack][Kubernetes]",
+                "first_line": "Building an open source sovereign cloud"
+              },
+              {
+                "start_index": 8906,
+                "end_index": 8908,
+                "text": "",
+                "first_line": ""
+              },
+              {
+                "start_index": 8908,
+                "end_index": 8910,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          },
+          {
+            "start_index": 8910,
+            "end_index": 9232,
+            "cell_ranges": [
+              {
+                "start_index": 8911,
+                "end_index": 8921,
+                "text": "Overview",
+                "first_line": "Overview"
+              },
+              {
+                "start_index": 8921,
+                "end_index": 9230,
+                "text": "Canonical's well-established open source components are backed by up to 15 years of long-term support, ensuring the enduring stability and reliability of your sovereign cloud investment.\n\nIntegrate our components into your existing stack, or combine them for a unified, end-to-end sovereign cloud solution.",
+                "first_line": "Canonical's well-established open source component..."
+              },
+              {
+                "start_index": 9230,
+                "end_index": 9232,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          },
+          {
+            "start_index": 9232,
+            "end_index": 9606,
+            "cell_ranges": [
+              {
+                "start_index": 9233,
+                "end_index": 9239,
+                "text": "MAAS",
+                "first_line": "MAAS"
+              },
+              {
+                "start_index": 9239,
+                "end_index": 9604,
+                "text": "[MAAS logo]\n\nEvery cloud requires servers to support workloads. However, server management and maintenance can be hugely time consuming. MAAS lightens this burden. \n\nIt streamlines the entire hardware lifecycle, enabling automated and remote server provisioning, configuration, installation, deployment, and discovery, all in a single workflow. \n\nDiscover MAAS \u003e",
+                "first_line": "[MAAS logo]"
+              },
+              {
+                "start_index": 9604,
+                "end_index": 9606,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          },
+          {
+            "start_index": 9606,
+            "end_index": 9881,
+            "cell_ranges": [
+              {
+                "start_index": 9607,
+                "end_index": 9613,
+                "text": "Ceph",
+                "first_line": "Ceph"
+              },
+              {
+                "start_index": 9613,
+                "end_index": 9879,
+                "text": "[Ceph logo]\nCanonical Ceph helps to organize the data on sovereign cloud servers. Ceph is an elastic distributed storage system which combines block, file, and object storage at scale, making it a strong foundation for sovereign clouds. \n\nDiscover Canonical Ceph \u003e",
+                "first_line": "[Ceph logo]"
+              },
+              {
+                "start_index": 9879,
+                "end_index": 9881,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          },
+          {
+            "start_index": 9881,
+            "end_index": 10299,
+            "cell_ranges": [
+              {
+                "start_index": 9882,
+                "end_index": 9893,
+                "text": "Landscape",
+                "first_line": "Landscape"
+              },
+              {
+                "start_index": 9893,
+                "end_index": 10297,
+                "text": "Canonical Landscape delivers control up to the systems management level.\n\nLandscape automates security patching, auditing, access management, and compliance tasks across your Ubuntu estate to keep sovereign cloud systems running smoothly. It helps organizations to remotely update and upgrade machines, as well as managing users and their permissions – on a single pane of glass. \n\nDiscover Landscape \u003e",
+                "first_line": "Canonical Landscape delivers control up to the sys..."
+              },
+              {
+                "start_index": 10297,
+                "end_index": 10299,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          },
+          {
+            "start_index": 10299,
+            "end_index": 10810,
+            "cell_ranges": [
+              {
+                "start_index": 10300,
+                "end_index": 10311,
+                "text": "Ubuntu OS",
+                "first_line": "Ubuntu OS"
+              },
+              {
+                "start_index": 10311,
+                "end_index": 10808,
+                "text": "[Ubuntu logo]\n\nEach element in Canonical’s sovereign cloud software stack is optimized to run on Ubuntu. Through features like AppArmor, File Encryption, Stack Protector, and UEFI Secure Boot, Ubuntu prioritizes user privacy and system integrity by default – which is key for sovereign clouds. \n\nWith Ubuntu Pro, enterprises get up to 15 years of security maintenance for thousands of open source packages, tools for compliance, and the option to add 24/7 enterprise support.\n\nDiscover Ubuntu \u003e",
+                "first_line": "[Ubuntu logo]"
+              },
+              {
+                "start_index": 10808,
+                "end_index": 10810,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          },
+          {
+            "start_index": 10810,
+            "end_index": 11176,
+            "cell_ranges": [
+              {
+                "start_index": 10811,
+                "end_index": 10823,
+                "text": "MicroCloud",
+                "first_line": "MicroCloud"
+              },
+              {
+                "start_index": 10823,
+                "end_index": 11174,
+                "text": "[MicroCloud logo]\n\nCanonical’s lightweight open source cloud, MicroCloud, is designed for companies without extensive on-premise infrastructure. It has a low barrier to entry, with automated deployment and on-site operations. MicroCloud helps you create a sovereign cloud in minutes, from a single node, to 50 node clusters.\n\n\nDiscover MicroCloud \u003e",
+                "first_line": "[MicroCloud logo]"
+              },
+              {
+                "start_index": 11174,
+                "end_index": 11176,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          },
+          {
+            "start_index": 11176,
+            "end_index": 11412,
+            "cell_ranges": [
+              {
+                "start_index": 11177,
+                "end_index": 11188,
+                "text": "OpenStack",
+                "first_line": "OpenStack"
+              },
+              {
+                "start_index": 11188,
+                "end_index": 11410,
+                "text": "[OpenStack logo]\n\nOpenStack is a highly customizable cloud platform, used for everything from a regional public cloud, to an on-premise extension of the public cloud, to sovereign clouds. \n\nDiscover Canonical OpenStack \u003e",
+                "first_line": "[OpenStack logo]"
+              },
+              {
+                "start_index": 11410,
+                "end_index": 11412,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          },
+          {
+            "start_index": 11412,
+            "end_index": 11775,
+            "cell_ranges": [
+              {
+                "start_index": 11413,
+                "end_index": 11425,
+                "text": "Kubernetes",
+                "first_line": "Kubernetes"
+              },
+              {
+                "start_index": 11425,
+                "end_index": 11773,
+                "text": "[Kubernetes logo]\n\nCanonical Kubernetes makes building sovereign clouds across multiple environments that align with your compliance and IT requirements much easier. It provides a layer that makes data and AI applications portable across development frameworks, with minimal adaptations or configuration changes. \n\nDiscover Canonical Kubernetes \u003e",
+                "first_line": "[Kubernetes logo]"
+              },
+              {
+                "start_index": 11773,
+                "end_index": 11775,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          }
+        ],
+        "column_headers": [
+          "Building an open source sovereign cloud",
+          "",
+          ""
+        ]
+      },
+      {
+        "id": "table-9",
+        "title": "TEMPLATE QUOTE 1",
+        "start_index": 11815,
+        "end_index": 12216,
+        "row_ranges": [
+          {
+            "start_index": 11816,
+            "end_index": 12215,
+            "cell_ranges": [
+              {
+                "start_index": 11817,
+                "end_index": 12213,
+                "text": "[Phoenix Systems logo: https://assets.ubuntu.com/v1/78ec4eb1-logo-phoenix-systems-ibm.png ] \n\nWhere other infrastructure providers in Switzerland that use traditional technologies might charge customers a premium uplift per year, we can offer the same capabilities\nfor ten times less while still achieving a better margin.”\n\nThomas Taroni, VP of Product, Phoenix Systems\n\nRead the case study \u003e",
+                "first_line": "[Phoenix Systems logo: https://assets.ubuntu.com/v..."
+              },
+              {
+                "start_index": 12213,
+                "end_index": 12215,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          }
+        ],
+        "column_headers": [
+          "[Phoenix Systems logo: https://assets.ubuntu.com/v...",
+          ""
+        ]
+      },
+      {
+        "id": "table-10",
+        "title": "TEMPLATE QUOTE 2",
+        "start_index": 12234,
+        "end_index": 12571,
+        "row_ranges": [
+          {
+            "start_index": 12235,
+            "end_index": 12570,
+            "cell_ranges": [
+              {
+                "start_index": 12236,
+                "end_index": 12568,
+                "text": "[Firmus logo: https://assets.ubuntu.com/v1/dc69e636-firmus-black.png ] \n\n“We needed a cloud solution that was stable, reliable, and performant. Canonical allowed us to do this by helping to design and deploy our cloud – and they helped us do this quickly.” \n\nPeter Blain, Director of Product and AI, Firmus\n\nRead the case study \u003e",
+                "first_line": "[Firmus logo: https://assets.ubuntu.com/v1/dc69e63..."
+              },
+              {
+                "start_index": 12568,
+                "end_index": 12570,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          }
+        ],
+        "column_headers": [
+          "[Firmus logo: https://assets.ubuntu.com/v1/dc69e63...",
+          ""
+        ]
+      },
+      {
+        "id": "table-11",
+        "title": "TEMPLATE QUOTE 3",
+        "start_index": 12590,
+        "end_index": 13047,
+        "row_ranges": [
+          {
+            "start_index": 12591,
+            "end_index": 13046,
+            "cell_ranges": [
+              {
+                "start_index": 12592,
+                "end_index": 13044,
+                "text": "[Nayatel logo: https://assets.ubuntu.com/v1/d0bd83b2-531-5319609_nayatel-logo-png-transparent-png.png ] \n\n“Knowledge transfer was another reason we chose to partner with Canonical. To minimize long-term operating costs, we don’t want to be reliant on any third party. Canonical is giving our staff the training they need to be able to manage the cloud completely self-sufficiently.”\n\nJahanzeb Arshad, VP of Operations, Nayatel\n\nRead the case study \u003e",
+                "first_line": "[Nayatel logo: https://assets.ubuntu.com/v1/d0bd83..."
+              },
+              {
+                "start_index": 13044,
+                "end_index": 13046,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          }
+        ],
+        "column_headers": [
+          "[Nayatel logo: https://assets.ubuntu.com/v1/d0bd83...",
+          ""
+        ]
+      },
+      {
+        "id": "table-12",
+        "title": "TEMPLATE QUOTE 4",
+        "start_index": 13066,
+        "end_index": 13499,
+        "row_ranges": [
+          {
+            "start_index": 13067,
+            "end_index": 13498,
+            "cell_ranges": [
+              {
+                "start_index": 13068,
+                "end_index": 13496,
+                "text": "[logo: https://assets.ubuntu.com/v1/91d63105-tnm_logo.webp ] \n\n“We wanted to consolidate onto a single, open platform. That way, we wouldn’t be tied to a single vendor, and we’d be able to change parameters at will. The goal was to develop our skills so that we could work with any partner in one cloud environment.”\n\nMacdonald Chamba, Head of Infrastructure and Cloud Services, Telekom Networks Malawi\n\nRead the case study \u003e",
+                "first_line": "[logo: https://assets.ubuntu.com/v1/91d63105-tnm_l..."
+              },
+              {
+                "start_index": 13496,
+                "end_index": 13498,
+                "text": "",
+                "first_line": ""
+              }
+            ]
+          }
+        ],
+        "column_headers": [
+          "[logo: https://assets.ubuntu.com/v1/91d63105-tnm_l...",
+          ""
+        ]
+      },
+      {
+        "id": "table-13",
+        "title": "TEMPLATE CTA",
+        "start_index": 13513,
+        "end_index": 13595,
+        "row_ranges": [
+          {
+            "start_index": 13514,
+            "end_index": 13594,
+            "cell_ranges": [
+              {
+                "start_index": 13515,
+                "end_index": 13594,
+                "text": "Canonical offers cloud design and delivery at a fixed price. Get in touch \u003e",
+                "first_line": "Canonical offers cloud design and delivery at a fi..."
+              }
+            ]
+          }
+        ],
+        "column_headers": [
+          "Canonical offers cloud design and delivery at a fi..."
+        ]
+      },
+      {
+        "id": "table-14",
+        "start_index": 13625,
+        "end_index": 14207,
+        "row_ranges": [
+          {
+            "start_index": 13626,
+            "end_index": 14206,
+            "cell_ranges": [
+              {
+                "start_index": 13627,
+                "end_index": 13664,
+                "text": "Take the next step in your journey",
+                "first_line": "Take the next step in your journey"
+              },
+              {
+                "start_index": 13664,
+                "end_index": 14206,
+                "text": "Rethinking virtualization: open source alternatives for resellers\nExplore powerful open source alternatives to mainstream hypervisor, storage, and other cloud services.\n\nDownload our business guide to multi-cloud\nLearn how to build multi-cloud infrastructure with our guide.\n\nSoftware-defined storage for enterprises\nLearn how Ceph enables you to keep up with the demands on your storage infrastructure.\n\nBrowse Canonical's Managed IT Services \nExplore the different ways that Canonical’s Managed Solutions can simplify your operations.",
+                "first_line": "Rethinking virtualization: open source alternative..."
+              }
+            ]
+          }
+        ],
+        "column_headers": [
+          "Take the next step in your journey",
+          "Rethinking virtualization: open source alternative..."
+        ]
+      }
+    ],
+    "full_text": "TEMPLATE\nMetadata\n\nPage title (60 characters max)\nSovereign cloud\nPage description (160 characters max)\nGain control of your data and infrastructure with an open source sovereign cloud from Canonical \nSuggested page URL\n/solutions/infrastructure/sovereign-cloud\nNEW *Suggested navigation\nBubble navigation under Canonical \u003e Solutions \u003e Infrastructure \u003e Sovereign Cloud\nMain CTA (call to action)\nContact us\nTop three SEO keywords\nSovereign cloud \nTarget audience (choose from drop down)\n\nPage type (choose from drop down)\n\nStage in the funnel\n\nPage owner (writer and department)\n\n\n\n\nHERO\nSovereign cloud\nControl your infrastructure with an open source sovereign cloud\n\nGeopolitical tensions, evolving regulations, and new security challenges linked to AI have increased enterprises’ needs to control and safeguard their infrastructure. Sovereign clouds built with open source components provide total control over your data, systems, and processing. Choose Canonical to build your sovereign cloud, tailored to meet your organization’s individual compliance, data sovereignty, and operational needs. \n\n[Contact Canonical]\n\n\nCTA SECTION\nLearn about sovereign clouds in our free, comprehensive guide.\nGet the guide \u003e\n[https://ubuntu.com/engage/sovereign-cloud-guide]\n\nBASIC TEXT\nWhat is a sovereign cloud?\n\nSovereign clouds are more than a particular cloud architecture. Truly sovereign clouds adhere to a comprehensive set of legal, operational, regulatory, and technical requirements. This ensures that nations and organizations maintain complete control over their data and ownership of their infrastructure, mitigating reliance on cloud providers outside of their region or country.\nA sovereign cloud also offers greater security for sensitive systems through cryptographic features and ensuring that only authorized individuals have access to infrastructure and data. \n\n\nTABBED SECTIONS\nLevels of sovereignty in the cloud\n[https://assets.ubuntu.com/v1/2aa22624-sovereign_cloud_the_essential_guide_for_enterprises.pdf]\n\nUpdated asset here\n\n\n[alt-text: a diagram linking different types of cloud computing with different levels of sovereignty. It shows that the lowest level, data sovereignty – where the provider offers control over data residency and security – is provided by some public clouds. Some hosted private clouds and proprietary private clouds offer a higher level of control, which is operational sovereignty, where the provider offers control and oversight of cloud management and maintenance. The highest level of control, software sovereignty, is provided by sovereign clouds which offer control and autonomy over software and reduced vendor lock-in.\n\n[Overview] [Data] [Operational][ySoftware]\n\n\n \nDigital sovereignty in the cloud\n\nDigital sovereignty refers to the technologies and services that empower organizations to gain and retain absolute control over their infrastructure and data. The specific level of control you require is dictated by your risk tolerance, industry regulations, and legal obligations. While many cloud options exist, a sovereign cloud offers the highest, most comprehensive level of digital control available.\n\nData \nThe foundational level of control that cloud solutions can offer is data sovereignty: control over data residency and the security measures that protect data at rest, in transit, and during processing. \n\nOnly some clouds will guarantee control over where data is stored. This control is critical. Since data is governed by the laws of every region it touches, storing data in the wrong jurisdiction can create significant risks, and may even violate industry-specific and/or national legal or regulatory requirements.\n\nOperational \nOperational sovereignty combines data sovereignty with full visibility into the day-to-day management and maintenance of an organization’s cloud. With this independent oversight, you can actively monitor security events, enforce regional compliance, and autonomously restrict access to sensitive systems. Hosted private clouds are a prime example, which provide organizations with dedicated, isolated infrastructure without resource sharing.\n\nySoftware \nySoftware sovereignty is the ultimate level of control you can have over your cloud, providing data and operational sovereignty and extending control to the underlying technology.\nThe most effective path to software sovereignty is through open source software. Unlike proprietary solutions, open source offers more transparency into cloud components, and may provide opportunities to influence the roadmap. Only sovereign clouds built on open source provide software sovereignty.\n\n\n\n\nTEMPLATE BASIC TEXT + SUBHEADINGS\nWhy build a sovereign cloud?\n\nReducing reliance on external vendors, mitigating security risk, and new regulations and laws are driving both private enterprises as well as governments and their institutions towards sovereign clouds. \n\nMitigate cybersecurity threats \nSensitive data, including military information and personal medical records, can be at high risk of cyber threats and foreign interference.  Gaining control over both physical infrastructure and code helps you to support robust, safe operations.\nReduce dependence on foreign vendors\nSanctions, wars, infrastructure damage – many circumstances beyond your control could bring your cloud operations to a halt. Relying on global public cloud providers can create dependencies on foreign companies, potentially compromising digital autonomy. \n\nSovereign clouds help you avoid this risky dependence and take control of your digital future.\n\nFind out more about geopatriation of clouds \u003e\nMeet compliance and regulations\nMany countries and entities have adopted data protection laws that mandate storing and processing sensitive and confidential data within national boundaries – a requirement which some public cloud providers can’t meet. The NIS-2 directive and the DORA act in the EU, for example, are making some enterprises rethink their cloud infrastructure.\n\nIf your cloud vendor stores, hosts, or processes your data outside of your jurisdiction, it may be subject to the access and processing laws of the external national entity, potentially creating significant legal and compliance risks.\nGain control over the entire cloud and operations\nSovereign clouds provide you with control and greater transparency of personnel, staffing, and organizational access. For sensitive data, or highly regulated industries, this may be a necessary risk reduction strategy.\n\nImprove resilience and disaster recovery\n\nStandard clouds often mitigate disasters by failing over to international data centers. Depending on the relevant compliance requirements, this may violate local data laws. \n\nBy establishing geographically distant, isolated regions within the same national borders, sovereign clouds can ensure high availability and data recovery whilst mitigating legal risk.\n\n\n\n\nTEMPLATE BASIC TEXT\nHow are sovereign clouds used in industry?\n\n\n\nPublic sector\nSensitive, personal, and potentially secret state information requires shielding to ensure the integrity of government services and protect national security.\n\nLegal firms\nLegal firms need to ensure that their highly confidential and privileged information is completely controlled. Entire cases could depend on it.\n\nHealthcare\nMedical organizations are tasked with safeguarding individuals' most sensitive medical and personal information. They also need to protect their operations and life-saving equipment against disruptions.\n\nFinancial\nFinancial organizations have regulatory and legal requirements to keep highly sensitive information safe from cyberattacks. A sovereign cloud provides these institutions more autonomy over their infrastructure and data.  \nHighly regulated industries\nThese are just some examples of the verticals that are taking advantage of sovereign clouds. The benefits of digital sovereignty extend to any heavily regulated industry that has a vital interest in controlling its infrastructure and guarding its data.\n\nHow to build a sovereign cloud with Canonical \u003e\n\nTABBED SECTIONS\nBuilding an open source sovereign cloud\n[https://assets.ubuntu.com/v1/30a0857f-2x_canonicals_composable_software_elements_1.png]\n[alt-text: \n\nA diagram of Canonical’s sovereign cloud software stack. From bottom to top, the layers are MAAS for server automation, Ceph for software defined storage, Landscape and Ubuntu for systems management, and Kubernetes, MicroCloud, and OpenStack for virtualization and orchestration. Kubernetes is an automated container management and workload orchestration solution. MicroCloud is a lightweight, low entry-barrier cloud computing platform. OpenStack is a highly customizable, featureful cloud. \n\n[Overview] [MAAS] [Ceph][Landscape][Ubuntu OS][MicroCloud][OpenStack][Kubernetes] \n\n\nOverview\nCanonical's well-established open source components are backed by up to 15 years of long-term support, ensuring the enduring stability and reliability of your sovereign cloud investment.\n\nIntegrate our components into your existing stack, or combine them for a unified, end-to-end sovereign cloud solution.\n\n\nMAAS\n[MAAS logo]\n\nEvery cloud requires servers to support workloads. However, server management and maintenance can be hugely time consuming. MAAS lightens this burden. \n\nIt streamlines the entire hardware lifecycle, enabling automated and remote server provisioning, configuration, installation, deployment, and discovery, all in a single workflow. \n\nDiscover MAAS \u003e\n\n\nCeph\n[Ceph logo]\nCanonical Ceph helps to organize the data on sovereign cloud servers. Ceph is an elastic distributed storage system which combines block, file, and object storage at scale, making it a strong foundation for sovereign clouds. \n\nDiscover Canonical Ceph \u003e\n\nLandscape\nCanonical Landscape delivers control up to the systems management level.\n\nLandscape automates security patching, auditing, access management, and compliance tasks across your Ubuntu estate to keep sovereign cloud systems running smoothly. It helps organizations to remotely update and upgrade machines, as well as managing users and their permissions – on a single pane of glass. \n\nDiscover Landscape \u003e\n\nUbuntu OS\n[Ubuntu logo]\n\nEach element in Canonical’s sovereign cloud software stack is optimized to run on Ubuntu. Through features like AppArmor, File Encryption, Stack Protector, and UEFI Secure Boot, Ubuntu prioritizes user privacy and system integrity by default – which is key for sovereign clouds. \n\nWith Ubuntu Pro, enterprises get up to 15 years of security maintenance for thousands of open source packages, tools for compliance, and the option to add 24/7 enterprise support.\n\nDiscover Ubuntu \u003e \n\nMicroCloud\n[MicroCloud logo]\n\nCanonical’s lightweight open source cloud, MicroCloud, is designed for companies without extensive on-premise infrastructure. It has a low barrier to entry, with automated deployment and on-site operations. MicroCloud helps you create a sovereign cloud in minutes, from a single node, to 50 node clusters.\n\n\nDiscover MicroCloud \u003e\n\n\nOpenStack\n[OpenStack logo]\n\nOpenStack is a highly customizable cloud platform, used for everything from a regional public cloud, to an on-premise extension of the public cloud, to sovereign clouds. \n\nDiscover Canonical OpenStack \u003e\n\nKubernetes\n[Kubernetes logo]\n\nCanonical Kubernetes makes building sovereign clouds across multiple environments that align with your compliance and IT requirements much easier. It provides a layer that makes data and AI applications portable across development frameworks, with minimal adaptations or configuration changes. \n\nDiscover Canonical Kubernetes \u003e\n\n\n\nWhat customers say\n\nTEMPLATE QUOTE 1\n[Phoenix Systems logo: https://assets.ubuntu.com/v1/78ec4eb1-logo-phoenix-systems-ibm.png ] \n\nWhere other infrastructure providers in Switzerland that use traditional technologies might charge customers a premium uplift per year, we can offer the same capabilities\nfor ten times less while still achieving a better margin.”\n\nThomas Taroni, VP of Product, Phoenix Systems\n\nRead the case study \u003e\n\n\n\nTEMPLATE QUOTE 2\n[Firmus logo: https://assets.ubuntu.com/v1/dc69e636-firmus-black.png ] \n\n“We needed a cloud solution that was stable, reliable, and performant. Canonical allowed us to do this by helping to design and deploy our cloud – and they helped us do this quickly.” \n\nPeter Blain, Director of Product and AI, Firmus\n\nRead the case study \u003e \n\n\n\nTEMPLATE QUOTE 3\n[Nayatel logo: https://assets.ubuntu.com/v1/d0bd83b2-531-5319609_nayatel-logo-png-transparent-png.png ] \n\n“Knowledge transfer was another reason we chose to partner with Canonical. To minimize long-term operating costs, we don’t want to be reliant on any third party. Canonical is giving our staff the training they need to be able to manage the cloud completely self-sufficiently.”\n\nJahanzeb Arshad, VP of Operations, Nayatel\n\nRead the case study \u003e\n\n\n\n\nTEMPLATE QUOTE 4\n[logo: https://assets.ubuntu.com/v1/91d63105-tnm_logo.webp ] \n\n“We wanted to consolidate onto a single, open platform. That way, we wouldn’t be tied to a single vendor, and we’d be able to change parameters at will. The goal was to develop our skills so that we could work with any partner in one cloud environment.”\n\nMacdonald Chamba, Head of Infrastructure and Cloud Services, Telekom Networks Malawi\n\nRead the case study \u003e\n\n\n\nTEMPLATE CTA\nCanonical offers cloud design and delivery at a fixed price. Get in touch \u003e \n\n\n\nTEMPLATE LEARN MORE FOOTER\n\nTake the next step in your journey\n\n\nRethinking virtualization: open source alternatives for resellers\nExplore powerful open source alternatives to mainstream hypervisor, storage, and other cloud services.\n\nDownload our business guide to multi-cloud\nLearn how to build multi-cloud infrastructure with our guide.\n\nSoftware-defined storage for enterprises\nLearn how Ceph enables you to keep up with the demands on your storage infrastructure.\n\nBrowse Canonical's Managed IT Services \nExplore the different ways that Canonical’s Managed Solutions can simplify your operations.\n\n\n\n\n",
+    "text_elements": [
+      {
+        "id": "text-1",
+        "text": "TEMPLATE\n",
+        "start_index": 1,
+        "end_index": 10
+      },
+      {
+        "id": "text-2",
+        "text": "Metadata\n",
+        "start_index": 13,
+        "end_index": 22
+      },
+      {
+        "id": "text-3",
+        "text": "\n",
+        "start_index": 23,
+        "end_index": 24
+      },
+      {
+        "id": "text-4",
+        "text": "Page title (60 characters max)\n",
+        "start_index": 26,
+        "end_index": 57
+      },
+      {
+        "id": "text-5",
+        "text": "Sovereign cloud\n",
+        "start_index": 58,
+        "end_index": 74
+      },
+      {
+        "id": "text-6",
+        "text": "Page description (160 characters max)\n",
+        "start_index": 76,
+        "end_index": 114
+      },
+      {
+        "id": "text-7",
+        "text": "Gain control of your data and infrastructure with an open source sovereign cloud from Canonical ",
+        "start_index": 115,
+        "end_index": 211
+      },
+      {
+        "id": "text-8",
+        "text": "\n",
+        "start_index": 211,
+        "end_index": 212
+      },
+      {
+        "id": "text-9",
+        "text": "Suggested page URL\n",
+        "start_index": 214,
+        "end_index": 233
+      },
+      {
+        "id": "text-10",
+        "text": "/solutions/infrastructure/sovereign-cloud\n",
+        "start_index": 234,
+        "end_index": 276
+      },
+      {
+        "id": "text-11",
+        "text": "NEW",
+        "start_index": 278,
+        "end_index": 281
+      },
+      {
+        "id": "text-12",
+        "text": " *Suggested navigation\n",
+        "start_index": 281,
+        "end_index": 304
+      },
+      {
+        "id": "text-13",
+        "text": "Bubble navigation under Canonical \u003e Solutions \u003e Infrastructure \u003e Sovereign Cloud\n",
+        "start_index": 305,
+        "end_index": 386
+      },
+      {
+        "id": "text-14",
+        "text": "Main CTA (call to action)\n",
+        "start_index": 388,
+        "end_index": 414
+      },
+      {
+        "id": "text-15",
+        "text": "Contact us\n",
+        "start_index": 415,
+        "end_index": 426
+      },
+      {
+        "id": "text-16",
+        "text": "Top three SEO keywords\n",
+        "start_index": 428,
+        "end_index": 451
+      },
+      {
+        "id": "text-17",
+        "text": "Sovereign cloud \n",
+        "start_index": 452,
+        "end_index": 469
+      },
+      {
+        "id": "text-18",
+        "text": "Target audience (choose from drop down)\n",
+        "start_index": 471,
+        "end_index": 511
+      },
+      {
+        "id": "text-19",
+        "text": "\n",
+        "start_index": 512,
+        "end_index": 514
+      },
+      {
+        "id": "text-20",
+        "text": "Page type (choose from drop down)\n",
+        "start_index": 516,
+        "end_index": 550
+      },
+      {
+        "id": "text-21",
+        "text": "\n",
+        "start_index": 551,
+        "end_index": 553
+      },
+      {
+        "id": "text-22",
+        "text": "Stage in the funnel\n",
+        "start_index": 555,
+        "end_index": 575
+      },
+      {
+        "id": "text-23",
+        "text": "\n",
+        "start_index": 576,
+        "end_index": 578
+      },
+      {
+        "id": "text-24",
+        "text": "Page owner (writer and department)\n",
+        "start_index": 580,
+        "end_index": 615
+      },
+      {
+        "id": "text-25",
+        "text": "\n",
+        "start_index": 617,
+        "end_index": 618
+      },
+      {
+        "id": "text-26",
+        "text": "\n",
+        "start_index": 619,
+        "end_index": 620
+      },
+      {
+        "id": "text-27",
+        "text": "\n",
+        "start_index": 620,
+        "end_index": 621
+      },
+      {
+        "id": "text-28",
+        "text": "\n",
+        "start_index": 621,
+        "end_index": 622
+      },
+      {
+        "id": "text-29",
+        "text": "HERO\n",
+        "start_index": 622,
+        "end_index": 627
+      },
+      {
+        "id": "text-30",
+        "text": "Sovereign cloud\n",
+        "start_index": 630,
+        "end_index": 646
+      },
+      {
+        "id": "text-31",
+        "text": "Control your infrastructure with an open source sovereign cloud\n",
+        "start_index": 646,
+        "end_index": 710
+      },
+      {
+        "id": "text-32",
+        "text": "\n",
+        "start_index": 710,
+        "end_index": 711
+      },
+      {
+        "id": "text-33",
+        "text": "Geopolitical tensions, evolving regulations, and new security challenges linked to AI have increased enterprises’ needs to control and safeguard their infrastructure. Sovereign clouds built with open source components provide total control over your data, systems, and processing. Choose Canonical to build your sovereign cloud, tailored to meet your organization’s individual compliance, data sovereignty, and operational needs. ",
+        "start_index": 711,
+        "end_index": 1141
+      },
+      {
+        "id": "text-34",
+        "text": "\n",
+        "start_index": 1141,
+        "end_index": 1142
+      },
+      {
+        "id": "text-35",
+        "text": "\n",
+        "start_index": 1143,
+        "end_index": 1144
+      },
+      {
+        "id": "text-36",
+        "text": "[Contact Canonical]",
+        "start_index": 1144,
+        "end_index": 1163
+      },
+      {
+        "id": "text-37",
+        "text": "\n",
+        "start_index": 1163,
+        "end_index": 1164
+      },
+      {
+        "id": "text-38",
+        "text": "\n",
+        "start_index": 1165,
+        "end_index": 1166
+      },
+      {
+        "id": "text-39",
+        "text": "\n",
+        "start_index": 1167,
+        "end_index": 1168
+      },
+      {
+        "id": "text-40",
+        "text": "CTA SECTION\n",
+        "start_index": 1168,
+        "end_index": 1180
+      },
+      {
+        "id": "text-41",
+        "text": "Learn about sovereign clouds in our free, comprehensive guide.\n",
+        "start_index": 1183,
+        "end_index": 1246
+      },
+      {
+        "id": "text-42",
+        "text": "Get the guide \u003e\n",
+        "start_index": 1246,
+        "end_index": 1262
+      },
+      {
+        "id": "text-43",
+        "text": "[https://ubuntu.com/engage/sovereign-cloud-guide]\n",
+        "start_index": 1262,
+        "end_index": 1312
+      },
+      {
+        "id": "text-44",
+        "text": "\n",
+        "start_index": 1313,
+        "end_index": 1314
+      },
+      {
+        "id": "text-45",
+        "text": "BASIC TEXT",
+        "start_index": 1314,
+        "end_index": 1324
+      },
+      {
+        "id": "text-46",
+        "text": "\n",
+        "start_index": 1324,
+        "end_index": 1325
+      },
+      {
+        "id": "text-47",
+        "text": "What is a sovereign cloud?\n",
+        "start_index": 1328,
+        "end_index": 1355
+      },
+      {
+        "id": "text-48",
+        "text": "\n",
+        "start_index": 1355,
+        "end_index": 1356
+      },
+      {
+        "id": "text-49",
+        "text": "Sovereign clouds are more than a ",
+        "start_index": 1357,
+        "end_index": 1390
+      },
+      {
+        "id": "text-50",
+        "text": "particular",
+        "start_index": 1390,
+        "end_index": 1400
+      },
+      {
+        "id": "text-51",
+        "text": " cloud architecture. ",
+        "start_index": 1400,
+        "end_index": 1421
+      },
+      {
+        "id": "text-52",
+        "text": "Truly ",
+        "start_index": 1421,
+        "end_index": 1427
+      },
+      {
+        "id": "text-53",
+        "text": "sovereign clouds",
+        "start_index": 1427,
+        "end_index": 1443
+      },
+      {
+        "id": "text-54",
+        "text": " adhere to a comprehensive set of legal, operational, regulatory, and technical requirements. This ensures that nations and organizations maintain complete control over their data and ownership of their infrastructure, ",
+        "start_index": 1443,
+        "end_index": 1662
+      },
+      {
+        "id": "text-55",
+        "text": "mitigating reliance",
+        "start_index": 1662,
+        "end_index": 1681
+      },
+      {
+        "id": "text-56",
+        "text": " on cloud providers outside of their region or country.",
+        "start_index": 1681,
+        "end_index": 1736
+      },
+      {
+        "id": "text-57",
+        "text": "\n",
+        "start_index": 1736,
+        "end_index": 1737
+      },
+      {
+        "id": "text-58",
+        "text": "A sovereign cloud also offers greater security for sensitive systems through cryptographic features and ensuring that only authorized individuals have access to infrastructure and data. ",
+        "start_index": 1737,
+        "end_index": 1923
+      },
+      {
+        "id": "text-59",
+        "text": "\n",
+        "start_index": 1923,
+        "end_index": 1924
+      },
+      {
+        "id": "text-60",
+        "text": "\n",
+        "start_index": 1924,
+        "end_index": 1925
+      },
+      {
+        "id": "text-61",
+        "text": "\n",
+        "start_index": 1925,
+        "end_index": 1926
+      },
+      {
+        "id": "text-62",
+        "text": "TABBED SECTIONS\n",
+        "start_index": 1927,
+        "end_index": 1943
+      },
+      {
+        "id": "text-63",
+        "text": "Levels of sovereignty in the cloud\n",
+        "start_index": 1946,
+        "end_index": 1981
+      },
+      {
+        "id": "text-64",
+        "text": "[",
+        "start_index": 1982,
+        "end_index": 1983
+      },
+      {
+        "id": "text-65",
+        "text": "https://assets.ubuntu.com/v1/2aa22624-sovereign_cloud_the_essential_guide_for_enterprises.pdf",
+        "start_index": 1983,
+        "end_index": 2076
+      },
+      {
+        "id": "text-66",
+        "text": "]\n",
+        "start_index": 2076,
+        "end_index": 2078
+      },
+      {
+        "id": "text-67",
+        "text": "\n",
+        "start_index": 2078,
+        "end_index": 2079
+      },
+      {
+        "id": "text-68",
+        "text": "Updated asset here",
+        "start_index": 2079,
+        "end_index": 2097
+      },
+      {
+        "id": "text-69",
+        "text": "\n",
+        "start_index": 2097,
+        "end_index": 2098
+      },
+      {
+        "id": "text-70",
+        "text": "\n",
+        "start_index": 2098,
+        "end_index": 2099
+      },
+      {
+        "id": "text-71",
+        "text": "\n",
+        "start_index": 2100,
+        "end_index": 2101
+      },
+      {
+        "id": "text-72",
+        "text": "[alt-text: a diagram linking different types of cloud computing with different levels of sovereignty. It shows that the lowest level, data sovereignty – where the provider offers control over data residency and security – is provided by some public clouds. Some hosted private clouds and proprietary private clouds offer a higher level of control, which is operational sovereignty, where the provider offers control and oversight of cloud management and maintenance. The highest level of control, software sovereignty, is provided by sovereign clouds which offer control and autonomy over software and reduced vendor lock-in.",
+        "start_index": 2101,
+        "end_index": 2726
+      },
+      {
+        "id": "text-73",
+        "text": "\n",
+        "start_index": 2726,
+        "end_index": 2727
+      },
+      {
+        "id": "text-74",
+        "text": "\n",
+        "start_index": 2727,
+        "end_index": 2728
+      },
+      {
+        "id": "text-75",
+        "text": "[Overview] [Data] [Operational][ySoftware]\n",
+        "start_index": 2728,
+        "end_index": 2771
+      },
+      {
+        "id": "text-76",
+        "text": "\n",
+        "start_index": 2772,
+        "end_index": 2773
+      },
+      {
+        "id": "text-77",
+        "text": "\n",
+        "start_index": 2774,
+        "end_index": 2775
+      },
+      {
+        "id": "text-78",
+        "text": " \n",
+        "start_index": 2777,
+        "end_index": 2779
+      },
+      {
+        "id": "text-79",
+        "text": "Digital sovereignty in the cloud",
+        "start_index": 2780,
+        "end_index": 2812
+      },
+      {
+        "id": "text-80",
+        "text": "\n",
+        "start_index": 2812,
+        "end_index": 2813
+      },
+      {
+        "id": "text-81",
+        "text": "\n",
+        "start_index": 2813,
+        "end_index": 2814
+      },
+      {
+        "id": "text-82",
+        "text": "Digital sovereignty refers to the technologies and services that empower organizations to gain and retain absolute control over their infrastructure and data. The specific level of control you require is dictated by your risk tolerance, industry regulations, and legal obligations. While many cloud options exist, a sovereign cloud offers the highest, most comprehensive level of digital control available.",
+        "start_index": 2814,
+        "end_index": 3220
+      },
+      {
+        "id": "text-83",
+        "text": "\n",
+        "start_index": 3220,
+        "end_index": 3221
+      },
+      {
+        "id": "text-84",
+        "text": "\n",
+        "start_index": 3222,
+        "end_index": 3223
+      },
+      {
+        "id": "text-85",
+        "text": "Data \n",
+        "start_index": 3225,
+        "end_index": 3231
+      },
+      {
+        "id": "text-86",
+        "text": "The foundational level of control that cloud solutions can offer is data sovereignty: control over data residency and the security measures that protect data at rest, in transit, and during processing. \n",
+        "start_index": 3232,
+        "end_index": 3435
+      },
+      {
+        "id": "text-87",
+        "text": "\n",
+        "start_index": 3435,
+        "end_index": 3436
+      },
+      {
+        "id": "text-88",
+        "text": "Only some clouds will guarantee control over where data is stored. This control is critical. Since data is governed by the laws of every region it touches, storing data in the wrong jurisdiction can create significant risks, and may even violate industry-specific and/or national legal or regulatory requirements.",
+        "start_index": 3436,
+        "end_index": 3749
+      },
+      {
+        "id": "text-89",
+        "text": "\n",
+        "start_index": 3749,
+        "end_index": 3750
+      },
+      {
+        "id": "text-90",
+        "text": "\n",
+        "start_index": 3751,
+        "end_index": 3752
+      },
+      {
+        "id": "text-91",
+        "text": "Operational \n",
+        "start_index": 3754,
+        "end_index": 3767
+      },
+      {
+        "id": "text-92",
+        "text": "Operational sovereignty combines data sovereignty with full visibility into the day-to-day management and maintenance of an organization’s cloud. With this independent oversight, you can actively monitor security events, enforce regional compliance, and autonomously restrict access to sensitive systems. Hosted private clouds are a prime example, which provide organizations with dedicated, isolated infrastructure without resource sharing.",
+        "start_index": 3768,
+        "end_index": 4209
+      },
+      {
+        "id": "text-93",
+        "text": "\n",
+        "start_index": 4209,
+        "end_index": 4210
+      },
+      {
+        "id": "text-94",
+        "text": "\n",
+        "start_index": 4211,
+        "end_index": 4212
+      },
+      {
+        "id": "text-95",
+        "text": "ySoftware \n",
+        "start_index": 4214,
+        "end_index": 4225
+      },
+      {
+        "id": "text-96",
+        "text": "y",
+        "start_index": 4226,
+        "end_index": 4227
+      },
+      {
+        "id": "text-97",
+        "text": "Software sovereignty is the ultimate level of control you can have over your cloud, providing data and operational sovereignty and extending control to the underlying technology.\n",
+        "start_index": 4227,
+        "end_index": 4406
+      },
+      {
+        "id": "text-98",
+        "text": "The most effective path to software sovereignty is through open source software. Unlike proprietary solutions, open source offers more transparency into cloud components, and may provide opportunities to influence the roadmap. Only sovereign clouds built on open source provide software sovereignty.",
+        "start_index": 4406,
+        "end_index": 4705
+      },
+      {
+        "id": "text-99",
+        "text": "\n",
+        "start_index": 4705,
+        "end_index": 4706
+      },
+      {
+        "id": "text-100",
+        "text": "\n",
+        "start_index": 4707,
+        "end_index": 4708
+      },
+      {
+        "id": "text-101",
+        "text": "\n",
+        "start_index": 4709,
+        "end_index": 4710
+      },
+      {
+        "id": "text-102",
+        "text": "\n",
+        "start_index": 4710,
+        "end_index": 4711
+      },
+      {
+        "id": "text-103",
+        "text": "\n",
+        "start_index": 4711,
+        "end_index": 4712
+      },
+      {
+        "id": "text-104",
+        "text": "TEMPLATE BASIC TEXT + SUBHEADINGS\n",
+        "start_index": 4712,
+        "end_index": 4746
+      },
+      {
+        "id": "text-105",
+        "text": "Why build a sovereign cloud?\n",
+        "start_index": 4749,
+        "end_index": 4778
+      },
+      {
+        "id": "text-106",
+        "text": "\n",
+        "start_index": 4778,
+        "end_index": 4779
+      },
+      {
+        "id": "text-107",
+        "text": "Reducing reliance on external vendors, mitigating security risk, and new regulations and laws are driving both private enterprises as well as governments and their institutions towards sovereign clouds. \n",
+        "start_index": 4780,
+        "end_index": 4984
+      },
+      {
+        "id": "text-108",
+        "text": "\n",
+        "start_index": 4984,
+        "end_index": 4985
+      },
+      {
+        "id": "text-109",
+        "text": "Mitigate cybersecurity threats ",
+        "start_index": 4985,
+        "end_index": 5016
+      },
+      {
+        "id": "text-110",
+        "text": "\n",
+        "start_index": 5016,
+        "end_index": 5017
+      },
+      {
+        "id": "text-111",
+        "text": "S",
+        "start_index": 5017,
+        "end_index": 5018
+      },
+      {
+        "id": "text-112",
+        "text": "ensitive data, including military information and personal medical records, can be at high risk of cyber threats and foreign interference.  Gaining control over both physical infrastructure and code helps you to support robust, safe operations.\n",
+        "start_index": 5018,
+        "end_index": 5263
+      },
+      {
+        "id": "text-113",
+        "text": "Reduce",
+        "start_index": 5263,
+        "end_index": 5269
+      },
+      {
+        "id": "text-114",
+        "text": " dependence on foreign vendors\n",
+        "start_index": 5269,
+        "end_index": 5300
+      },
+      {
+        "id": "text-115",
+        "text": "Sanctions, wars, infrastructure damage – many circumstances beyond your control could bring your cloud operations to a halt. Relying on global public cloud providers can create dependencies on foreign companies, potentially compromising digital autonomy. \n",
+        "start_index": 5300,
+        "end_index": 5556
+      },
+      {
+        "id": "text-116",
+        "text": "\n",
+        "start_index": 5556,
+        "end_index": 5557
+      },
+      {
+        "id": "text-117",
+        "text": "Sovereign clouds help you avoid this risky dependence and take control of your digital future.\n",
+        "start_index": 5557,
+        "end_index": 5652
+      },
+      {
+        "id": "text-118",
+        "text": "\n",
+        "start_index": 5652,
+        "end_index": 5653
+      },
+      {
+        "id": "text-119",
+        "text": "Find out more about geopatriation of clouds \u003e",
+        "start_index": 5653,
+        "end_index": 5698
+      },
+      {
+        "id": "text-120",
+        "text": "\n",
+        "start_index": 5698,
+        "end_index": 5699
+      },
+      {
+        "id": "text-121",
+        "text": "Meet c",
+        "start_index": 5699,
+        "end_index": 5705
+      },
+      {
+        "id": "text-122",
+        "text": "ompliance and regulations\n",
+        "start_index": 5705,
+        "end_index": 5731
+      },
+      {
+        "id": "text-123",
+        "text": "Many countries and entities have adopted data protection laws that mandate storing and processing sensitive and confidential data within national boundaries – a requirement which some public cloud providers can’t meet. ",
+        "start_index": 5731,
+        "end_index": 5950
+      },
+      {
+        "id": "text-124",
+        "text": "The NIS-2 directive and the DORA act in the EU, for example, are making some enterprises rethink their cloud infrastructure.",
+        "start_index": 5950,
+        "end_index": 6074
+      },
+      {
+        "id": "text-125",
+        "text": "\n",
+        "start_index": 6074,
+        "end_index": 6075
+      },
+      {
+        "id": "text-126",
+        "text": "\n",
+        "start_index": 6075,
+        "end_index": 6076
+      },
+      {
+        "id": "text-127",
+        "text": "If your cloud vendor stores, hosts, or processes your data outside of your jurisdiction, it may be subject to the access and processing laws of the external national entity, potentially creating significant legal and compliance risks.\n",
+        "start_index": 6076,
+        "end_index": 6311
+      },
+      {
+        "id": "text-128",
+        "text": "Gain",
+        "start_index": 6311,
+        "end_index": 6315
+      },
+      {
+        "id": "text-129",
+        "text": " control over the entire cloud and operations\n",
+        "start_index": 6315,
+        "end_index": 6361
+      },
+      {
+        "id": "text-130",
+        "text": "Sovereign clouds provide you with control and greater transparency of personnel, staffing, and organizational access. For sensitive data, or highly regulated industries, this may be a necessary risk reduction strategy.",
+        "start_index": 6361,
+        "end_index": 6579
+      },
+      {
+        "id": "text-131",
+        "text": "\n",
+        "start_index": 6579,
+        "end_index": 6580
+      },
+      {
+        "id": "text-132",
+        "text": "\n",
+        "start_index": 6580,
+        "end_index": 6581
+      },
+      {
+        "id": "text-133",
+        "text": "Improve r",
+        "start_index": 6581,
+        "end_index": 6590
+      },
+      {
+        "id": "text-134",
+        "text": "esilience and disaster recovery\n",
+        "start_index": 6590,
+        "end_index": 6622
+      },
+      {
+        "id": "text-135",
+        "text": "\n",
+        "start_index": 6622,
+        "end_index": 6623
+      },
+      {
+        "id": "text-136",
+        "text": "Standard clouds often mitigate disasters by failing over to international data centers. Depending on the relevant compliance requirements, this may violate local data laws. \n",
+        "start_index": 6623,
+        "end_index": 6797
+      },
+      {
+        "id": "text-137",
+        "text": "\n",
+        "start_index": 6797,
+        "end_index": 6798
+      },
+      {
+        "id": "text-138",
+        "text": "By establishing geographically distant, isolated regions within the same national borders, sovereign clouds can ensure high availability and data recovery whilst mitigating legal risk.\n",
+        "start_index": 6798,
+        "end_index": 6983
+      },
+      {
+        "id": "text-139",
+        "text": "\n",
+        "start_index": 6983,
+        "end_index": 6984
+      },
+      {
+        "id": "text-140",
+        "text": "\n",
+        "start_index": 6984,
+        "end_index": 6985
+      },
+      {
+        "id": "text-141",
+        "text": "\n",
+        "start_index": 6985,
+        "end_index": 6986
+      },
+      {
+        "id": "text-142",
+        "text": "\n",
+        "start_index": 6987,
+        "end_index": 6988
+      },
+      {
+        "id": "text-143",
+        "text": "TEMPLATE BASIC TEXT\n",
+        "start_index": 6988,
+        "end_index": 7008
+      },
+      {
+        "id": "text-144",
+        "text": "How are s",
+        "start_index": 7011,
+        "end_index": 7020
+      },
+      {
+        "id": "text-145",
+        "text": "overeign clouds used in industry?\n",
+        "start_index": 7020,
+        "end_index": 7054
+      },
+      {
+        "id": "text-146",
+        "text": "\n",
+        "start_index": 7054,
+        "end_index": 7055
+      },
+      {
+        "id": "text-147",
+        "text": "\n",
+        "start_index": 7055,
+        "end_index": 7056
+      },
+      {
+        "id": "text-148",
+        "text": "\n",
+        "start_index": 7056,
+        "end_index": 7057
+      },
+      {
+        "id": "text-149",
+        "text": "Public sector\n",
+        "start_index": 7058,
+        "end_index": 7072
+      },
+      {
+        "id": "text-150",
+        "text": "Sensitive, personal, and potentially secret state information requires shielding to ensure the integrity of government services and protect national security.\n",
+        "start_index": 7072,
+        "end_index": 7231
+      },
+      {
+        "id": "text-151",
+        "text": "\n",
+        "start_index": 7231,
+        "end_index": 7232
+      },
+      {
+        "id": "text-152",
+        "text": "Legal firms\n",
+        "start_index": 7232,
+        "end_index": 7244
+      },
+      {
+        "id": "text-153",
+        "text": "Legal firms need to ensure that their highly confidential and privileged information is completely controlled. Entire cases could depend on it.\n",
+        "start_index": 7244,
+        "end_index": 7388
+      },
+      {
+        "id": "text-154",
+        "text": "\n",
+        "start_index": 7388,
+        "end_index": 7389
+      },
+      {
+        "id": "text-155",
+        "text": "Healthcare\n",
+        "start_index": 7389,
+        "end_index": 7400
+      },
+      {
+        "id": "text-156",
+        "text": "Medical organizations are tasked with safeguarding individuals' most sensitive medical and personal information. They also need to protect their operations and life-saving equipment against disruptions.\n",
+        "start_index": 7400,
+        "end_index": 7603
+      },
+      {
+        "id": "text-157",
+        "text": "\n",
+        "start_index": 7603,
+        "end_index": 7604
+      },
+      {
+        "id": "text-158",
+        "text": "Financial\n",
+        "start_index": 7604,
+        "end_index": 7614
+      },
+      {
+        "id": "text-159",
+        "text": "Financial organizations have regulatory and legal requirements to keep highly sensitive information safe from cyberattacks. A sovereign cloud provides these ",
+        "start_index": 7614,
+        "end_index": 7771
+      },
+      {
+        "id": "text-160",
+        "text": "institutions",
+        "start_index": 7771,
+        "end_index": 7783
+      },
+      {
+        "id": "text-161",
+        "text": " more autonomy over their infrastructure and data.  ",
+        "start_index": 7783,
+        "end_index": 7835
+      },
+      {
+        "id": "text-162",
+        "text": "\n",
+        "start_index": 7835,
+        "end_index": 7836
+      },
+      {
+        "id": "text-163",
+        "text": "Highly regulated industries\n",
+        "start_index": 7836,
+        "end_index": 7864
+      },
+      {
+        "id": "text-164",
+        "text": "These are just some examples of the verticals that are taking advantage of sovereign clouds. The benefits of digital sovereignty extend to any heavily regulated industry that has a vital interest in controlling its infrastructure and guarding its data.",
+        "start_index": 7864,
+        "end_index": 8116
+      },
+      {
+        "id": "text-165",
+        "text": "\n",
+        "start_index": 8116,
+        "end_index": 8117
+      },
+      {
+        "id": "text-166",
+        "text": "\n",
+        "start_index": 8117,
+        "end_index": 8118
+      },
+      {
+        "id": "text-167",
+        "text": "How to build a sovereign cloud with Canonical \u003e",
+        "start_index": 8118,
+        "end_index": 8165
+      },
+      {
+        "id": "text-168",
+        "text": "\n",
+        "start_index": 8165,
+        "end_index": 8166
+      },
+      {
+        "id": "text-169",
+        "text": "\n",
+        "start_index": 8167,
+        "end_index": 8168
+      },
+      {
+        "id": "text-170",
+        "text": "TABBED SECTIONS\n",
+        "start_index": 8168,
+        "end_index": 8184
+      },
+      {
+        "id": "text-171",
+        "text": "Building an open source sovereign cloud\n",
+        "start_index": 8187,
+        "end_index": 8227
+      },
+      {
+        "id": "text-172",
+        "text": "[https://assets.ubuntu.com/v1/30a0857f-2x_canonicals_composable_software_elements_1.png]",
+        "start_index": 8227,
+        "end_index": 8315
+      },
+      {
+        "id": "text-173",
+        "text": "\n",
+        "start_index": 8315,
+        "end_index": 8316
+      },
+      {
+        "id": "text-174",
+        "text": "[alt-text: ",
+        "start_index": 8316,
+        "end_index": 8327
+      },
+      {
+        "id": "text-175",
+        "text": "\n",
+        "start_index": 8327,
+        "end_index": 8328
+      },
+      {
+        "id": "text-176",
+        "text": "\n",
+        "start_index": 8328,
+        "end_index": 8329
+      },
+      {
+        "id": "text-177",
+        "text": "A diagram of Canonical’s sovereign cloud software stack. From bottom to top, the layers are MAAS for server automation, Ceph for software defined storage, Landscape and Ubuntu for systems management, and Kubernetes, MicroCloud, and OpenStack for virtualization and orchestration. Kubernetes is an automated container management and workload orchestration solution. MicroCloud is a lightweight, low entry-barrier cloud computing platform. OpenStack is a highly customizable, featureful cloud. ",
+        "start_index": 8329,
+        "end_index": 8821
+      },
+      {
+        "id": "text-178",
+        "text": "\n",
+        "start_index": 8821,
+        "end_index": 8822
+      },
+      {
+        "id": "text-179",
+        "text": "\n",
+        "start_index": 8822,
+        "end_index": 8823
+      },
+      {
+        "id": "text-180",
+        "text": "[Overview] [MAAS] [Ceph][Landscape][Ubuntu OS][MicroCloud][OpenStack][Kubernetes] \n",
+        "start_index": 8823,
+        "end_index": 8906
+      },
+      {
+        "id": "text-181",
+        "text": "\n",
+        "start_index": 8907,
+        "end_index": 8908
+      },
+      {
+        "id": "text-182",
+        "text": "\n",
+        "start_index": 8909,
+        "end_index": 8910
+      },
+      {
+        "id": "text-183",
+        "text": "Overview\n",
+        "start_index": 8912,
+        "end_index": 8921
+      },
+      {
+        "id": "text-184",
+        "text": "Canonical's well-established open source components are backed by up to 15 years of long-term support, ensuring the enduring stability and reliability of your sovereign cloud investment.\n",
+        "start_index": 8922,
+        "end_index": 9109
+      },
+      {
+        "id": "text-185",
+        "text": "\n",
+        "start_index": 9109,
+        "end_index": 9110
+      },
+      {
+        "id": "text-186",
+        "text": "Integrate our components into your existing stack, or combine them ",
+        "start_index": 9110,
+        "end_index": 9177
+      },
+      {
+        "id": "text-187",
+        "text": "for a unified, end-to-end sovereign cloud solution.",
+        "start_index": 9177,
+        "end_index": 9228
+      },
+      {
+        "id": "text-188",
+        "text": "\n",
+        "start_index": 9228,
+        "end_index": 9229
+      },
+      {
+        "id": "text-189",
+        "text": "\n",
+        "start_index": 9229,
+        "end_index": 9230
+      },
+      {
+        "id": "text-190",
+        "text": "\n",
+        "start_index": 9231,
+        "end_index": 9232
+      },
+      {
+        "id": "text-191",
+        "text": "MAAS\n",
+        "start_index": 9234,
+        "end_index": 9239
+      },
+      {
+        "id": "text-192",
+        "text": "[MAAS logo]",
+        "start_index": 9240,
+        "end_index": 9251
+      },
+      {
+        "id": "text-193",
+        "text": "\n",
+        "start_index": 9251,
+        "end_index": 9252
+      },
+      {
+        "id": "text-194",
+        "text": "\n",
+        "start_index": 9252,
+        "end_index": 9253
+      },
+      {
+        "id": "text-195",
+        "text": "Every cloud requires servers to support workloads. However, server management and maintenance can be hugely time consuming. MAAS lightens this burden. \n",
+        "start_index": 9253,
+        "end_index": 9405
+      },
+      {
+        "id": "text-196",
+        "text": "\n",
+        "start_index": 9405,
+        "end_index": 9406
+      },
+      {
+        "id": "text-197",
+        "text": "It streamlines the entire hardware lifecycle, enabling automated and remote server provisioning, configuration, installation, deployment, and discovery, all in a single workflow. ",
+        "start_index": 9406,
+        "end_index": 9585
+      },
+      {
+        "id": "text-198",
+        "text": "\n",
+        "start_index": 9585,
+        "end_index": 9586
+      },
+      {
+        "id": "text-199",
+        "text": "\n",
+        "start_index": 9586,
+        "end_index": 9587
+      },
+      {
+        "id": "text-200",
+        "text": "Discover MAAS \u003e",
+        "start_index": 9587,
+        "end_index": 9602
+      },
+      {
+        "id": "text-201",
+        "text": "\n",
+        "start_index": 9602,
+        "end_index": 9603
+      },
+      {
+        "id": "text-202",
+        "text": "\n",
+        "start_index": 9603,
+        "end_index": 9604
+      },
+      {
+        "id": "text-203",
+        "text": "\n",
+        "start_index": 9605,
+        "end_index": 9606
+      },
+      {
+        "id": "text-204",
+        "text": "Ceph\n",
+        "start_index": 9608,
+        "end_index": 9613
+      },
+      {
+        "id": "text-205",
+        "text": "[Ceph logo]",
+        "start_index": 9614,
+        "end_index": 9625
+      },
+      {
+        "id": "text-206",
+        "text": "\n",
+        "start_index": 9625,
+        "end_index": 9626
+      },
+      {
+        "id": "text-207",
+        "text": "Canonical Ceph helps to organize the data on sovereign cloud servers. Ceph is an elastic distributed storage system which combines block, file, and object storage at scale, making it a strong foundation for sovereign clouds.",
+        "start_index": 9626,
+        "end_index": 9850
+      },
+      {
+        "id": "text-208",
+        "text": " \n",
+        "start_index": 9850,
+        "end_index": 9852
+      },
+      {
+        "id": "text-209",
+        "text": "\n",
+        "start_index": 9852,
+        "end_index": 9853
+      },
+      {
+        "id": "text-210",
+        "text": "Discover Canonical Ceph \u003e",
+        "start_index": 9853,
+        "end_index": 9878
+      },
+      {
+        "id": "text-211",
+        "text": "\n",
+        "start_index": 9878,
+        "end_index": 9879
+      },
+      {
+        "id": "text-212",
+        "text": "\n",
+        "start_index": 9880,
+        "end_index": 9881
+      },
+      {
+        "id": "text-213",
+        "text": "Landscape\n",
+        "start_index": 9883,
+        "end_index": 9893
+      },
+      {
+        "id": "text-214",
+        "text": "Canonical Landscape delivers control up to the systems management level.\n",
+        "start_index": 9894,
+        "end_index": 9967
+      },
+      {
+        "id": "text-215",
+        "text": "\n",
+        "start_index": 9967,
+        "end_index": 9968
+      },
+      {
+        "id": "text-216",
+        "text": "Landscape automates security patching, auditing, access management, and compliance tasks across your Ubuntu estate to keep sovereign cloud systems running smoothly. It helps organizations to remotely update and upgrade machines, as well as managing users and their permissions – on a single pane of glass. \n",
+        "start_index": 9968,
+        "end_index": 10275
+      },
+      {
+        "id": "text-217",
+        "text": "\n",
+        "start_index": 10275,
+        "end_index": 10276
+      },
+      {
+        "id": "text-218",
+        "text": "Discover Landscape \u003e",
+        "start_index": 10276,
+        "end_index": 10296
+      },
+      {
+        "id": "text-219",
+        "text": "\n",
+        "start_index": 10296,
+        "end_index": 10297
+      },
+      {
+        "id": "text-220",
+        "text": "\n",
+        "start_index": 10298,
+        "end_index": 10299
+      },
+      {
+        "id": "text-221",
+        "text": "Ubuntu OS\n",
+        "start_index": 10301,
+        "end_index": 10311
+      },
+      {
+        "id": "text-222",
+        "text": "[Ubuntu logo]",
+        "start_index": 10312,
+        "end_index": 10325
+      },
+      {
+        "id": "text-223",
+        "text": "\n",
+        "start_index": 10325,
+        "end_index": 10326
+      },
+      {
+        "id": "text-224",
+        "text": "\n",
+        "start_index": 10326,
+        "end_index": 10327
+      },
+      {
+        "id": "text-225",
+        "text": "Each element in Canonical’s sovereign cloud software stack is optimized to run on Ubuntu. Through features like AppArmor, File Encryption, Stack Protector, and UEFI Secure Boot, Ubuntu prioritizes user privacy and system integrity by default – which is key for sovereign clouds. \n",
+        "start_index": 10327,
+        "end_index": 10607
+      },
+      {
+        "id": "text-226",
+        "text": "\n",
+        "start_index": 10607,
+        "end_index": 10608
+      },
+      {
+        "id": "text-227",
+        "text": "With ",
+        "start_index": 10608,
+        "end_index": 10613
+      },
+      {
+        "id": "text-228",
+        "text": "Ubuntu Pro",
+        "start_index": 10613,
+        "end_index": 10623
+      },
+      {
+        "id": "text-229",
+        "text": ", enterprises get up to 15 years of security maintenance for thousands of open source packages, tools for compliance, and the option to add 24/7 enterprise support.",
+        "start_index": 10623,
+        "end_index": 10787
+      },
+      {
+        "id": "text-230",
+        "text": "\n",
+        "start_index": 10787,
+        "end_index": 10788
+      },
+      {
+        "id": "text-231",
+        "text": "\n",
+        "start_index": 10788,
+        "end_index": 10789
+      },
+      {
+        "id": "text-232",
+        "text": "Discover Ubuntu ",
+        "start_index": 10789,
+        "end_index": 10805
+      },
+      {
+        "id": "text-233",
+        "text": "\u003e",
+        "start_index": 10805,
+        "end_index": 10806
+      },
+      {
+        "id": "text-234",
+        "text": " ",
+        "start_index": 10806,
+        "end_index": 10807
+      },
+      {
+        "id": "text-235",
+        "text": "\n",
+        "start_index": 10807,
+        "end_index": 10808
+      },
+      {
+        "id": "text-236",
+        "text": "\n",
+        "start_index": 10809,
+        "end_index": 10810
+      },
+      {
+        "id": "text-237",
+        "text": "MicroCloud\n",
+        "start_index": 10812,
+        "end_index": 10823
+      },
+      {
+        "id": "text-238",
+        "text": "[MicroCloud logo]",
+        "start_index": 10824,
+        "end_index": 10841
+      },
+      {
+        "id": "text-239",
+        "text": "\n",
+        "start_index": 10841,
+        "end_index": 10842
+      },
+      {
+        "id": "text-240",
+        "text": "\n",
+        "start_index": 10842,
+        "end_index": 10843
+      },
+      {
+        "id": "text-241",
+        "text": "Canonical’s lightweight open source cloud, MicroCloud, is designed for ",
+        "start_index": 10843,
+        "end_index": 10914
+      },
+      {
+        "id": "text-242",
+        "text": "companies without extensive on-premise infrastructure. It has a low barrier to entry, with automated deployment and on-site operations. MicroCloud helps you create a sovereign cloud in minutes, from a single node, to 50 node clusters.",
+        "start_index": 10914,
+        "end_index": 11148
+      },
+      {
+        "id": "text-243",
+        "text": "\n",
+        "start_index": 11148,
+        "end_index": 11149
+      },
+      {
+        "id": "text-244",
+        "text": "\n",
+        "start_index": 11149,
+        "end_index": 11150
+      },
+      {
+        "id": "text-245",
+        "text": "\n",
+        "start_index": 11150,
+        "end_index": 11151
+      },
+      {
+        "id": "text-246",
+        "text": "Discover MicroCloud",
+        "start_index": 11151,
+        "end_index": 11170
+      },
+      {
+        "id": "text-247",
+        "text": " \u003e\n",
+        "start_index": 11170,
+        "end_index": 11173
+      },
+      {
+        "id": "text-248",
+        "text": "\n",
+        "start_index": 11173,
+        "end_index": 11174
+      },
+      {
+        "id": "text-249",
+        "text": "\n",
+        "start_index": 11175,
+        "end_index": 11176
+      },
+      {
+        "id": "text-250",
+        "text": "OpenStack\n",
+        "start_index": 11178,
+        "end_index": 11188
+      },
+      {
+        "id": "text-251",
+        "text": "[OpenStack logo]",
+        "start_index": 11189,
+        "end_index": 11205
+      },
+      {
+        "id": "text-252",
+        "text": "\n",
+        "start_index": 11205,
+        "end_index": 11206
+      },
+      {
+        "id": "text-253",
+        "text": "\n",
+        "start_index": 11206,
+        "end_index": 11207
+      },
+      {
+        "id": "text-254",
+        "text": "OpenStack is a highly customizable cloud platform,",
+        "start_index": 11207,
+        "end_index": 11257
+      },
+      {
+        "id": "text-255",
+        "text": " used for everything from a regional public cloud, to an on-premise extension of the public cloud, to sovereign clouds. ",
+        "start_index": 11257,
+        "end_index": 11377
+      },
+      {
+        "id": "text-256",
+        "text": "\n",
+        "start_index": 11377,
+        "end_index": 11378
+      },
+      {
+        "id": "text-257",
+        "text": "\n",
+        "start_index": 11378,
+        "end_index": 11379
+      },
+      {
+        "id": "text-258",
+        "text": "Discover Canonical OpenStack ",
+        "start_index": 11379,
+        "end_index": 11408
+      },
+      {
+        "id": "text-259",
+        "text": "\u003e",
+        "start_index": 11408,
+        "end_index": 11409
+      },
+      {
+        "id": "text-260",
+        "text": "\n",
+        "start_index": 11409,
+        "end_index": 11410
+      },
+      {
+        "id": "text-261",
+        "text": "\n",
+        "start_index": 11411,
+        "end_index": 11412
+      },
+      {
+        "id": "text-262",
+        "text": "Kubernetes\n",
+        "start_index": 11414,
+        "end_index": 11425
+      },
+      {
+        "id": "text-263",
+        "text": "[Kubernetes logo]",
+        "start_index": 11426,
+        "end_index": 11443
+      },
+      {
+        "id": "text-264",
+        "text": "\n",
+        "start_index": 11443,
+        "end_index": 11444
+      },
+      {
+        "id": "text-265",
+        "text": "\n",
+        "start_index": 11444,
+        "end_index": 11445
+      },
+      {
+        "id": "text-266",
+        "text": "Canonical Kubernetes",
+        "start_index": 11445,
+        "end_index": 11465
+      },
+      {
+        "id": "text-267",
+        "text": " makes building sovereign clouds across multiple environments that align with your compliance and IT requirements much easier. ",
+        "start_index": 11465,
+        "end_index": 11592
+      },
+      {
+        "id": "text-268",
+        "text": "It provides a layer that makes data and AI applications portable across development frameworks, with minimal adaptations or configuration changes. ",
+        "start_index": 11592,
+        "end_index": 11739
+      },
+      {
+        "id": "text-269",
+        "text": "\n",
+        "start_index": 11739,
+        "end_index": 11740
+      },
+      {
+        "id": "text-270",
+        "text": "\n",
+        "start_index": 11740,
+        "end_index": 11741
+      },
+      {
+        "id": "text-271",
+        "text": "Discover Canonical Kubernetes",
+        "start_index": 11741,
+        "end_index": 11770
+      },
+      {
+        "id": "text-272",
+        "text": " \u003e",
+        "start_index": 11770,
+        "end_index": 11772
+      },
+      {
+        "id": "text-273",
+        "text": "\n",
+        "start_index": 11772,
+        "end_index": 11773
+      },
+      {
+        "id": "text-274",
+        "text": "\n",
+        "start_index": 11774,
+        "end_index": 11775
+      },
+      {
+        "id": "text-275",
+        "text": "\n",
+        "start_index": 11776,
+        "end_index": 11777
+      },
+      {
+        "id": "text-276",
+        "text": "\n",
+        "start_index": 11777,
+        "end_index": 11778
+      },
+      {
+        "id": "text-277",
+        "text": "What customers say\n",
+        "start_index": 11778,
+        "end_index": 11797
+      },
+      {
+        "id": "text-278",
+        "text": "\n",
+        "start_index": 11797,
+        "end_index": 11798
+      },
+      {
+        "id": "text-279",
+        "text": "TEMPLATE QUOTE 1\n",
+        "start_index": 11798,
+        "end_index": 11815
+      },
+      {
+        "id": "text-280",
+        "text": "[Phoenix Systems logo: ",
+        "start_index": 11818,
+        "end_index": 11841
+      },
+      {
+        "id": "text-281",
+        "text": "https://assets.ubuntu.com/v1/78ec4eb1-logo-phoenix-systems-ibm.png",
+        "start_index": 11841,
+        "end_index": 11907
+      },
+      {
+        "id": "text-282",
+        "text": " ]",
+        "start_index": 11907,
+        "end_index": 11909
+      },
+      {
+        "id": "text-283",
+        "text": " ",
+        "start_index": 11909,
+        "end_index": 11910
+      },
+      {
+        "id": "text-284",
+        "text": "\n",
+        "start_index": 11910,
+        "end_index": 11911
+      },
+      {
+        "id": "text-285",
+        "text": "\n",
+        "start_index": 11911,
+        "end_index": 11912
+      },
+      {
+        "id": "text-286",
+        "text": "Where other infrastructure providers in Switzerland that use traditional technologies might charge customers a premium uplift per year, we can offer the same capabilities\n",
+        "start_index": 11912,
+        "end_index": 12083
+      },
+      {
+        "id": "text-287",
+        "text": "for ten times less while still achieving a better margin.”\n",
+        "start_index": 12083,
+        "end_index": 12142
+      },
+      {
+        "id": "text-288",
+        "text": "\n",
+        "start_index": 12142,
+        "end_index": 12143
+      },
+      {
+        "id": "text-289",
+        "text": "Thomas Taroni, VP of Product, Phoenix Systems\n",
+        "start_index": 12143,
+        "end_index": 12189
+      },
+      {
+        "id": "text-290",
+        "text": "\n",
+        "start_index": 12189,
+        "end_index": 12190
+      },
+      {
+        "id": "text-291",
+        "text": "Read the case study \u003e",
+        "start_index": 12190,
+        "end_index": 12211
+      },
+      {
+        "id": "text-292",
+        "text": "\n",
+        "start_index": 12211,
+        "end_index": 12212
+      },
+      {
+        "id": "text-293",
+        "text": "\n",
+        "start_index": 12212,
+        "end_index": 12213
+      },
+      {
+        "id": "text-294",
+        "text": "\n",
+        "start_index": 12214,
+        "end_index": 12215
+      },
+      {
+        "id": "text-295",
+        "text": "\n",
+        "start_index": 12216,
+        "end_index": 12217
+      },
+      {
+        "id": "text-296",
+        "text": "TEMPLATE QUOTE 2\n",
+        "start_index": 12217,
+        "end_index": 12234
+      },
+      {
+        "id": "text-297",
+        "text": "[",
+        "start_index": 12237,
+        "end_index": 12238
+      },
+      {
+        "id": "text-298",
+        "text": "Firmus logo: ",
+        "start_index": 12238,
+        "end_index": 12251
+      },
+      {
+        "id": "text-299",
+        "text": "https://assets.ubuntu.com/v1/dc69e636-firmus-black.png",
+        "start_index": 12251,
+        "end_index": 12305
+      },
+      {
+        "id": "text-300",
+        "text": " ] \n",
+        "start_index": 12305,
+        "end_index": 12309
+      },
+      {
+        "id": "text-301",
+        "text": "\n",
+        "start_index": 12309,
+        "end_index": 12310
+      },
+      {
+        "id": "text-302",
+        "text": "“We needed a cloud solution that was stable, reliable, and performant. Canonical allowed us to do this by helping to design and deploy our cloud – and they helped us do this quickly.”",
+        "start_index": 12310,
+        "end_index": 12493
+      },
+      {
+        "id": "text-303",
+        "text": " \n",
+        "start_index": 12493,
+        "end_index": 12495
+      },
+      {
+        "id": "text-304",
+        "text": "\n",
+        "start_index": 12495,
+        "end_index": 12496
+      },
+      {
+        "id": "text-305",
+        "text": "Peter Blain, Director of Product and AI, Firmus",
+        "start_index": 12496,
+        "end_index": 12543
+      },
+      {
+        "id": "text-306",
+        "text": "\n",
+        "start_index": 12543,
+        "end_index": 12544
+      },
+      {
+        "id": "text-307",
+        "text": "\n",
+        "start_index": 12544,
+        "end_index": 12545
+      },
+      {
+        "id": "text-308",
+        "text": "Read the case study \u003e ",
+        "start_index": 12545,
+        "end_index": 12567
+      },
+      {
+        "id": "text-309",
+        "text": "\n",
+        "start_index": 12567,
+        "end_index": 12568
+      },
+      {
+        "id": "text-310",
+        "text": "\n",
+        "start_index": 12569,
+        "end_index": 12570
+      },
+      {
+        "id": "text-311",
+        "text": "\n",
+        "start_index": 12571,
+        "end_index": 12572
+      },
+      {
+        "id": "text-312",
+        "text": "\n",
+        "start_index": 12572,
+        "end_index": 12573
+      },
+      {
+        "id": "text-313",
+        "text": "TEMPLATE QUOTE 3\n",
+        "start_index": 12573,
+        "end_index": 12590
+      },
+      {
+        "id": "text-314",
+        "text": "[Nayatel logo: ",
+        "start_index": 12593,
+        "end_index": 12608
+      },
+      {
+        "id": "text-315",
+        "text": "https://assets.ubuntu.com/v1/d0bd83b2-531-5319609_nayatel-logo-png-transparent-png.png",
+        "start_index": 12608,
+        "end_index": 12694
+      },
+      {
+        "id": "text-316",
+        "text": " ]",
+        "start_index": 12694,
+        "end_index": 12696
+      },
+      {
+        "id": "text-317",
+        "text": " ",
+        "start_index": 12696,
+        "end_index": 12697
+      },
+      {
+        "id": "text-318",
+        "text": "\n",
+        "start_index": 12697,
+        "end_index": 12698
+      },
+      {
+        "id": "text-319",
+        "text": "\n",
+        "start_index": 12698,
+        "end_index": 12699
+      },
+      {
+        "id": "text-320",
+        "text": "“Knowledge transfer was another reason we chose to partner with Canonical. To minimize long-term operating costs, we don’t want to be reliant on any third party. Canonical is giving our staff the training they need to be able to manage the cloud completely self-sufficiently.”\n",
+        "start_index": 12699,
+        "end_index": 12976
+      },
+      {
+        "id": "text-321",
+        "text": "\n",
+        "start_index": 12976,
+        "end_index": 12977
+      },
+      {
+        "id": "text-322",
+        "text": "Jahanzeb Arshad, VP of Operations, Nayatel",
+        "start_index": 12977,
+        "end_index": 13019
+      },
+      {
+        "id": "text-323",
+        "text": "\n",
+        "start_index": 13019,
+        "end_index": 13020
+      },
+      {
+        "id": "text-324",
+        "text": "\n",
+        "start_index": 13020,
+        "end_index": 13021
+      },
+      {
+        "id": "text-325",
+        "text": "Read the case study \u003e",
+        "start_index": 13021,
+        "end_index": 13042
+      },
+      {
+        "id": "text-326",
+        "text": "\n",
+        "start_index": 13042,
+        "end_index": 13043
+      },
+      {
+        "id": "text-327",
+        "text": "\n",
+        "start_index": 13043,
+        "end_index": 13044
+      },
+      {
+        "id": "text-328",
+        "text": "\n",
+        "start_index": 13045,
+        "end_index": 13046
+      },
+      {
+        "id": "text-329",
+        "text": "\n",
+        "start_index": 13047,
+        "end_index": 13048
+      },
+      {
+        "id": "text-330",
+        "text": "\n",
+        "start_index": 13048,
+        "end_index": 13049
+      },
+      {
+        "id": "text-331",
+        "text": "TEMPLATE QUOTE 4\n",
+        "start_index": 13049,
+        "end_index": 13066
+      },
+      {
+        "id": "text-332",
+        "text": "[logo: ",
+        "start_index": 13069,
+        "end_index": 13076
+      },
+      {
+        "id": "text-333",
+        "text": "https://assets.ubuntu.com/v1/91d63105-tnm_logo.webp",
+        "start_index": 13076,
+        "end_index": 13127
+      },
+      {
+        "id": "text-334",
+        "text": " ]",
+        "start_index": 13127,
+        "end_index": 13129
+      },
+      {
+        "id": "text-335",
+        "text": " ",
+        "start_index": 13129,
+        "end_index": 13130
+      },
+      {
+        "id": "text-336",
+        "text": "\n",
+        "start_index": 13130,
+        "end_index": 13131
+      },
+      {
+        "id": "text-337",
+        "text": "\n",
+        "start_index": 13131,
+        "end_index": 13132
+      },
+      {
+        "id": "text-338",
+        "text": "“We wanted to consolidate onto a single, open platform. That way, we wouldn’t be tied to a single vendor, and we’d be able to change parameters at will. The goal was to develop our skills so that we could work with any partner in one cloud environment.”\n",
+        "start_index": 13132,
+        "end_index": 13386
+      },
+      {
+        "id": "text-339",
+        "text": "\n",
+        "start_index": 13386,
+        "end_index": 13387
+      },
+      {
+        "id": "text-340",
+        "text": "Macdonald Chamba, Head of Infrastructure and Cloud Services, Telekom Networks Malawi\n",
+        "start_index": 13387,
+        "end_index": 13472
+      },
+      {
+        "id": "text-341",
+        "text": "\n",
+        "start_index": 13472,
+        "end_index": 13473
+      },
+      {
+        "id": "text-342",
+        "text": "Read the case study \u003e",
+        "start_index": 13473,
+        "end_index": 13494
+      },
+      {
+        "id": "text-343",
+        "text": "\n",
+        "start_index": 13494,
+        "end_index": 13495
+      },
+      {
+        "id": "text-344",
+        "text": "\n",
+        "start_index": 13495,
+        "end_index": 13496
+      },
+      {
+        "id": "text-345",
+        "text": "\n",
+        "start_index": 13497,
+        "end_index": 13498
+      },
+      {
+        "id": "text-346",
+        "text": "\n",
+        "start_index": 13499,
+        "end_index": 13500
+      },
+      {
+        "id": "text-347",
+        "text": "TEMPLATE CTA\n",
+        "start_index": 13500,
+        "end_index": 13513
+      },
+      {
+        "id": "text-348",
+        "text": "Canonical offers cloud design and delivery at a fixed price. Get in touch \u003e \n",
+        "start_index": 13516,
+        "end_index": 13593
+      },
+      {
+        "id": "text-349",
+        "text": "\n",
+        "start_index": 13593,
+        "end_index": 13594
+      },
+      {
+        "id": "text-350",
+        "text": "\n",
+        "start_index": 13595,
+        "end_index": 13596
+      },
+      {
+        "id": "text-351",
+        "text": "\n",
+        "start_index": 13596,
+        "end_index": 13597
+      },
+      {
+        "id": "text-352",
+        "text": "TEMPLATE LEARN MORE FOOTER\n",
+        "start_index": 13597,
+        "end_index": 13624
+      },
+      {
+        "id": "text-353",
+        "text": "\n",
+        "start_index": 13624,
+        "end_index": 13625
+      },
+      {
+        "id": "text-354",
+        "text": "Take the next step in your journey\n",
+        "start_index": 13628,
+        "end_index": 13663
+      },
+      {
+        "id": "text-355",
+        "text": "\n",
+        "start_index": 13663,
+        "end_index": 13664
+      },
+      {
+        "id": "text-356",
+        "text": "\n",
+        "start_index": 13665,
+        "end_index": 13666
+      },
+      {
+        "id": "text-357",
+        "text": "Rethinking virtualization: open source alternatives for resellers",
+        "start_index": 13666,
+        "end_index": 13731
+      },
+      {
+        "id": "text-358",
+        "text": "\n",
+        "start_index": 13731,
+        "end_index": 13732
+      },
+      {
+        "id": "text-359",
+        "text": "Explore powerful open source alternatives to mainstream hypervisor, storage, and other cloud services.\n",
+        "start_index": 13732,
+        "end_index": 13835
+      },
+      {
+        "id": "text-360",
+        "text": "\n",
+        "start_index": 13835,
+        "end_index": 13836
+      },
+      {
+        "id": "text-361",
+        "text": "Download our business guide to multi-cloud",
+        "start_index": 13836,
+        "end_index": 13878
+      },
+      {
+        "id": "text-362",
+        "text": "\n",
+        "start_index": 13878,
+        "end_index": 13879
+      },
+      {
+        "id": "text-363",
+        "text": "Learn how to build multi-cloud infrastructure with our guide.\n",
+        "start_index": 13879,
+        "end_index": 13941
+      },
+      {
+        "id": "text-364",
+        "text": "\n",
+        "start_index": 13941,
+        "end_index": 13942
+      },
+      {
+        "id": "text-365",
+        "text": "Software-defined storage for enterprises",
+        "start_index": 13942,
+        "end_index": 13982
+      },
+      {
+        "id": "text-366",
+        "text": "\n",
+        "start_index": 13982,
+        "end_index": 13983
+      },
+      {
+        "id": "text-367",
+        "text": "Learn how Ceph enables you to keep up with the demands on your storage infrastructure.\n",
+        "start_index": 13983,
+        "end_index": 14070
+      },
+      {
+        "id": "text-368",
+        "text": "\n",
+        "start_index": 14070,
+        "end_index": 14071
+      },
+      {
+        "id": "text-369",
+        "text": "Browse Canonical's Managed IT Services",
+        "start_index": 14071,
+        "end_index": 14109
+      },
+      {
+        "id": "text-370",
+        "text": " \n",
+        "start_index": 14109,
+        "end_index": 14111
+      },
+      {
+        "id": "text-371",
+        "text": "Explore the different ways that Canonical’s Managed Solutions can simplify your operations.\n",
+        "start_index": 14111,
+        "end_index": 14203
+      },
+      {
+        "id": "text-372",
+        "text": "\n",
+        "start_index": 14203,
+        "end_index": 14204
+      },
+      {
+        "id": "text-373",
+        "text": "\n",
+        "start_index": 14204,
+        "end_index": 14205
+      },
+      {
+        "id": "text-374",
+        "text": "\n",
+        "start_index": 14205,
+        "end_index": 14206
+      },
+      {
+        "id": "text-375",
+        "text": "\n",
+        "start_index": 14207,
+        "end_index": 14208
+      }
+    ]
+  }
+}
