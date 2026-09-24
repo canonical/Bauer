@@ -55,6 +55,51 @@ func GroupActionableSuggestions(suggestions []ActionableSuggestion, structure *D
 	return result
 }
 
+func ResolveGroupedConflicts(groups []LocationGroupedSuggestions) []LocationGroupedSuggestions {
+	for i := range groups {
+		// Clean up the suggestions within each location group
+		groups[i].Suggestions = resolveSuggestionsInGroup(groups[i].Suggestions)
+	}
+	return groups
+}
+
+func resolveSuggestionsInGroup(suggestions []GroupedActionableSuggestion) []GroupedActionableSuggestion {
+	if len(suggestions) <= 1 {
+		return suggestions
+	}
+
+	// 1. Sort by Range Size (Largest to Smallest)
+	sort.Slice(suggestions, func(i, j int) bool {
+		sizeI := suggestions[i].Position.EndIndex - suggestions[i].Position.StartIndex
+		sizeJ := suggestions[j].Position.EndIndex - suggestions[j].Position.StartIndex
+		return sizeI > sizeJ
+	})
+
+	var resolved []GroupedActionableSuggestion
+	for _, current := range suggestions {
+		isConflict := false
+		for _, accepted := range resolved {
+			// Overlap check
+			if current.Position.StartIndex < accepted.Position.EndIndex &&
+				current.Position.EndIndex > accepted.Position.StartIndex {
+				isConflict = true
+				break
+			}
+		}
+
+		if !isConflict {
+			resolved = append(resolved, current)
+		}
+	}
+
+	// 2. Sort back to Document Order
+	sort.Slice(resolved, func(i, j int) bool {
+		return resolved[i].Position.StartIndex < resolved[j].Position.StartIndex
+	})
+
+	return resolved
+}
+
 // groupSuggestionsByID groups suggestions by their ID and merges contiguous atomic operations.
 // Suggestions with the same ID that are contiguous in position are merged into a single
 // GroupedActionableSuggestion. Non-contiguous suggestions with the same ID are kept separate.

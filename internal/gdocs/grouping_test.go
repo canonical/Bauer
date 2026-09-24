@@ -1172,6 +1172,90 @@ func TestGroupSuggestionsByID_SortedOutput(t *testing.T) {
 	}
 }
 
+// TestResolveGroupedConflicts_NestedConflict tests that large deletions swallow small nested edits
+func TestResolveGroupedConflicts_NestedConflict(t *testing.T) {
+	// Setup: A large deletion and a tiny replacement inside it
+	groups := []LocationGroupedSuggestions{
+		{
+			Location: SuggestionLocation{Section: "Body"},
+			Suggestions: []GroupedActionableSuggestion{
+				{
+					ID: "suggest.big_delete",
+					Change: SuggestionChange{
+						Type:         "delete",
+						OriginalText: "Ubuntu Core 24 is amazing and should be deleted.",
+					},
+					Position: struct {
+						StartIndex int64 `json:"start_index"`
+						EndIndex   int64 `json:"end_index"`
+					}{StartIndex: 1600, EndIndex: 1650},
+				},
+				{
+					ID: "suggest.small_fix",
+					Change: SuggestionChange{
+						Type:         "replace",
+						OriginalText: "24",
+						NewText:      "2024",
+					},
+					Position: struct {
+						StartIndex int64 `json:"start_index"`
+						EndIndex   int64 `json:"end_index"`
+					}{StartIndex: 1612, EndIndex: 1614}, // This is INSIDE the big delete
+				},
+			},
+		},
+	}
+
+	resolved := ResolveGroupedConflicts(groups)
+
+	if len(resolved[0].Suggestions) != 1 {
+		t.Fatalf("Expected 1 suggestion after resolution, got %d", len(resolved[0].Suggestions))
+	}
+
+	winner := resolved[0].Suggestions[0]
+	if winner.ID != "suggest.big_delete" {
+		t.Errorf("The large deletion should have won, but got %s", winner.ID)
+	}
+}
+
+// TestResolveGroupedConflicts_PartialOverlap tests resolution when ranges partially touch
+func TestResolveGroupedConflicts_PartialOverlap(t *testing.T) {
+	groups := []LocationGroupedSuggestions{
+		{
+			Location: SuggestionLocation{Section: "Body"},
+			Suggestions: []GroupedActionableSuggestion{
+				{
+					ID:     "suggest.left", // Indices 10 to 30
+					Change: SuggestionChange{Type: "delete"},
+					Position: struct {
+						StartIndex int64 `json:"start_index"`
+						EndIndex   int64 `json:"end_index"`
+					}{StartIndex: 10, EndIndex: 30},
+				},
+				{
+					ID:     "suggest.right", // Indices 25 to 40 (Overlaps 25-30)
+					Change: SuggestionChange{Type: "delete"},
+					Position: struct {
+						StartIndex int64 `json:"start_index"`
+						EndIndex   int64 `json:"end_index"`
+					}{StartIndex: 25, EndIndex: 40},
+				},
+			},
+		},
+	}
+
+	resolved := ResolveGroupedConflicts(groups)
+
+	// In size-based logic, 10-30 (Size 20) beats 25-40 (Size 15)
+	if len(resolved[0].Suggestions) != 1 {
+		t.Errorf("Expected 1 suggestion, got %d", len(resolved[0].Suggestions))
+	}
+
+	if resolved[0].Suggestions[0].ID != "suggest.left" {
+		t.Errorf("Larger range (suggest.left) should have won")
+	}
+}
+
 // TestAreContiguous tests the contiguity checking function
 func TestAreContiguous(t *testing.T) {
 	tests := []struct {
