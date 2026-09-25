@@ -38,7 +38,8 @@ func LoadConfig() (*APIConfig, error) {
 		return nil, err
 	}
 
-	apiToken := env.GetGoEnv("API_TOKEN")
+	// Secret-typed charm config options are exposed with a "_VALUE" suffix.
+	apiToken := env.GetGoEnv("API_TOKEN_VALUE")
 
 	if *configFile != "" {
 		cfg, err := config.LoadFromJSONFile(*configFile)
