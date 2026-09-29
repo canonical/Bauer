@@ -51,3 +51,11 @@ config:
       type: string
       description: Google service account client_id.
       default: ""
+    git-user-name:
+      type: string
+      description: Git author/committer name used for commits made by Bauer.
+      default: "Bauer Bot"
+    git-user-email:
+      type: string
+      description: Git author/committer email used for commits made by Bauer.
+      default: "bauer-bot@canonical.com"
