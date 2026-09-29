@@ -1,12 +1,35 @@
 package github
 
 import (
+	"bauer/internal/env"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 )
+
+// defaultCommitAuthorName and defaultCommitAuthorEmail are used when no
+// git identity is configured, so commits succeed even on hosts (e.g. the
+// staging container) that have no global git config for the running user.
+const (
+	defaultCommitAuthorName  = "Bauer Bot"
+	defaultCommitAuthorEmail = "bauer-bot@canonical.com"
+)
+
+// gitIdentityArgs returns "-c" flags that pin the git commit author/committer
+// identity, overridable via GIT_USER_NAME / GIT_USER_EMAIL.
+func gitIdentityArgs() []string {
+	name := env.GetGoEnv("GIT_USER_NAME")
+	if name == "" {
+		name = defaultCommitAuthorName
+	}
+	email := env.GetGoEnv("GIT_USER_EMAIL")
+	if email == "" {
+		email = defaultCommitAuthorEmail
+	}
+	return []string{"-c", "user.name=" + name, "-c", "user.email=" + email}
+}
 
 type Repository struct {
 	Owner     string
@@ -262,7 +285,8 @@ func CommitChanges(localPath, message string) error {
 	}
 
 	// Commit
-	cmd = exec.Command("git", "commit", "-m", message)
+	commitArgs := append(gitIdentityArgs(), "commit", "-m", message)
+	cmd = exec.Command("git", commitArgs...)
 	cmd.Dir = localPath
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to commit changes: %w, output: %s", err, output)
@@ -295,7 +319,8 @@ func CommitFiles(localPath, message string, files []string) error {
 		return fmt.Errorf("no staged changes to commit")
 	}
 
-	cmd = exec.Command("git", "commit", "-m", message)
+	commitArgs := append(gitIdentityArgs(), "commit", "-m", message)
+	cmd = exec.Command("git", commitArgs...)
 	cmd.Dir = localPath
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to commit files: %w, output: %s", err, output)
