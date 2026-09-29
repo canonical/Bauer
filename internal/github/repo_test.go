@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -151,5 +152,83 @@ func TestCloneOrUpdateRepo_UpdateExisting(t *testing.T) {
 
 	if !isGitRepo(dest) {
 		t.Fatalf("expected destination to remain a valid git repo after update")
+	}
+}
+
+// withNoGitIdentity points HOME at an empty directory for the duration of fn,
+// reproducing a host with no global user.name/user.email configured.
+func withNoGitIdentity(t *testing.T, fn func()) {
+	t.Helper()
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	fn()
+}
+
+func TestCommitFiles_NoHostGitIdentity(t *testing.T) {
+	requireGit(t)
+
+	src := createSourceRepo(t)
+	dest := filepath.Join(t.TempDir(), "clone")
+	repo := &Repository{Owner: "test", Name: "repo", HTTPURL: src}
+	if err := CloneOrUpdateRepo(repo, dest); err != nil {
+		t.Fatalf("clone failed: %v", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(dest, "new.txt"), []byte("content\n"), 0644); err != nil {
+		t.Fatalf("failed to write new file: %v", err)
+	}
+
+	withNoGitIdentity(t, func() {
+		if err := CommitFiles(dest, "test commit", []string{"new.txt"}); err != nil {
+			t.Fatalf("CommitFiles failed with no host git identity: %v", err)
+		}
+	})
+
+	cmd := exec.Command("git", "log", "-1", "--pretty=%an <%ae>")
+	cmd.Dir = dest
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("failed to read commit author: %v", err)
+	}
+	got := strings.TrimSpace(string(out))
+	want := defaultCommitAuthorName + " <" + defaultCommitAuthorEmail + ">"
+	if got != want {
+		t.Fatalf("expected commit author %q, got %q", want, got)
+	}
+}
+
+func TestCommitFiles_HonoursGitUserEnvOverride(t *testing.T) {
+	requireGit(t)
+
+	t.Setenv("APP_GIT_USER_NAME", "Custom Author")
+	t.Setenv("APP_GIT_USER_EMAIL", "custom@example.com")
+
+	src := createSourceRepo(t)
+	dest := filepath.Join(t.TempDir(), "clone")
+	repo := &Repository{Owner: "test", Name: "repo", HTTPURL: src}
+	if err := CloneOrUpdateRepo(repo, dest); err != nil {
+		t.Fatalf("clone failed: %v", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(dest, "new.txt"), []byte("content\n"), 0644); err != nil {
+		t.Fatalf("failed to write new file: %v", err)
+	}
+
+	withNoGitIdentity(t, func() {
+		if err := CommitFiles(dest, "test commit", []string{"new.txt"}); err != nil {
+			t.Fatalf("CommitFiles failed: %v", err)
+		}
+	})
+
+	cmd := exec.Command("git", "log", "-1", "--pretty=%an <%ae>")
+	cmd.Dir = dest
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("failed to read commit author: %v", err)
+	}
+	got := strings.TrimSpace(string(out))
+	want := "Custom Author <custom@example.com>"
+	if got != want {
+		t.Fatalf("expected commit author %q, got %q", want, got)
 	}
 }
