@@ -3,6 +3,7 @@ package github
 import (
 	"bauer/internal/env"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -63,6 +64,14 @@ func SetupGitHubAuth(token string) error {
 	// Also set for gh CLI
 	if err := env.SetGoEnv("GH_TOKEN", token); err != nil {
 		return fmt.Errorf("failed to set GH_TOKEN: %w", err)
+	}
+
+	// Wire git's credential helper to gh so plain "git clone"/"git push"
+	// subprocesses can authenticate; they don't read GH_TOKEN themselves.
+	cmd := exec.Command("gh", "auth", "setup-git")
+	cmd.Env = append(os.Environ(), "GH_TOKEN="+token, "GITHUB_TOKEN="+token)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to configure git credential helper via gh: %w, output: %s", err, output)
 	}
 
 	return nil
