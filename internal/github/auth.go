@@ -82,3 +82,12 @@ func IsGhCLIInstalled() bool {
 	_, err := exec.LookPath("gh")
 	return err == nil
 }
+
+// ghCommand builds an exec.Cmd for a gh CLI subcommand
+func ghCommand(args ...string) *exec.Cmd {
+	cmd := exec.Command("gh", args...)
+	if token, err := GetGitHubToken(); err == nil && token != "" {
+		cmd.Env = append(os.Environ(), "GH_TOKEN="+token, "GITHUB_TOKEN="+token)
+	}
+	return cmd
+}
