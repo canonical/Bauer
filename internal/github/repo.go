@@ -79,13 +79,28 @@ func ParseGitHubRepo(input string) (*Repository, error) {
 	}, nil
 }
 
+// gitCommand builds an exec.Cmd for a git subcommand that talks to a remote.
+// When a GitHub token is available it is forwarded via GH_TOKEN/GITHUB_TOKEN
+// so gh's credential helper (wired by SetupGitHubAuth) can authenticate this
+// one subprocess directly, without needing a persisted/validated gh login.
+func gitCommand(dir string, args ...string) *exec.Cmd {
+	cmd := exec.Command("git", args...)
+	if dir != "" {
+		cmd.Dir = dir
+	}
+	if token, err := GetGitHubToken(); err == nil && token != "" {
+		cmd.Env = append(os.Environ(), "GH_TOKEN="+token, "GITHUB_TOKEN="+token)
+	}
+	return cmd
+}
+
 // cloneRepo ensures the parent directory of localPath exists and clones repo
 // into localPath. On success it records the clone location on repo.
 func cloneRepo(repo *Repository, localPath string) error {
 	if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
 		return fmt.Errorf("failed to create parent directory: %w", err)
 	}
-	cmd := exec.Command("git", "clone", repo.HTTPURL, localPath)
+	cmd := gitCommand("", "clone", repo.HTTPURL, localPath)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to clone repo: %w, output: %s", err, output)
 	}
@@ -133,8 +148,7 @@ func CloneOrUpdateRepo(repo *Repository, localPath string) error {
 			}
 		}
 
-		cmd := exec.Command("git", "fetch", "origin")
-		cmd.Dir = localPath
+		cmd := gitCommand(localPath, "fetch", "origin")
 		if output, err := cmd.CombinedOutput(); err != nil {
 			// The local repo may be corrupted (e.g. "pack has unresolved deltas").
 			// Remove it and fall back to a fresh clone.
@@ -147,8 +161,7 @@ func CloneOrUpdateRepo(repo *Repository, localPath string) error {
 			return nil
 		}
 
-		cmd = exec.Command("git", "pull", "origin", getDefaultBranch(localPath))
-		cmd.Dir = localPath
+		cmd = gitCommand(localPath, "pull", "origin", getDefaultBranch(localPath))
 		if _, err := cmd.CombinedOutput(); err != nil {
 			// Non-fatal: might be on a different branch
 			fmt.Printf("Warning: failed to pull latest: %v\n", err)
@@ -210,8 +223,7 @@ func CreateFeatureBranch(localPath, branchName string) error {
 	}
 
 	// Pull latest changes
-	cmd = exec.Command("git", "pull", "--ff-only", "origin", defaultBranch)
-	cmd.Dir = localPath
+	cmd = gitCommand(localPath, "pull", "--ff-only", "origin", defaultBranch)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		// In automation, local default can diverge from origin due to previous runs.
 		// Force sync local default branch to remote default and continue.
@@ -342,8 +354,7 @@ func GetHeadCommitSHA(localPath string) (string, error) {
 
 // PushBranch pushes the specified branch to remote
 func PushBranch(localPath, branchName string) error {
-	cmd := exec.Command("git", "push", "origin", branchName)
-	cmd.Dir = localPath
+	cmd := gitCommand(localPath, "push", "origin", branchName)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to push branch %s: %w, output: %s", branchName, err, output)
 	}
