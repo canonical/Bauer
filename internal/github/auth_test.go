@@ -124,4 +124,3 @@ func TestGitCommand_NoTokenLeavesEnvUnset(t *testing.T) {
 		t.Fatalf("expected gitCommand to leave cmd.Env nil (inherit default) when no token is available, got: %v", cmd.Env)
 	}
 }
-

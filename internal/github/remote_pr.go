@@ -3,7 +3,6 @@ package github
 import (
 	"encoding/base64"
 	"fmt"
-	"os/exec"
 	"strings"
 	"time"
 )
@@ -82,7 +81,7 @@ func CreateParseResultPR(opts CreateParseResultPROptions) (prURL string, branchN
 
 // GetDefaultBranchRemote resolves the default branch for a repository via gh api.
 func GetDefaultBranchRemote(owner, repo string) (string, error) {
-	cmd := exec.Command("gh", "api", fmt.Sprintf("repos/%s/%s", owner, repo), "--jq", ".default_branch")
+	cmd := ghCommand("api", fmt.Sprintf("repos/%s/%s", owner, repo), "--jq", ".default_branch")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("gh api failed: %w, output: %s", err, output)
@@ -95,8 +94,8 @@ func GetDefaultBranchRemote(owner, repo string) (string, error) {
 }
 
 func getBranchHeadSHA(owner, repo, branch string) (string, error) {
-	cmd := exec.Command(
-		"gh", "api",
+	cmd := ghCommand(
+		"api",
 		fmt.Sprintf("repos/%s/%s/git/ref/heads/%s", owner, repo, branch),
 		"--jq", ".object.sha",
 	)
@@ -112,8 +111,8 @@ func getBranchHeadSHA(owner, repo, branch string) (string, error) {
 }
 
 func createBranchRef(owner, repo, branchName, sha string) error {
-	cmd := exec.Command(
-		"gh", "api", "-X", "POST",
+	cmd := ghCommand(
+		"api", "-X", "POST",
 		fmt.Sprintf("repos/%s/%s/git/refs", owner, repo),
 		"-f", "ref=refs/heads/"+branchName,
 		"-f", "sha="+sha,
@@ -142,7 +141,7 @@ func putFileOnBranch(owner, repo, branch, path, message, encodedContent string) 
 		args = append(args, "-f", "sha="+existingSHA)
 	}
 
-	cmd := exec.Command("gh", args...)
+	cmd := ghCommand(args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("gh api failed: %w, output: %s", err, output)
@@ -151,8 +150,8 @@ func putFileOnBranch(owner, repo, branch, path, message, encodedContent string) 
 }
 
 func getFileSHAOnBranch(owner, repo, branch, path string) (string, error) {
-	cmd := exec.Command(
-		"gh", "api",
+	cmd := ghCommand(
+		"api",
 		fmt.Sprintf("repos/%s/%s/contents/%s", owner, repo, path),
 		"-f", "ref="+branch,
 		"--jq", ".sha",

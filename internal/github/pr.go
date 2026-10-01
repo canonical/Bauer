@@ -64,7 +64,7 @@ func CreatePR(owner, repo string, opts CreatePROptions) (string, error) {
 		args = append(args, "--reviewer", reviewer)
 	}
 
-	cmd := exec.Command("gh", args...)
+	cmd := ghCommand(args...)
 
 	// Log token availability for debugging
 	logger := slog.Default()
@@ -118,7 +118,7 @@ type PRStatus struct {
 
 // GetPRInfo retrieves information about a pull request
 func GetPRInfo(owner, repo, branchName string) (*PRStatus, error) {
-	cmd := exec.Command("gh", "pr", "list",
+	cmd := ghCommand("pr", "list",
 		"--repo", fmt.Sprintf("%s/%s", owner, repo),
 		"--head", branchName,
 		"--json", "number,state,title,url",

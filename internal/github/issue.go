@@ -2,7 +2,6 @@ package github
 
 import (
 	"fmt"
-	"os/exec"
 	"strings"
 )
 
@@ -38,7 +37,7 @@ func CreateIssue(owner, repo string, opts CreateIssueOptions) (string, error) {
 		args = append(args, "--assignee", assignee)
 	}
 
-	cmd := exec.Command("gh", args...)
+	cmd := ghCommand(args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("failed to create issue: %w, output: %s", err, output)
@@ -65,8 +64,8 @@ func AddIssueComment(owner, repo, issueNumber, body string) error {
 		return fmt.Errorf("comment body cannot be empty")
 	}
 
-	cmd := exec.Command(
-		"gh", "issue", "comment", issueNumber,
+	cmd := ghCommand(
+		"issue", "comment", issueNumber,
 		"--repo", fmt.Sprintf("%s/%s", owner, repo),
 		"--body", body,
 	)
