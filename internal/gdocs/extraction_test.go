@@ -842,10 +842,17 @@ func TestParseDocIDAndTab(t *testing.T) {
 		{"id with edit", "abc123/edit", "abc123", ""},
 		{"id with edit and tab", "abc123/edit?tab=t.0", "abc123", "t.0"},
 		{"id with extra params", "abc123?tab=t.0&usp=sharing", "abc123", "t.0"},
+		{"id with edit and extra params", "abc123/edit?usp=sharing", "abc123", ""},
 		{"id with fragment", "abc123?tab=t.0#heading", "abc123", "t.0"},
 		{
 			name:      "full url with tab",
 			input:     "https://docs.google.com/document/d/15QhtNdZTw2Mk5YPnc3y1RH4R7UBi3F8dZ70bJRB8xJc/edit?tab=t.0",
+			wantDocID: "15QhtNdZTw2Mk5YPnc3y1RH4R7UBi3F8dZ70bJRB8xJc",
+			wantTabID: "t.0",
+		},
+		{
+			name:      "full url with sharing query and tab",
+			input:     "https://docs.google.com/document/d/15QhtNdZTw2Mk5YPnc3y1RH4R7UBi3F8dZ70bJRB8xJc/edit?usp=sharing&tab=t.0",
 			wantDocID: "15QhtNdZTw2Mk5YPnc3y1RH4R7UBi3F8dZ70bJRB8xJc",
 			wantTabID: "t.0",
 		},

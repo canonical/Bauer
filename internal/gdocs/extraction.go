@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"strings"
 
 	"google.golang.org/api/docs/v1"
@@ -28,14 +29,16 @@ func ParseDocIDAndTab(docID string) (string, string) {
 		docID = docID[idx+len(docsURLPrefix):]
 	}
 
-	// Extract tab ID if present, then trim any trailing query parameters or
-	// fragment that may follow the tab value (e.g. "&usp=sharing", "#heading").
-	if idx := strings.Index(docID, "?tab="); idx != -1 {
-		tabID = docID[idx+5:]
+	// Remove fragments before parsing query parameters so they cannot become
+	// part of the document or tab ID.
+	if idx := strings.Index(docID, "#"); idx != -1 {
 		docID = docID[:idx]
-		// Trim at the first '&' or '#' so extra parameters don't corrupt the ID.
-		if i := strings.IndexAny(tabID, "&#"); i != -1 {
-			tabID = tabID[:i]
+	}
+	if idx := strings.Index(docID, "?"); idx != -1 {
+		query := docID[idx+1:]
+		docID = docID[:idx]
+		if values, err := url.ParseQuery(query); err == nil {
+			tabID = values.Get("tab")
 		}
 	}
 
