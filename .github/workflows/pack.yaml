@@ -72,7 +72,8 @@ jobs:
           if-no-files-found: error
       
   pack-rock:
-    runs-on: ubuntu-latest
+    # Match rock base in rockcraft.yaml
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
