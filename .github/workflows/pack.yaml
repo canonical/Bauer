@@ -153,8 +153,9 @@ jobs:
           controller-address: ${{ vars.JUJU_CONTROLLER_ADDRESS }}
           model-name: ${{ vars.JUJU_MODEL_NAME }}
           juju-version: ${{ vars.JUJU_VERSION || '3/stable' }}
-          juju-client-id: ${{ secrets.JUJU_CLIENT_ID }}
-          juju-client-secret: ${{ secrets.JUJU_CLIENT_SECRET }}
+          vault-role-id: ${{ secrets.VAULT_ROLE_ID }}
+          vault-secret-id: ${{ secrets.VAULT_SECRET_ID }}
+          vault-credentials-path: ${{ vars.VAULT_CREDS_PATH }}
   
   deploy-production:
     needs: [pack-rock, deploy-staging]
@@ -179,5 +180,6 @@ jobs:
           controller-address: ${{ vars.JUJU_CONTROLLER_ADDRESS }}
           model-name: ${{ vars.JUJU_MODEL_NAME }}
           juju-version: ${{ vars.JUJU_VERSION || '3/stable' }}
-          juju-client-id: ${{ secrets.JUJU_CLIENT_ID }}
-          juju-client-secret: ${{ secrets.JUJU_CLIENT_SECRET }}
+          vault-role-id: ${{ secrets.VAULT_ROLE_ID }}
+          vault-secret-id: ${{ secrets.VAULT_SECRET_ID }}
+          vault-credentials-path: ${{ vars.VAULT_CREDS_PATH }}
